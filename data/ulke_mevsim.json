@@ -1,0 +1,65 @@
+{
+  "Türkiye": {
+    "hemisphere": "north",
+    "capital_query": "Ankara,TR",
+    "takvim_notlari": [
+      "Bayram ve uzun tatiller perakende, seyahat ve nakit akışını mevsimsel olarak şekillendirebilir.",
+      "Kış aylarında doğalgaz/elektrik talebi ve kırsal tarım ürünleri fiyatları gündeme gelir.",
+      "Yaz aylarında turizm, içecek ve enerji tüketimi ile tarımsal sulama maliyetleri öne çıkabilir."
+    ]
+  },
+  "ABD": {
+    "hemisphere": "north",
+    "capital_query": "Washington,US",
+    "takvim_notlari": [
+      "Şükran Günü–yıl sonu tüketim ve lojistik yoğunluğu ABD için belirleyicidir.",
+      "Ocak–Nisan vergi ve bilanço dönemi kurumsal harcama davranışını etkileyebilir.",
+      "Kasım–Mart kışı enerji talebi (doğalgaz, perakende ısınma) ile ilişkilidir."
+    ]
+  },
+  "Almanya": {
+    "hemisphere": "north",
+    "capital_query": "Berlin,DE",
+    "takvim_notlari": [
+      "Ekim ayındaki fuar ve sanayi takvimi ihracat ve otomotiv çevresinde haber akışını artırır.",
+      "Kış aylarında enerji fiyatları ve sanayi üretimi Avrupa için sinyal taşır.",
+      "Yaz tatili döneminde üretim yavaşlaması ve tüketim kayması tipik olabilir."
+    ]
+  },
+  "İngiltere": {
+    "hemisphere": "north",
+    "capital_query": "London,GB",
+    "takvim_notlari": [
+      "Mali yıl ve bütçe açıklamaları piyasalar için dönemsel gündem oluşturur.",
+      "Kış aylarında enerji ve tüketici fiyatları gündemde kalır.",
+      "Yaz aylarında turizm ve perakende sezonu belirgindir."
+    ]
+  },
+  "Japonya": {
+    "hemisphere": "north",
+    "capital_query": "Tokyo,JP",
+    "takvim_notlari": [
+      "Nisan–Mayıs altın haftası (Golden Week) iç talep ve seyahati etkiler.",
+      "Yaz aylarında enerji (klima) ve tayfun riski altyapı/lojistiği gündeme getirebilir.",
+      "Mart sonu mali yıl kapanışı kurumsal davranışlarda dalgalanma yaratabilir."
+    ]
+  },
+  "Çin": {
+    "hemisphere": "north",
+    "capital_query": "Beijing,CN",
+    "takvim_notlari": [
+      "Ocak–Şubat civarı Bahar Festivali çevresinde üretim duruşları ve iç talep dalgalanır.",
+      "Yaz aylarında enerji tüketimi ve üretim tesisleri kapasite kullanımı izlenir.",
+      "İhracat ve emtia talebi ile iç tüketim arasında mevsimsel farklar oluşabilir."
+    ]
+  },
+  "Diğer": {
+    "hemisphere": "north",
+    "capital_query": null,
+    "takvim_notlari": [
+      "Ülke özelinde tatil ve okul takvimi tüketim ve işgücü arzını etkiler.",
+      "Kuzey yarımküre için kış–yaz enerji ve tarım döngüleri genel çerçevedir.",
+      "Belirsizlik yüksekse genellemelerden kaçın; varsayımları açıkça söyle."
+    ]
+  }
+}

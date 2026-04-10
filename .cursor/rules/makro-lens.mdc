@@ -1,0 +1,32 @@
+---
+description: Makro Lens proje bağlamı, dokümantasyon disiplini ve yol haritası senkronu
+alwaysApply: true
+---
+
+# Makro Lens — Kalıcı agent kuralları
+
+Bu kural dosyası her Cursor oturumunda geçerlidir; kullanıcıdan aynı çalışma düzenini her sohbette yeniden anlatmasını bekleme.
+
+## Proje özeti
+Telegram bot: makro / mevsim / hava analizi. Ana kod: `app.py`, `mevsim_baglam.py`, `hava_baglam.py`. AI motoru şu an **Gemini**; planda Claude geçebilir — ayrıntı `MIMARI.md` (plan ↔ kod).
+
+## Dokümantasyon (sırayla bak)
+| Dosya | Ne için |
+|-------|---------|
+| `makro_lens_proje_plani.md` | Vizyon, mod listesi, uyarı politikası |
+| `MIMARI.md` | Mimari, dosya envanteri, teknik kurallar |
+| `SURUM_VE_YOL_HARITASI.md` | Parça bazlı **yapıldı / yapılacak** |
+| `GUNCELLEME_GUNLUGU.md` | Tarihli **ne değişti** kaydı |
+
+## Yapılacaklar disiplini
+1. Anlamlı kod veya davranış değişikliğinden sonra **`GUNCELLEME_GUNLUGU.md`** içine kısa, tarihli bir madde ekle (ne, neden, hangi dosyalar).
+2. Bir **Parça** (SURUM’daki iş paketi) tamamlandıysa **`SURUM_VE_YOL_HARITASI.md`** içindeki ilgili kutuları güncelle veya sürüm notuna işle.
+3. “Yapıyoruz / yapacağız” bilgisini güncel tutmak için büyük kararlardan sonra gerekirse `SURUM_VE_YOL_HARITASI.md` veya plandaki ilgili bölümü senkronize et.
+
+## Kod hatırlatıcıları
+- Uzun yasal metin modelde istenmez; sabit footer `ANALIZ_FOOTER` (`app.py`). Detay: plan + `MIMARI.md`.
+- Kullanıcıya Türkçe; Telegram HTML ve uzun mesaj bölme kuralları `MIMARI.md` teknik tabloda.
+- Gizli anahtarlar yalnızca `.env`; repoya gömme.
+
+## Kullanıcı tercihleri
+Depodaki kullanıcı kural dosyaları (varsa) ve bu proje kuralı birlikte uygulanır; çelişkide önce kullanıcı mesajı, sonra bu dosya ve `MIMARI.md`.
