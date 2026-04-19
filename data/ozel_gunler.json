@@ -1,0 +1,57 @@
+{
+  "Türkiye": [
+    {"ay": 1, "gun": 1, "ad": "Yılbaşı", "etki": "Perakende, e-ticaret, turizm harcamaları artar; kargo/lojistik yoğunluğu."},
+    {"ay": 3, "gun": 8, "ad": "Dünya Kadınlar Günü", "etki": "Kozmetik, moda, çiçek ve hediye sektörlerinde kısa vadeli talep artışı."},
+    {"ay": 4, "gun": 23, "ad": "Ulusal Egemenlik ve Çocuk Bayramı", "etki": "Oyuncak, eğlence ve çocuk ürünleri sektöründe kısa vadeli talep."},
+    {"ay": 5, "gun": 1, "ad": "İşçi Bayramı", "etki": "Üretim ve lojistik sektöründe kısa duraksamalar; sendika haberleri gündemde."},
+    {"ay": 5, "gun": 19, "ad": "Atatürk'ü Anma, Gençlik ve Spor Bayramı", "etki": "Spor ekipmanları ve gençlik odaklı tüketim kısa vadeli artış gösterebilir."},
+    {"ay": 8, "gun": 30, "ad": "Zafer Bayramı", "etki": "Savunma sanayi haberleri ve milliyetçi tüketim eğilimleri öne çıkabilir."},
+    {"ay": 10, "gun": 29, "ad": "Cumhuriyet Bayramı", "etki": "Savunma, kamu yatırımları ve ulusal sanayi haberleri yoğunlaşır."},
+    {"ay": 11, "gun": 11, "ad": "Bekarlar Günü (11.11)", "etki": "E-ticaret ve perakende için yılın en büyük indirim günlerinden biri; lojistik yoğunluğu."},
+    {"ay": 12, "gun": 25, "ad": "Yılsonu / Noel (küresel etki)", "etki": "Turizm, perakende ve e-ticaret sektörlerinde yılsonu harcama dalgası."},
+    {"ay": 3, "gun": 0, "ad": "Ramazan Ayı (değişken tarih)", "etki": "Gıda, içecek ve perakende tüketimi artar; iş saatleri kısalır; lojistik yavaşlayabilir."},
+    {"ay": 4, "gun": 0, "ad": "Ramazan Bayramı (değişken tarih)", "etki": "Perakende, seyahat, hediye ve gıda sektörlerinde güçlü talep artışı."},
+    {"ay": 6, "gun": 0, "ad": "Kurban Bayramı (değişken tarih)", "etki": "Et, gıda, seyahat ve perakende sektörlerinde yoğun talep; kasap ve et işleme sektörü öne çıkar."}
+  ],
+  "ABD": [
+    {"ay": 1, "gun": 1, "ad": "Yılbaşı", "etki": "Perakende iade dönemi; tüketici harcamaları yavaşlar."},
+    {"ay": 2, "gun": 14, "ad": "Sevgililer Günü", "etki": "Çiçek, çikolata, mücevher ve restoran sektörlerinde kısa vadeli talep artışı."},
+    {"ay": 5, "gun": 0, "ad": "Anneler Günü (Mayıs 2. Pazar)", "etki": "Hediye, çiçek, restoran ve perakende sektörlerinde güçlü talep."},
+    {"ay": 7, "gun": 4, "ad": "Bağımsızlık Günü", "etki": "Havai fişek, barbekü, perakende ve turizm sektörlerinde kısa vadeli artış."},
+    {"ay": 9, "gun": 0, "ad": "İşçi Günü (Eylül 1. Pazartesi)", "etki": "Yaz sonu perakende indirimleri; otomotiv ve ev eşyası satışları artar."},
+    {"ay": 10, "gun": 31, "ad": "Cadılar Bayramı", "etki": "Kostüm, şeker, dekorasyon sektörlerinde güçlü talep; perakende için önemli."},
+    {"ay": 11, "gun": 0, "ad": "Şükran Günü (Kasım 4. Perşembe)", "etki": "Gıda, seyahat ve perakende için yılın en yoğun döneminin başlangıcı."},
+    {"ay": 11, "gun": 0, "ad": "Kara Cuma / Siber Pazartesi", "etki": "E-ticaret ve perakende için yılın en büyük alışveriş günleri; lojistik kapasitesi zorlanır."},
+    {"ay": 12, "gun": 25, "ad": "Noel", "etki": "Perakende, seyahat, e-ticaret ve eğlence sektörlerinde yılın zirvesi."}
+  ],
+  "Almanya": [
+    {"ay": 1, "gun": 1, "ad": "Yılbaşı", "etki": "Perakende yavaşlar; sanayi üretimi kısa süre durur."},
+    {"ay": 10, "gun": 3, "ad": "Alman Birliği Günü", "etki": "Kamu ve sanayi kısa tatil; ulusal kimlik ve siyasi haberler öne çıkar."},
+    {"ay": 10, "gun": 0, "ad": "Oktoberfest (Eylül-Ekim)", "etki": "Turizm, bira, gıda ve eğlence sektörlerinde güçlü talep; Münih ekonomisi canlanır."},
+    {"ay": 11, "gun": 0, "ad": "Noel Pazarları (Kasım-Aralık)", "etki": "Turizm, perakende ve gıda sektörlerinde yılsonu harcama dalgası."},
+    {"ay": 12, "gun": 25, "ad": "Noel", "etki": "Perakende, seyahat ve e-ticaret için yılın zirvesi."}
+  ],
+  "İngiltere": [
+    {"ay": 1, "gun": 1, "ad": "Yılbaşı", "etki": "Perakende iade dönemi; tüketici harcamaları yavaşlar."},
+    {"ay": 12, "gun": 26, "ad": "Boxing Day", "etki": "Perakende indirimleri; yılın en büyük alışveriş günlerinden biri."},
+    {"ay": 12, "gun": 25, "ad": "Noel", "etki": "Perakende, seyahat ve e-ticaret için yılın zirvesi."},
+    {"ay": 4, "gun": 0, "ad": "Paskalya (değişken tarih)", "etki": "Turizm, gıda ve perakende sektörlerinde kısa vadeli talep artışı."}
+  ],
+  "Japonya": [
+    {"ay": 1, "gun": 1, "ad": "Yılbaşı (Oshogatsu)", "etki": "Perakende, gıda ve seyahat sektörlerinde güçlü talep; iş dünyası kısa tatil."},
+    {"ay": 4, "gun": 29, "ad": "Altın Hafta Başlangıcı", "etki": "Turizm, perakende ve eğlence sektörlerinde yılın en yoğun tatil dönemlerinden biri."},
+    {"ay": 8, "gun": 0, "ad": "Obon Festivali", "etki": "Seyahat, gıda ve perakende sektörlerinde yoğun talep; üretim yavaşlar."},
+    {"ay": 12, "gun": 25, "ad": "Noel (kültürel etki)", "etki": "Perakende ve eğlence sektörlerinde kısa vadeli talep artışı."}
+  ],
+  "Çin": [
+    {"ay": 1, "gun": 0, "ad": "Çin Yeni Yılı / Bahar Festivali (değişken tarih)", "etki": "Üretim duruşları; perakende, seyahat ve gıda sektörlerinde güçlü talep; küresel tedarik zinciri etkilenir."},
+    {"ay": 10, "gun": 1, "ad": "Ulusal Gün / Altın Hafta", "etki": "Turizm, perakende ve e-ticaret sektörlerinde güçlü talep; üretim kısa tatil."},
+    {"ay": 11, "gun": 11, "ad": "Bekarlar Günü (11.11)", "etki": "Alibaba/JD.com öncülüğünde dünyanın en büyük e-ticaret alışveriş günü; lojistik kapasitesi zorlanır."},
+    {"ay": 6, "gun": 18, "ad": "618 Alışveriş Festivali", "etki": "E-ticaret ve perakende için yılın ikinci büyük alışveriş dönemi."}
+  ],
+  "Diğer": [
+    {"ay": 1, "gun": 1, "ad": "Yılbaşı", "etki": "Perakende, seyahat ve e-ticaret sektörlerinde genel talep artışı."},
+    {"ay": 12, "gun": 25, "ad": "Noel (küresel etki)", "etki": "Küresel perakende, seyahat ve e-ticaret için yılın zirvesi."},
+    {"ay": 0, "gun": 0, "ad": "Yerel bayramlar ve tatiller", "etki": "Ülkeye özgü tatil ve bayramlar tüketim, lojistik ve iş gücü arzını etkiler."}
+  ]
+}

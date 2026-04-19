@@ -1,6 +1,6 @@
 """
 Mevsim modu için yapılandırılmış bağlam: zaman, mevsim fazı, ülke notları,
-isteğe bağlı RSS özeti ve başkent hava özeti (OpenWeather).
+isteğe bağlı RSS özeti, başkent hava özeti (OpenWeather) ve Tavily web araması.
 """
 
 from __future__ import annotations
@@ -14,6 +14,7 @@ from typing import Any
 from xml.etree import ElementTree as ET
 
 import httpx
+from web_arama import topla_mod_aramalari
 
 logger = logging.getLogger(__name__)
 
@@ -198,5 +199,22 @@ def topla_mevsim_baglami(ulke: str) -> str:
     if hava:
         parcalar.append("### Hava (mevsim bağlamı için tek satır)")
         parcalar.append(hava)
+
+    # Analiz rehberi
+    analiz_rehberi = f"""### Analiz Rehberi
+Yukarıdaki mevsim ve haber verilerinden şu soruları yanıtla:
+1. MEVSİMSEL DÖNGÜ: {ay_adi} ayında {ulke} için hangi mevsimsel sektörel döngü aktif? (enerji, tarım, turizm, perakende)
+2. HABER ÖRTÜŞMESI: Bağlamdaki haber başlıkları mevsimsel tezi destekliyor mu, çürütüyor mu?
+3. SEKTÖREL KAZANAN: Bu mevsimde tarihsel olarak hangi sektörler güçlenir?
+4. MEVSİM GEÇİŞİ: Bir sonraki mevsime geçiş yaklaşıyorsa hangi sektörel kayma bekleniyor?
+5. {ulke.upper()} ÖZGÜ: Bu mevsimin {ulke} piyasasına özgü etkisi nedir?
+NOT: Mevsimsel veriye ve haber başlıklarına dayan. Bağlamda olmayan verileri uydurma."""
+
+    # Tavily web araması
+    tavily_blok = topla_mod_aramalari("mevsim", ulke)
+    if tavily_blok:
+        parcalar.append(tavily_blok)
+
+    parcalar.append(analiz_rehberi)
 
     return "\n".join(parcalar)

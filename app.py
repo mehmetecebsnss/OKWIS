@@ -1,6 +1,7 @@
 """
-Makro Lens — Telegram Yatırım Asistanı
-MVP — Mevsim ve Hava modları (OpenWeatherMap ile canlı hava).
+Okwis AI — Telegram Yatırım Asistanı
+8 analiz modu (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)
++ Okwis — Tanrının Gözü (tüm modların birleşimi, ultra sade çıktı).
 """
 
 import asyncio
@@ -27,9 +28,182 @@ from telegram.ext import (
     ConversationHandler,
 )
 
+from dogal_afet_baglam import topla_dogal_afet_baglami
 from hava_baglam import HavaModuHatasi, topla_hava_baglami
 from jeopolitik_baglam import topla_jeopolitik_baglami
+from magazin_baglam import topla_magazin_baglami
 from mevsim_baglam import topla_mevsim_baglami
+from ozel_gunler_baglam import topla_ozel_gunler_baglami
+from sektor_baglam import topla_sektor_baglami
+from trendler_baglam import topla_trendler_baglami
+from alarm_sistemi import (
+    alarm_tara_ve_bildir,
+    kullanici_bildirim_acik_mi,
+    kullanici_bildirim_ayarla,
+    ALARM_ARALIK_SANIYE,
+)
+
+# ─── Kaynak Etiketleri (mod → kullanılan kaynaklar) ──────────────────────────
+_MOD_KAYNAKLARI: dict[str, list[str]] = {
+    "mevsim":     ["Reuters Business RSS", "BBC Business RSS", "OpenWeatherMap API (başkent)", "data/ulke_mevsim.json"],
+    "hava":       ["OpenWeatherMap API (anlık + 5 günlük tahmin)", "data/ulke_mevsim.json"],
+    "jeopolitik": ["Reuters World News RSS", "BBC World News RSS", "data/ulke_mevsim.json"],
+    "sektor":     ["Reuters Business RSS", "BBC Business RSS", "Reuters Technology RSS", "BBC Technology RSS"],
+    "trendler":   ["BBC News RSS", "Reuters World RSS", "BBC Technology RSS"],
+    "magazin":    ["BBC Entertainment RSS", "Reuters Entertainment RSS"],
+    "ozel_gun":   ["data/ozel_gunler.json", "Reuters Business RSS"],
+    "dogal_afet": ["USGS Earthquake API (M5+, son 7 gün)", "Reuters World News RSS", "BBC World News RSS"],
+    "okwis":      ["8 mod paralel (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)"],
+}
+
+_PROB_ZINCIRI_PATH = Path(__file__).resolve().parent / "data" / "prob_zinciri.json"
+
+
+def _prob_zinciri_yukle() -> list[dict]:
+    """Sosyal olasılık zincirlerini yükle."""
+    try:
+        if _PROB_ZINCIRI_PATH.exists():
+            with open(_PROB_ZINCIRI_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+            return data if isinstance(data, list) else []
+    except Exception as e:
+        logger.warning("prob_zinciri.json yüklenemedi: %s", e)
+    return []
+
+
+def _ilgili_prob_zincirleri(mod: str) -> str:
+    """Verilen mod için ilgili sosyal ihtimal zincirlerini özet metin olarak döndür."""
+    zincirler = _prob_zinciri_yukle()
+    ilgili = [z for z in zincirler if mod in z.get("ilgili_modlar", [])]
+    if not ilgili:
+        return ""
+    satirlar = ["### Sosyal İhtimal Zincirleri (bu modla ilgili olasılık senaryoları)"]
+    for z in ilgili[:3]:  # en fazla 3 zincir
+        satirlar.append(f"\n[{z['baslik']}] — Tetikleyici: {z['tetikleyici']}")
+        for adim in z.get("zincir", [])[:4]:
+            satirlar.append(f"  Adım {adim['adim']}: {adim['olay']} → {adim['etki']} (olasılık: %{int(adim['olasilik']*100)})")
+        satirlar.append(f"  Net etki: {z['net_etki']}")
+    return "\n".join(satirlar)
+
+
+def _kaynak_listesi_html(mod_adi: str) -> str:
+    """Analiz sonuna eklenecek kaynak listesi (Telegram HTML)."""
+    kaynaklar = _MOD_KAYNAKLARI.get(mod_adi, [])
+    if not kaynaklar:
+        return ""
+    satirlar = ["<b>━━━━━━━━━━━━━━━━━━━━</b>", "<b>◆ Kullanılan Kaynaklar</b>"]
+    for k in kaynaklar:
+        satirlar.append(f"▸ {_tg_html_escape(k)}")
+    satirlar.append("<i>Analiz bu kaynaklardan derlenen veriler + AI çıkarımına dayanır. Yatırım tavsiyesi değildir.</i>")
+    return "\n".join(satirlar)
+
+
+def _guven_karti_html(
+    mod_adi: str,
+    baglam_metni: str,
+    guven: dict,
+    user_id: int | str | None = None,
+) -> str:
+    """
+    Analiz sonuna eklenen Güven Kartı.
+    Bağlam metnini parse ederek gerçek sayıları gösterir.
+    """
+    # ── Bağlam zenginliğini ölç ──────────────────────────────────────────────
+    metin = baglam_metni or ""
+
+    # Haber başlığı sayısı ("- " ile başlayan satırlar)
+    baslik_sayisi = metin.count("\n- ")
+
+    # Tavily var mı?
+    tavily_var = "Güncel Web Araması" in metin or "Tavily" in metin
+    tavily_sonuc_sayisi = 0
+    if tavily_var:
+        # "1." "2." "3." şeklinde numaralı satırları say
+        import re as _re
+        tavily_sonuc_sayisi = len(_re.findall(r"^\d+\.", metin, _re.MULTILINE))
+
+    # USGS var mı?
+    usgs_var = "USGS" in metin or "M5." in metin or "M6." in metin or "M7." in metin
+    deprem_sayisi = metin.count("- M")
+
+    # Hava verisi var mı?
+    hava_var = "OpenWeather" in metin or "Anlık" in metin or "°C" in metin
+
+    # ── Bağlam zenginliği etiketi ─────────────────────────────────────────────
+    kaynak_skoru = 0
+    kaynak_skoru += min(baslik_sayisi, 10)          # max 10 puan
+    kaynak_skoru += 3 if tavily_var else 0           # Tavily var
+    kaynak_skoru += 2 if usgs_var else 0             # USGS var
+    kaynak_skoru += 1 if hava_var else 0             # Hava var
+
+    if kaynak_skoru >= 12:
+        zenginlik = "🟢 Yüksek"
+    elif kaynak_skoru >= 6:
+        zenginlik = "🟡 Orta"
+    else:
+        zenginlik = "🟠 Düşük"
+
+    # ── AI Motoru ─────────────────────────────────────────────────────────────
+    motor = "Gemini 2.5 Flash"
+    if user_id is not None:
+        plan_bilgi = _kullanici_plan_bilgisi(user_id)
+        if plan_bilgi.get("plan") == "claude":
+            motor = "Claude 3.5 Sonnet"
+        elif AI_PROVIDER == "deepseek":
+            motor = f"DeepSeek ({DEEPSEEK_MODEL})"
+
+    # ── Güven açıklaması ──────────────────────────────────────────────────────
+    g_toplam = guven.get("toplam", 0)
+    g_etiket = guven.get("etiket", "")
+    vkg = guven.get("vkg", 0)
+    mbs = guven.get("mbs", 0)
+
+    # Neden bu skor? — dinamik açıklama
+    aciklama_parcalari = []
+    if vkg >= 80:
+        aciklama_parcalari.append("veri kalitesi yüksek")
+    elif vkg < 50:
+        aciklama_parcalari.append("bazı veri kaynakları boş geldi")
+
+    if mbs >= 70:
+        aciklama_parcalari.append("sinyaller net")
+    elif mbs < 45:
+        aciklama_parcalari.append("sinyaller belirsiz")
+
+    if tavily_var:
+        aciklama_parcalari.append(f"web araması destekledi ({tavily_sonuc_sayisi} sonuç)")
+
+    if not aciklama_parcalari:
+        aciklama_parcalari.append("standart bağlam")
+
+    aciklama = ", ".join(aciklama_parcalari)
+
+    # ── Statik kaynaklar ──────────────────────────────────────────────────────
+    kaynaklar = _MOD_KAYNAKLARI.get(mod_adi, [])
+    kaynak_satirlari = "\n".join(f"  ▸ {_tg_html_escape(k)}" for k in kaynaklar)
+    if tavily_var:
+        kaynak_satirlari += f"\n  ▸ Tavily Web Araması ({tavily_sonuc_sayisi} sonuç)"
+
+    # ── Kart ─────────────────────────────────────────────────────────────────
+    veri_ozeti_parcalari = [f"{baslik_sayisi} haber başlığı"]
+    if tavily_var:
+        veri_ozeti_parcalari.append(f"{tavily_sonuc_sayisi} web sonucu")
+    if usgs_var:
+        veri_ozeti_parcalari.append(f"{deprem_sayisi} deprem kaydı")
+    if hava_var:
+        veri_ozeti_parcalari.append("hava verisi")
+    veri_ozeti = ", ".join(veri_ozeti_parcalari)
+
+    return (
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>◆ Analiz Kalite Kartı</b>\n"
+        f"Veri: {_tg_html_escape(veri_ozeti)}\n"
+        f"Bağlam: {_tg_html_escape(zenginlik)}\n"
+        f"Motor: {_tg_html_escape(motor)}\n"
+        f"Güven: <b>{g_toplam}/100</b> {_tg_html_escape(g_etiket)} — {_tg_html_escape(aciklama)}\n"
+        f"Kaynaklar:\n{kaynak_satirlari}\n"
+        "<i>Yatırım tavsiyesi değildir. Kendi araştırmanı yap.</i>"
+    )
 
 # ─── Ayarlar ──────────────────────────────────────────────────────────────────
 
@@ -44,6 +218,8 @@ logger = logging.getLogger(__name__)
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
+CLAUDE_API_KEY = (os.getenv("CLAUDE_API_KEY") or "").strip()
+CLAUDE_MODEL = (os.getenv("CLAUDE_MODEL") or "claude-3-5-sonnet-20241022").strip()
 # gemini: önce tüm Gemini anahtarları (sırayla); deepseek: önce DeepSeek, sonra yedek Gemini
 AI_PROVIDER = (os.getenv("AI_PROVIDER") or "gemini").strip().lower()
 DEEPSEEK_MODEL = (os.getenv("DEEPSEEK_MODEL") or "deepseek-chat").strip()
@@ -182,14 +358,69 @@ def _deepseek_hatasi_gemini_yedegi_uygun(exc: BaseException) -> bool:
     return any(k in msg for k in anahtarlar)
 
 
-def llm_metin_uret(prompt: str) -> str:
-    """
-    Mevsim / Hava analizleri için tek LLM giriş noktası.
+def _claude_metin_uret(prompt: str) -> str:
+    """Claude API (Anthropic) ile metin üret."""
+    if not CLAUDE_API_KEY:
+        raise RuntimeError("CLAUDE_API_KEY tanımlı değil")
+    try:
+        import anthropic
+    except ModuleNotFoundError as e:
+        raise ModuleNotFoundError(
+            "anthropic paketi yüklü değil. pip install anthropic"
+        ) from e
+    client = anthropic.Anthropic(api_key=CLAUDE_API_KEY)
+    message = client.messages.create(
+        model=CLAUDE_MODEL,
+        max_tokens=2048,
+        messages=[{"role": "user", "content": prompt}],
+    )
+    text = ""
+    for block in (message.content or []):
+        if hasattr(block, "text"):
+            text += block.text
+    return text.strip()
 
-    - AI_PROVIDER=gemini (varsayılan): tüm GEMINI anahtarları sırayla; kota benzeri hata → sıradaki anahtar.
-      Tüm anahtarlar bittiyse veya AI_FALLBACK_DEEPSEEK + DEEPSEEK_API_KEY → DeepSeek.
-    - AI_PROVIDER=deepseek: önce DeepSeek; openai yoksa veya hata + AI_FALLBACK_GEMINI → Gemini anahtarları.
+
+def _claude_hatasi_gemini_yedegi_uygun(exc: BaseException) -> bool:
+    """Claude başarısız → Gemini yedeğine düşülsün mü?"""
+    msg = str(exc).lower()
+    # Geçersiz anahtar — yedek işe yaramaz
+    if "401" in msg or "authentication" in msg or "invalid x-api-key" in msg:
+        return False
+    # Kota, rate limit, overload → yedek dene
+    return any(k in msg for k in ("429", "529", "overloaded", "rate", "quota", "timeout"))
+
+
+def llm_metin_uret(prompt: str, user_id: int | str | None = None) -> str:
     """
+    Tek LLM giriş noktası — kullanıcı planına göre motor seçer.
+
+    Plan → Motor:
+      claude  → Claude API (Anthropic) | anahtar yoksa Gemini'ye düşer
+      pro     → Gemini (limit bypass, kota biterse DeepSeek)
+      free    → Gemini (varsayılan)
+      (AI_PROVIDER=deepseek olduğunda: tüm planlar DeepSeek önce, Gemini yedek)
+    """
+    # Claude planı: önce Claude dene
+    if user_id is not None:
+        plan_bilgi = _kullanici_plan_bilgisi(user_id)
+        if plan_bilgi.get("plan") == "claude":
+            if CLAUDE_API_KEY:
+                try:
+                    out = _claude_metin_uret(prompt)
+                    if not out:
+                        raise RuntimeError("Claude boş yanıt döndü")
+                    logger.info("Claude API kullanıldı (user=%s)", user_id)
+                    return out
+                except Exception as e:
+                    if _claude_hatasi_gemini_yedegi_uygun(e):
+                        logger.warning("Claude başarısız, Gemini'ye düşülüyor (user=%s): %s", user_id, e)
+                        # Gemini zincirine devam et
+                    else:
+                        raise
+            else:
+                logger.warning("Kullanıcı claude planında ama CLAUDE_API_KEY eksik, Gemini kullanılıyor (user=%s)", user_id)
+
     keys = _gemini_anahtarlari()
 
     if AI_PROVIDER == "deepseek":
@@ -235,7 +466,9 @@ def llm_metin_uret(prompt: str) -> str:
 
 MOD_SECIMI = 0       # Kullanıcı analiz modu seçiyor (Mevsim vb.)
 ULKE_SECIMI = 1      # Kullanıcı ülke seçiyor
-FORMAT_SECIMI = 2    # Çıktı: uzun anlatım / kısa özet
+VARLIK_SORGUSU = 2   # Kullanıcı varlık adı yazıyor (metin girişi, opsiyonel)
+FORMAT_SECIMI = 3    # Çıktı: uzun anlatım / kısa özet
+OKWIS_DETAY_SECIMI = 4  # Okwis kısa analizden sonra detay isteği
 
 # Çıktı stilleri (mevsim analizi)
 CIKTI_DETAY = "detay"
@@ -245,9 +478,235 @@ CIKTI_OZET = "ozet"
 ANALIZ_MEVSIM = "mevsim"
 ANALIZ_HAVA = "hava"
 ANALIZ_JEOPOLITIK = "jeopolitik"
+ANALIZ_SEKTOR = "sektor"
+ANALIZ_TRENDLER = "trendler"
+ANALIZ_MAGAZIN = "magazin"
+ANALIZ_OZEL_GUN = "ozel_gun"
+ANALIZ_DOGAL_AFET = "dogal_afet"
 
 # Telegram bot mesaj limiti (HTML dahil tüm metin)
 TELEGRAM_MAX_UZUNLUK = 4096
+
+# Dil kuralı — tüm analiz fonksiyonlarında kullanılır
+# Bağlam verisi İngilizce olsa bile kullanıcıya her zaman Türkçe çıktı verilir.
+ANALIZ_DIL_NOTU = (
+    "Her zaman Türkçe yaz. "
+    "Yabancı şirket/sembol/yer adları parantez içinde orijinal haliyle kalabilir."
+)
+
+# Analist kimliği — tüm prompt'larda kullanılır
+_ANALIST_KIMLIK = """Sen kıdemli bir makro yatırım analistisin. Hedge fon deneyimin var.
+Görevin: bağlamdaki verileri yorumlayıp net, cesur, aksiyon odaklı çıkarımlar yapmak.
+Kurallar:
+- Belirsiz "yatay kalabilir", "etkilenebilir" gibi kaçamak ifadeler kullanma. Net yön söyle.
+- Her çıkarımda KISA VADE (1-2 hafta), ORTA VADE (1-3 ay), UZUN VADE (3-12 ay) ayrımı yap.
+- "Değerlendirilebilir" değil, "al", "izle", "kaçın" gibi net aksiyon kelimeleri kullan.
+- Güven düşükse bunu açıkça söyle: "Bu sinyal zayıf, pozisyon küçük tut."
+- Ters senaryo her zaman somut olsun: "Eğer X olursa tez çöker."
+- Yatırım tavsiyesi değil, analist görüşü veriyorsun — bu farkı kullanıcı biliyor.
+- ASLA Markdown kullanma: ** * __ _ # gibi semboller kesinlikle yasak.
+- ASLA em dash (—) kullanma, sadece normal tire (-) kullan.
+- ASLA madde işareti veya liste yapma. Düz cümle yaz."""
+
+# ─── Varlık Tipi Tespit ve Direktif İşlevleri ─────────────────────────────────
+
+def _varlik_tipi_tespit(varlik: str) -> str:
+    """Varlık adından türünü tespit et."""
+    varlik_lower = varlik.lower() if varlik else ""
+    
+    # Emtia: petrol, altın, gümüş, bakır, doğalgaz, kömür, soya, buğday, kahve, kakao, demir, vs.
+    emtialar = [
+        "petrol", "crude", "gas", "gaz", "doğalgaz", "lng",
+        "altın", "gold", "gümüş", "silver", "bakır", "copper",
+        "demir", "iron", "kömür", "coal", "çinko", "zinc",
+        "soya", "soybeans", "buğday", "wheat", "mısır", "corn",
+        "kahve", "coffee", "kakao", "cocoa", "şeker", "sugar",
+        "nikel", "nickel", "kurşun", "lead", "tın", "tin"
+    ]
+    
+    # Kripto: bitcoin, ethereum, altcoin, vb.
+    kriptolar = [
+        "bitcoin", "btc", "ethereum", "eth", "altcoin", "crypto",
+        "kripto", "doge", "cardano", "ada", "solana", "avax"
+    ]
+    
+    # Hisse: şirket adları (Apple, Microsoft, Tesla, vs.) — genelde büyük harf veya ABD sembolü
+    # Burada basit heuristic: 2-5 karakterli sembol (AAPL, MSFT) veya bilinen isim
+    hisseler = [
+        "apple", "aapl", "microsoft", "msft", "tesla", "tsla",
+        "amazon", "amzn", "google", "googl", "meta", "metaaa",
+        "nvidia", "nvda", "amd", "intel", "ibm", "coca", "ko",
+        "mcdonald", "mcd", "accenture", "act", "sap", "ibm"
+    ]
+    
+    # Para/Döviz
+    dovizler = ["dolar", "dollar", "euro", "sterlin", "pound", "yen", "para", "currency"]
+    
+    for emtia in emtialar:
+        if emtia in varlik_lower:
+            return "emtia"
+    
+    for kripto in kriptolar:
+        if kripto in varlik_lower:
+            return "kripto"
+    
+    for hisse in hisseler:
+        if hisse in varlik_lower:
+            return "hisse"
+    
+    for doviz in dovizler:
+        if doviz in varlik_lower:
+            return "doviz"
+    
+    # Default: bilinmiyor (genelleme)
+    return "diğer"
+
+
+def _varlik_detay_directive(varlik: str, varlik_tipi: str, ay_adi: str, ulke: str) -> str:
+    """
+    Varlık tipi + ay kombinasyonuna göre detaylı analiz direktifi oluştur.
+    Bu direktif prompt başına enjekte edilecek, modela o varlığın mevsimsel
+    davranışı, fiyat etkileyen faktörler vs. hakkında net talimatlar verir.
+    """
+    varlik_lower = varlik.lower() if varlik else ""
+    
+    # Mevsim belirleme (basit heuristic)
+    kis_aylari = {"Aralık", "Ocak", "Şubat"}
+    yaz_aylari = {"Haziran", "Temmuz", "Ağustos"}
+    ilkbahar = {"Mart", "Nisan", "Mayıs"}
+    sonbahar = {"Eylül", "Ekim", "Kasım"}
+    
+    mevsim = "kış"
+    if ay_adi in kis_aylari:
+        mevsim = "kış"
+    elif ay_adi in yaz_aylari:
+        mevsim = "yaz"
+    elif ay_adi in ilkbahar:
+        mevsim = "ilkbahar"
+    elif ay_adi in sonbahar:
+        mevsim = "sonbahar"
+    
+    if varlik_tipi == "emtia":
+        # Emtia spesifik logik
+        if "petrol" in varlik_lower or "crude" in varlik_lower or "gas" in varlik_lower:
+            if mevsim == "kış":
+                return f"""
+**VARLIK ANALİZİ — PETROL ({ay_adi}):**
+{ay_adi} kış döneminin ortası/sonu; **enerji talebinin pik noktası**.
+— Isınma (doğalgaz, ısıtma yağı) talebinden petrol fiyatları tipik yükseliş gösterir
+— Enerji enflasyonu → taşımacılık, lojistik maliyetleri artar
+— Coğrafı riskler (Orta Doğu, Rusya) petrol volatilitesini arttırır
+— OPEC karmaşası, dolar kuru, stok seviyeleri asıl belirleyiciler
+**Soru:** {ulke}'de bu dönemde enerji talebinin fiyatlaşması, yatırımcı pozisyonları nasıl?
+**Bilinçlendir:** Petrol genelde kış aylarında enerji talebinden yüksek volatilite gösterir; fakat jeopolitik şoklara karşı da çabuk tepki verir. {ay_adi} tarihinde hangi coğrafi riskler devreye giriyor?
+"""
+            elif mevsim == "yaz":
+                return f"""
+**VARLIK ANALİZİ — PETROL ({ay_adi}):**
+{ay_adi} yaz mevsiminin zirve dönemi; **ulaştırma (havayolu, turizm, karayolu) talebinin pik noktası**.
+— Enerji talebindeki tepe (klima, trafiğin yoğunluğu) → petrol tüketimi maksimum
+— Stok seviyeleri düşerse (musim tüketimi), fiyatlar hızlı yükselebilir
+— Hava koşulları (kasırga, kuraklık) Körfez petrol üretimini etkileyebilir
+— Dolar kuru petrol fiyatı ile ters ilişkili; para güçlenirse fiyatlar düşer
+**Soru:** {ulke}'de {ay_adi}'da turizm/lojistik talebinin petrol fiyatı üzerindeki baskısı ne kadar şiddetli?
+**Bilinçlendir:** Petrol yaz döneminde arz şoklarına (coğrafi riziko, stok) karşı çok hassastır. Hava tahminlerini, OPEC kararlarını, dolar hareketlerini takip etmek kritik.
+"""
+            else:  # İlkbahar, sonbahar
+                return f"""
+**VARLIK ANALİZİ — PETROL ({ay_adi}):**
+{ay_adi} geçiş mevsimi; **enerji talep belirsizliği ve jeopolitik şoklarının ön planda olduğu dönem**.
+— Kıştan yaza (veya tam tersi) geçişte enerji talebinde kütlesel değişim
+— Geçiş dönemleri stok ayarlamaları → arz/talep dengesizliği
+— Bölgesel krizler, OPEC kararmaşaları bu dönemde hızlıca fiyat hareket ettiriyor
+— Jeopolitik riski ve mevsimsel kütlesel değişim birlikte çalışır
+**Soru:** {ulke} perspektifinden, {ay_adi}'da hangi coğrafi risk veya tüketim değişimi petrol fiyatını kontrol ediyor?
+**Bilinçlendir:** Geçiş mevsimlerinde petrol volatilitesi yüksek; dolar, stoklar, jeopolitik riski yakından takip etmek gerek.
+"""
+        
+        elif "altın" in varlik_lower or "gold" in varlik_lower:
+            if mevsim == "kış":
+                return f"""
+**VARLIK ANALİZİ — ALTIN ({ay_adi}):**
+{ay_adi} enflasyonist baskı altında; **merkez bankaları sıkı para politikasında**.
+— Kış aylarında enflasyon baskısı yüksek (enerji, lojistik maliyetleri)
+— Altın enflasyon koruması + güvenli liman rolü oynar
+— Faiz oranları yükselişte altın fiyatları genelde baskıda (sabit getiri yatırımları tercih)
+— Küresel risk ortamı altının talep destek düzeyi belirler
+**Soru:** {ulke}'de {ay_adi}'da merkez bankası politikası, reel faizler altın tercihini nasıl etkiliyor?
+**Bilinçlendir:** Altın tipik olarak reel faiz negatifse yükselir; enflasyonist dönemlerde koruma sağlar ama nominal faiz yükselişte perde olabilir.
+"""
+            else:
+                return f"""
+**VARLIK ANALİZİ — ALTIN ({ay_adi}):**
+{ay_adi} mevsiminde altın talep ve dolar kuruna bağlı; **risk iştahı makro belirleyici**.
+— Altın dolar kuru ile ters ilişkili; dolar güçlenirse altın baskıda
+— Jeopolitik riski artarsa altın güvenli liman olarak yükselir
+— Gerçek faizler (nominal faiz - enflasyon) altının uzun vadeli hareketi belirler
+— {ay_adi}'da merkez bankaları para politikası sinyalleri kritik
+**Soru:** {ulke}-global dolar kuru, risk ortamı, merkez bankası sinyallerinden altın için hangileri en etkili?
+**Bilinçlendir:** Altın volatilitesi düşük ama trend uzun vadeli; dolar, faiz, jeopolitik riski izle.
+"""
+        
+        else:
+            # Diğer emtialar (doğalgaz, bakır, vb.)
+            return f"""
+**VARLIK ANALİZİ — EMTIA ({varlik}, {ay_adi}):**
+{varlik} gibi emtia varlıklar mevsimsel ve coğrafi arz/talep değişimine hassastır.
+— {ay_adi}'da bu emtianın spesifik tüketim döngüsü nedir? (enerji, inşaat, tarım vs.)
+— Coğrafi arz riskleşmesi (üretim ülkeleri, lojistik) fiyat volatilitesini arttırır
+— Dolar kuru emtia fiyatlarını ters yönde etkiler (dolar güçlenir = fiyat düşer)
+— Stok seviyeleri ve üretici güvenine bakarak trend anlayabiliriz
+**Soru:** {ulke} penceresinden, {varlik} için {ay_adi}'da arz/talep dengesinin yönü nedir?
+**Bilinçlendir:** Emtialar hassas; mevsimsellik, coğrafya, dolar hızlıca fiyatı oynatabilir.
+"""
+    
+    elif varlik_tipi == "kripto":
+        return f"""
+**VARLIK ANALİZİ — KRİPTO ({varlik}, {ay_adi}):**
+{varlik} gibi kripto varlıklar makro risk ortamı, merkez bankası politikası, regülasyon haberleri ve teknoloji trendine çok hassastır.
+— {ay_adi} merkez bankası beklentilerini kontrol et; sıkı para → risk azlaması → kripto baskıda
+— Jeopolitik riski + risk iştahı kripto'nun temel motoru
+— Teknoloji sektörü trendleri ({varlik} ile korelatif) önemli
+— Regülasyon haberleri (SEC, AB) volatilitelerinin asıl kaynağı
+**Soru:** {ulke} ve global perspektiften, {ay_adi}'da risk iştahı kripto lehine mi aleyhine mi yöneliyör?
+**Bilinçlendir:** Kripto risk-on varlık; makro ortamda hızlı tepki gösterir. Ancak uzun vadeli trend oluşturabilir; trend başında yer almak kritik.
+"""
+    
+    elif varlik_tipi == "hisse":
+        return f"""
+**VARLIK ANALİZİ — HİSSE ({varlik}, {ay_adi}):**
+{varlik} hissesinin {ay_adi}'daki davranışı şirketin sektörü, kazanç döngüsü, makro ortama bağlı.
+— Sektörel mevsimsellik: teknoloji (Q1/Q4), tüketim (Q4), enerji (yaz talep), finansal (faiz döngüsü)
+— {ay_adi}'daki merkez bankası beklentileri, reel faizler şirkete discount uygulanmasını belirler (şirket kazancı geleceğe indirgeniyor)
+— Jeopolitik riskler sektörel maruz kalımı etkiler (enerji → yüksek, teknoloji → orta, tüketim → düşük)
+— Para kuru, işletme giderleri (enerji, lojistik) karı etkileyebilir
+**Soru:** {varlik}'nin sektörü, {ay_adi}'da makro ortam (faiz, talep, coğrafya) tarafından nasıl etkileniyor?
+**Bilinçlendir:** Hisse şirkete vs (sektörel denge, arz/talep, makro ortam) karar verir. Sektör trend ve makro döngü tutarlı olmalı.
+"""
+    
+    elif varlik_tipi == "doviz":
+        return f"""
+**VARLIK ANALİZİ — PARA ({varlik}, {ay_adi}):**
+{varlik} parası faiz farkılığı (carry trade), ticaret dengesi, jeopolitik güvenlik algısı tarafından belirleniyor.
+— Faiz farkı: {ulke} vs dış pazarın faiz oranları → {varlik} tercihini etkiler (yüksek faiz → talep artar)
+— Jeopolitik riski: güvenli liman paradır (dolar €, vs. karşı güçlenir)
+— Ticaret dengesi: {ulke}'nin cari hesap açığı/fazlası {varlik} kurunu uzun vadede etkileyebilir
+— {ay_adi} merkez bankası beklentileri, enflasyon verileri haber (piyasa o ay haber bekliyorsa volatilite yüksek)
+**Soru:** {ay_adi}'da {varlik} karşı dolar kuru eğilimi faiz farkından mı, jeopolitikten mi, ticaret dengelerinden mi kaynaklanıyor?
+**Bilinçlendir:** Para kuru makro ortamın barometresine benzer; faiz, ticaret, güvenliği yansıtır. Uzun trend vs. kısa volatiliteyi ayırt etmek gerek.
+"""
+    
+    else:  # Diğer (bilinmeyen varlık)
+        return f"""
+**VARLIK ANALİZİ — {varlik} ({ay_adi}):**
+{varlik} varlığı hakkında spesifik mevsimsel veya makro davranış tarafından belirleniyor.
+— Varlık sınıfını (emtia/kripto/hisse/para vs.) belirledikten sonra mevsimsel/coğrafi etkileri sosyoloji et
+— {ay_adi}'da makro ortam (faiz, risk, jeopolitik) bu varlığa nasıl etki ediyor?
+— Geçmiş dönemlerde benzer {ay_adi} aylarında bu varlık nasıl davranmış?
+**Soru:** {varlik}'nin {ay_adi}'daki temel hareketi neyle açıklanabilir?
+**Bilinçlendir:** Tanımadığın varlık için pazar katılımcılarının algısını, arz/talep dinamiklerini araştır.
+"""
+
 
 # ─── Sabitler ─────────────────────────────────────────────────────────────────
 
@@ -257,6 +716,8 @@ _ANALIZ_OLAYLARI_PATH = _METRICS_DIR / "analiz_olaylari.jsonl"
 _KULLANIM_LIMIT_PATH = _METRICS_DIR / "kullanim_limitleri.json"
 _PLAN_KAYIT_PATH = _METRICS_DIR / "plan_kullanicilari.json"
 _ODEME_OLAYLARI_PATH = _METRICS_DIR / "odeme_olaylari.jsonl"
+_PROFIL_PATH = _METRICS_DIR / "kullanici_profilleri.json"
+_TAHMIN_KAYIT_PATH = _METRICS_DIR / "tahmin_kayitlari.jsonl"
 ANALIZ_GUNLUK_LIMIT = int((os.getenv("ANALIZ_GUNLUK_LIMIT") or "3").strip() or 3)
 ADMIN_USER_IDS = {
     int(x.strip())
@@ -265,16 +726,37 @@ ADMIN_USER_IDS = {
 }
 
 # Uyarı politikası (plan / MIMARI): kısa metin her zaman bot şablonuyla; model uzun disclaimer üretmez.
-ANALIZ_FOOTER = (
-    "\n\n—\n"
-    "Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir. "
-    "Yatırım kararı için kendi araştırmanı yap."
-)
+ANALIZ_FOOTER_HTML = "<b>Yeni analiz:</b> /analiz"
 
 
 def _tg_html_escape(text: str) -> str:
     """Telegram HTML modu için model/ kullanıcı metnini güvenle kaçır."""
     return html.escape(text or "", quote=False)
+
+
+def _markdown_temizle(text: str) -> str:
+    """
+    Model çıktısındaki Markdown artıklarını temizle.
+    **bold** → düz metin, *italic* → düz metin, — → -, ``` → kaldır.
+    """
+    if not text:
+        return text
+    # **bold** ve __bold__
+    text = re.sub(r'\*\*(.+?)\*\*', r'\1', text)
+    text = re.sub(r'__(.+?)__', r'\1', text)
+    # *italic* ve _italic_
+    text = re.sub(r'\*(.+?)\*', r'\1', text)
+    text = re.sub(r'_(.+?)_', r'\1', text)
+    # ``` kod blokları
+    text = re.sub(r'```.*?```', '', text, flags=re.DOTALL)
+    text = re.sub(r'`(.+?)`', r'\1', text)
+    # Em dash ve özel tireler → normal tire
+    text = text.replace('—', '-').replace('–', '-')
+    # Markdown başlıkları ### ## #
+    text = re.sub(r'^#{1,6}\s+', '', text, flags=re.MULTILINE)
+    # Madde işaretleri * - + satır başında (zaten • kullanıyoruz)
+    text = re.sub(r'^\s*[\*\-\+]\s+', '', text, flags=re.MULTILINE)
+    return text.strip()
 
 
 def telegram_html_parcalara_bol(metin: str, ust_sinir: int = TELEGRAM_MAX_UZUNLUK) -> list[str]:
@@ -379,6 +861,11 @@ def _guven_skoru_hesapla(analiz_turu: str, baglam_metni: str) -> dict[str, int |
         ANALIZ_MEVSIM: 88,
         ANALIZ_HAVA: 74,
         ANALIZ_JEOPOLITIK: 62,
+        ANALIZ_SEKTOR: 70,
+        ANALIZ_TRENDLER: 58,
+        ANALIZ_MAGAZIN: 45,
+        ANALIZ_OZEL_GUN: 82,
+        ANALIZ_DOGAL_AFET: 65,
     }
     mbp = mbp_tabani.get(analiz_turu, 60)
 
@@ -452,6 +939,94 @@ def _analiz_olayi_kaydet(
         )
     except Exception as e:
         logger.warning("Analiz olayı kaydedilemedi: %s", e)
+
+
+# ─── Kullanıcı Profil Sistemi ─────────────────────────────────────────────────
+
+def _profil_yukle() -> dict[str, dict]:
+    """Tüm kullanıcı profillerini yükle."""
+    if not _PROFIL_PATH.exists():
+        return {}
+    try:
+        with open(_PROFIL_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.warning("Profil dosyası okunamadı: %s", e)
+    return {}
+
+
+def _profil_kaydet(data: dict[str, dict]) -> None:
+    try:
+        _METRICS_DIR.mkdir(parents=True, exist_ok=True)
+        with open(_PROFIL_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning("Profil dosyası yazılamadı: %s", e)
+
+
+def _kullanici_profili_al(user_id: int | str) -> dict | None:
+    """Kullanıcının profilini döndür; yoksa None."""
+    data = _profil_yukle()
+    return data.get(str(user_id))
+
+
+def _kullanici_profili_kaydet(user_id: int | str, profil_metni: str) -> None:
+    """Kullanıcı profilini kaydet/güncelle."""
+    data = _profil_yukle()
+    data[str(user_id)] = {
+        "profil": profil_metni.strip(),
+        "guncelleme": datetime.now(timezone.utc).isoformat(),
+    }
+    _profil_kaydet(data)
+
+
+def _kullanici_profili_sil(user_id: int | str) -> bool:
+    """Kullanıcı profilini sil. Başarılıysa True döner."""
+    data = _profil_yukle()
+    if str(user_id) in data:
+        del data[str(user_id)]
+        _profil_kaydet(data)
+        return True
+    return False
+
+
+def _profil_okwis_blogu(profil: dict | None) -> str:
+    """
+    Profil varsa Okwis prompt'una eklenecek kişiselleştirme bloğunu üret.
+    Yoksa boş string döner.
+    """
+    if not profil:
+        return ""
+    metin = (profil.get("profil") or "").strip()
+    if not metin:
+        return ""
+    return (
+        "### Kullanıcı Profili (KİŞİSELLEŞTİRME — bu bilgilere göre analizi özelleştir)\n"
+        f"{metin}\n\n"
+        "ÖNEMLI: Yukarıdaki profil bilgilerini kullanarak analizi tamamen bu kişiye özelleştir.\n"
+        "- Elindeki varlıkları sahiplen: 'senin bitcoin'in', 'portföyündeki X' gibi konuş.\n"
+        "- Soyut tavsiye değil, somut aksiyon ver: 'X fiyatına gelince sat', 'Y seviyesinde al' gibi.\n"
+        "- Kişinin ilgi alanlarına ve risk profiline göre önceliklendirme yap.\n"
+        "- Uzaktan konuşan analist değil, portföyünü bilen yakın bir danışman gibi konuş.\n"
+        "- Profilde belirtilen her varlık için ayrı bir değerlendirme yap."
+    )
+
+
+def _kullanici_profili_html(profil: dict) -> str:
+    """Profili Telegram HTML formatında göster."""
+    metin = (profil.get("profil") or "").strip()
+    guncelleme = (profil.get("guncelleme") or "")[:10]
+    return (
+        f"<b>◆ Profilin</b>\n"
+        f"<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+        f"{_tg_html_escape(metin)}\n\n"
+        f"<i>Son güncelleme: {_tg_html_escape(guncelleme)}</i>"
+    )
+
+
+# ─── Profil Konuşma State'leri ────────────────────────────────────────────────
+PROFIL_METIN_BEKLENIYOR = 10  # /profil komutundan sonra metin bekleniyor
 
 
 def _kullanim_limitleri_yukle() -> dict[str, dict[str, int]]:
@@ -570,8 +1145,8 @@ def _kullanici_plan_bilgisi(user_id: int | str) -> dict[str, str]:
     plan = str(kayit.get("plan") or "free").lower()
     pro_until = str(kayit.get("pro_until") or "")
 
-    # Süresi dolmuş pro kayıtlarını otomatik free yap.
-    if plan == "pro" and pro_until:
+    # Süresi dolmuş pro/claude kayıtlarını otomatik free yap.
+    if plan in ("pro", "claude") and pro_until:
         bitis = _tarih_parse_iso(pro_until)
         if bitis is not None and bitis < date.today():
             data[uid] = {"plan": "free", "pro_until": ""}
@@ -586,8 +1161,15 @@ def _kullanici_plan_bilgisi(user_id: int | str) -> dict[str, str]:
 
 
 def _kullanici_pro_mu(user_id: int | str) -> bool:
+    """Pro veya Claude planında mı? (limit bypass için)"""
     info = _kullanici_plan_bilgisi(user_id)
-    return info.get("plan") == "pro"
+    return info.get("plan") in ("pro", "claude")
+
+
+def _kullanici_claude_mi(user_id: int | str) -> bool:
+    """Claude planında mı?"""
+    info = _kullanici_plan_bilgisi(user_id)
+    return info.get("plan") == "claude"
 
 
 def _kalan_pro_gun(pro_until: str) -> int:
@@ -634,6 +1216,149 @@ def _odeme_kayit_son_n(n: int = 10) -> list[dict[str, str]]:
     return satirlar[-max(n, 1):]
 
 
+
+# --- Tahmin Kayit Sistemi (Parca L) ---
+
+def _yon_tespit(analiz_metni: str) -> str:
+    metin = (analiz_metni or "").lower()
+    bullish = ["yukseli", "yukseleceğ", "artis", "al/izle", "bullish", "toparlanma",
+               "pozitif", "firsat", "kazanan", "pozisyon: al", "yon: yukseli",
+               "yukseliyor", "guclen"]
+    bearish = ["dusus", "duseceğ", "kacin", "bearish", "dusuyor", "gerileme",
+               "negatif", "baski", "azalt", "pozisyon: sat", "yon: dusus"]
+    neutral = ["yatay", "izle", "bekle", "notr", "neutral", "belirsiz", "pozisyon: tut"]
+    b = sum(1 for w in bullish if w in metin)
+    br = sum(1 for w in bearish if w in metin)
+    n = sum(1 for w in neutral if w in metin)
+    if b == 0 and br == 0 and n == 0:
+        return "neutral"
+    if b > br and b > n:
+        return "bullish"
+    if br > b and br > n:
+        return "bearish"
+    return "neutral"
+
+
+def _sure_tespit(analiz_metni: str) -> str:
+    metin = (analiz_metni or "").lower()
+    if "1-2 hafta" in metin or "kisa vade" in metin or "kisa vade" in metin:
+        return "1-2 hafta"
+    if "1-3 ay" in metin or "orta vade" in metin:
+        return "1-3 ay"
+    if "3-12 ay" in metin or "uzun vade" in metin:
+        return "3-12 ay"
+    return "belirsiz"
+
+
+def _tahmin_kaydet(*, mod: str, ulke: str, varlik: str, analiz_metni: str, user_id=None) -> dict:
+    yon = _yon_tespit(analiz_metni)
+    sure = _sure_tespit(analiz_metni)
+    bugun = date.today()
+    gun = {"1-2 hafta": 14, "1-3 ay": 45, "3-12 ay": 180}.get(sure, 14)
+    hedef = bugun + timedelta(days=gun)
+    tahmin = {
+        "ts_utc": datetime.now(timezone.utc).isoformat(),
+        "tarih": bugun.isoformat(),
+        "mod": mod,
+        "ulke": ulke,
+        "varlik": varlik or "genel",
+        "yon": yon,
+        "sure": sure,
+        "hedef_tarih": hedef.isoformat(),
+        "dogrulandi": None,
+        "gercek_yon": None,
+        "user_id": str(user_id) if user_id else None,
+    }
+    try:
+        _METRICS_DIR.mkdir(parents=True, exist_ok=True)
+        with open(_TAHMIN_KAYIT_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(tahmin, ensure_ascii=False) + "\n")
+    except Exception as e:
+        logger.warning("Tahmin kaydedilemedi: %s", e)
+    return tahmin
+
+
+def _tahmin_gecmis_yukle(son_n: int = 20) -> list:
+    if not _TAHMIN_KAYIT_PATH.exists():
+        return []
+    kayitlar = []
+    try:
+        with open(_TAHMIN_KAYIT_PATH, encoding="utf-8") as f:
+            for satir in f:
+                s = satir.strip()
+                if not s:
+                    continue
+                try:
+                    o = json.loads(s)
+                    if isinstance(o, dict):
+                        kayitlar.append(o)
+                except json.JSONDecodeError:
+                    continue
+    except Exception as e:
+        logger.warning("Tahmin gecmisi okunamadi: %s", e)
+    return kayitlar[-son_n:]
+
+
+def _tahmin_istatistik() -> dict:
+    kayitlar = _tahmin_gecmis_yukle(son_n=500)
+    toplam = len(kayitlar)
+    if not toplam:
+        return {"toplam": 0, "dogrulanan": 0, "dogru": 0, "yanlis": 0, "oran": None}
+    dogrulanan = [k for k in kayitlar if k.get("dogrulandi") is not None]
+    dogru = [k for k in dogrulanan if k.get("dogrulandi") is True]
+    yanlis = [k for k in dogrulanan if k.get("dogrulandi") is False]
+    oran = (len(dogru) / len(dogrulanan) * 100) if dogrulanan else None
+    return {"toplam": toplam, "dogrulanan": len(dogrulanan),
+            "dogru": len(dogru), "yanlis": len(yanlis), "oran": oran}
+
+
+def _gecmis_tahminler_html(son_n: int = 10) -> str:
+    tahminler = _tahmin_gecmis_yukle(son_n)
+    if not tahminler:
+        return (
+            "<b>\u25c6 Tahmin Ge\u00e7mi\u015fi</b>\n"
+            "<b>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</b>\n\n"
+            "Hen\u00fcz tahmin kay\u0131d\u0131 yok. Analiz yap\u0131nca otomatik kaydedilir."
+        )
+    yon_emoji = {"bullish": "\U0001f7e2", "bearish": "\U0001f534", "neutral": "\U0001f7e1"}
+    ok_emoji = {True: "\u2713", False: "\u2717", None: "\u23f3"}
+    istat = _tahmin_istatistik()
+    s = [
+        "<b>\u25c6 Tahmin Ge\u00e7mi\u015fi</b>",
+        "<b>\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501\u2501</b>",
+    ]
+    s.append(f"Toplam: <b>{istat['toplam']}</b> tahmin   Do\u011frulanan: <b>{istat['dogrulanan']}</b>")
+    if istat["oran"] is not None:
+        dogru = istat['dogru']
+        dogrulanan = istat['dogrulanan']
+        oran = istat['oran']
+        s.append(f"Do\u011fruluk: <b>{dogru}/{dogrulanan}</b> ({oran:.0f}%)")
+    s.append("")
+    for t in reversed(tahminler):
+        tarih = (t.get("tarih") or "")[:10]
+        mod = t.get("mod", "?")
+        ulke = t.get("ulke", "?")
+        varlik = t.get("varlik", "genel")
+        yon = t.get("yon", "neutral")
+        sure = t.get("sure", "?")
+        hedef = (t.get("hedef_tarih") or "")[:10]
+        dogru = t.get("dogrulandi")
+        e_yon = yon_emoji.get(yon, "\u26aa")
+        e_ok = ok_emoji.get(dogru, "\u23f3")
+        varlik_str = f" \u00b7 {_tg_html_escape(varlik)}" if varlik != "genel" else ""
+        s.append(
+            f"{e_ok} <b>{_tg_html_escape(tarih)}</b> "
+            f"{_tg_html_escape(mod)}/{_tg_html_escape(ulke)}{varlik_str}\n"
+            f"   {e_yon} <b>{_tg_html_escape(yon)}</b> \u00b7 {_tg_html_escape(sure)} \u00b7 hedef: {_tg_html_escape(hedef)}"
+        )
+    s.extend([
+        "",
+        "<i>\u23f3 bekliyor \u00b7 \u2713 do\u011frulandi \u00b7 \u2717 yanl\u0131\u015f</i>",
+        "<i>Do\u011frulama \u015fu an manuel \u2014 ileride fiyat API\u2019si ile otomatik olacak.</i>",
+    ])
+    return "\n".join(s)
+
+
 def _performans_ozeti_hesapla() -> str:
     """
     JSONL analiz olaylarından canlı özet üretir.
@@ -641,7 +1366,7 @@ def _performans_ozeti_hesapla() -> str:
     """
     if not _ANALIZ_OLAYLARI_PATH.exists():
         return (
-            "<b>📈 Canlı performans</b>\n"
+            "<b>◆ Canlı Performans</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
             "Henüz kayıt yok. Önce birkaç analiz çalıştırıp tekrar dene."
         )
@@ -662,14 +1387,14 @@ def _performans_ozeti_hesapla() -> str:
     except Exception as e:
         logger.warning("Performans dosyası okunamadı: %s", e)
         return (
-            "<b>📈 Canlı performans</b>\n"
+            "<b>◆ Canlı Performans</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
             "Performans verisi okunamadı. Biraz sonra tekrar dene."
         )
 
     if not olaylar:
         return (
-            "<b>📈 Canlı performans</b>\n"
+            "<b>◆ Canlı Performans</b>\n"
             "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
             "Kayıt dosyası boş görünüyor. Önce birkaç analiz çalıştır."
         )
@@ -733,7 +1458,7 @@ def _performans_ozeti_hesapla() -> str:
                 mod_stats[mod]["sum30"] += score
 
     satirlar = [
-        "<b>📈 Canlı performans</b>",
+        "<b>◆ Canlı Performans</b>",
         "<b>━━━━━━━━━━━━━━━━━━━━</b>",
         "",
         f"Toplam kayıt: <b>{toplam}</b>",
@@ -871,7 +1596,9 @@ async def gonder_parcali_html(
 
 def _ozet_satirlari_html(govde: str) -> str:
     """Kısa özeti premium kart görünümünde sun."""
-    etiketler = "ÖZET|SEKTÖR|ŞİRKETLER|VARLIK|GİRİŞİM|RİSK|GÜVEN|TERS_SENARYO"
+    # Önce markdown artıklarını temizle
+    govde = _markdown_temizle(govde or "")
+    etiketler = "ÖZET|KISA_VADE|ORTA_VADE|SEKTÖR|ŞİRKETLER|VARLIK|GİRİŞİM|RİSK|GÜVEN|TERS_SENARYO|PİYASA_YÖNÜ|YÜKSELEN|DÜŞEN|MARKA_ETKİSİ"
     desen = re.compile(rf"^({etiketler})\s*:\s*(.*)$", re.IGNORECASE)
     alanlar: dict[str, str] = {}
     for ham in (govde or "").strip().splitlines():
@@ -880,36 +1607,46 @@ def _ozet_satirlari_html(govde: str) -> str:
             continue
         m = desen.match(s)
         if m:
-            etiket = m.group(1).strip()
+            etiket = m.group(1).strip().upper()
             icerik = m.group(2).strip()
-            alanlar[etiket.upper()] = icerik
+            alanlar[etiket] = icerik
         else:
-            # Beklenmeyen satırları özete ekle (bozulmasın).
             alanlar.setdefault("ÖZET", s)
 
     if not alanlar:
         return _tg_html_escape(govde)
 
-    # Premium mini kart düzeni
     c: list[str] = []
     if "ÖZET" in alanlar:
-        c.append(f"<b>🧭 Piyasa Özeti</b>\n{_tg_html_escape(alanlar['ÖZET'])}")
+        c.append(f"<b>◆ Özet</b>\n{_tg_html_escape(alanlar['ÖZET'])}")
+    if "KISA_VADE" in alanlar:
+        c.append(f"<b>▸ Kısa Vade  1-2 hafta</b>\n{_tg_html_escape(alanlar['KISA_VADE'])}")
+    if "ORTA_VADE" in alanlar:
+        c.append(f"<b>▸ Orta Vade  1-3 ay</b>\n{_tg_html_escape(alanlar['ORTA_VADE'])}")
+    if "YÜKSELEN" in alanlar:
+        c.append(f"<b>▲ Yükselen</b>\n{_tg_html_escape(alanlar['YÜKSELEN'])}")
+    if "DÜŞEN" in alanlar:
+        c.append(f"<b>▼ Düşen</b>\n{_tg_html_escape(alanlar['DÜŞEN'])}")
     if "SEKTÖR" in alanlar:
-        c.append(f"<b>🏭 Öne Çıkan Tema</b>\n{_tg_html_escape(alanlar['SEKTÖR'])}")
+        c.append(f"<b>◈ Sektör</b>\n{_tg_html_escape(alanlar['SEKTÖR'])}")
     if "ŞİRKETLER" in alanlar:
-        c.append(f"<b>🏷️ Şirket Örnekleri</b>\n{_tg_html_escape(alanlar['ŞİRKETLER'])}")
+        c.append(f"<b>◈ Şirketler</b>\n{_tg_html_escape(alanlar['ŞİRKETLER'])}")
+    if "MARKA_ETKİSİ" in alanlar:
+        c.append(f"<b>◈ Marka Etkisi</b>\n{_tg_html_escape(alanlar['MARKA_ETKİSİ'])}")
     if "VARLIK" in alanlar:
-        c.append(f"<b>🧺 Varlık Kanalı</b>\n{_tg_html_escape(alanlar['VARLIK'])}")
+        c.append(f"<b>◈ Varlık</b>\n{_tg_html_escape(alanlar['VARLIK'])}")
     if "GİRİŞİM" in alanlar:
-        c.append(f"<b>🚀 Girişim Fırsatı</b>\n{_tg_html_escape(alanlar['GİRİŞİM'])}")
+        c.append(f"<b>◈ Girişim</b>\n{_tg_html_escape(alanlar['GİRİŞİM'])}")
+    if "PİYASA_YÖNÜ" in alanlar:
+        c.append(f"<b>◈ Piyasa Yönü</b>\n{_tg_html_escape(alanlar['PİYASA_YÖNÜ'])}")
 
     alt: list[str] = []
     if "RİSK" in alanlar:
-        alt.append(f"<b>⚠️ Risk</b>: {_tg_html_escape(alanlar['RİSK'])}")
+        alt.append(f"<b>▹ Risk</b>: {_tg_html_escape(alanlar['RİSK'])}")
     if "TERS_SENARYO" in alanlar:
-        alt.append(f"<b>🧯 Ters Senaryo</b>: {_tg_html_escape(alanlar['TERS_SENARYO'])}")
+        alt.append(f"<b>▹ Ters Senaryo</b>: {_tg_html_escape(alanlar['TERS_SENARYO'])}")
     if "GÜVEN" in alanlar:
-        alt.append(f"<b>🎯 Güven</b>: {_tg_html_escape(alanlar['GÜVEN'])}")
+        alt.append(f"<b>◆ Güven</b>: {_tg_html_escape(alanlar['GÜVEN'])}")
     if alt:
         c.append("\n".join(alt))
 
@@ -918,17 +1655,15 @@ def _ozet_satirlari_html(govde: str) -> str:
 
 def _detay_govdeyi_sadelestir_html(govde: str) -> str:
     """
-    Uzun anlatım metnini Telegram'da daha okunur kart bloklarına dönüştür.
-    Amaç: metin yığını görünümünü azaltmak (satır/sentence bloklama + etiket vurgusu).
+    Uzun anlatım metnini Telegram'da premium kart bloklarına dönüştür.
+    Markdown artıklarını temizler, yapılandırılmış bloklar oluşturur.
     """
-    txt = (govde or "").strip()
+    txt = _markdown_temizle((govde or "").strip())
     if not txt:
         return ""
 
-    # Fazla boşlukları sadeleştir; satır kırılımlarını koru.
     satirlar = [re.sub(r"\s+", " ", s).strip() for s in txt.splitlines() if s.strip()]
 
-    # Tek satır geldiyse cümle bazlı bloklara böl.
     if len(satirlar) <= 1:
         satirlar = [
             s.strip()
@@ -936,17 +1671,29 @@ def _detay_govdeyi_sadelestir_html(govde: str) -> str:
             if s.strip()
         ]
 
+    # Numaralı satırları (1. 2. 3.) tanı ve etiketle
+    NUMARALI = re.compile(r'^(\d+)\.\s+(.*)')
+    ETIKET_MAP = {
+        "1": ("▸", "Durum"),
+        "2": ("▸", "Etki Zinciri"),
+        "3": ("▸", "Kısa Vade"),
+        "4": ("▸", "Orta Vade"),
+        "5": ("▸", "Uzun Vade"),
+        "6": ("◆", "Fırsatlar"),
+        "7": ("◈", "Girişim"),
+        "8": ("◆", "Güven"),
+        "9": ("▹", "Ters Senaryo"),
+    }
+
     icerik_satirlari: list[str] = []
     guven_satiri = ""
     ters_satiri = ""
     risk_satiri = ""
+
     for s in satirlar:
         u = s.upper()
         if u.startswith("GÜVEN:"):
-            if ":" in s:
-                guven_satiri = s.split(":", 1)[1].strip()
-            else:
-                guven_satiri = s
+            guven_satiri = s.split(":", 1)[1].strip() if ":" in s else s
             continue
         if u.startswith("TERS_SENARYO:"):
             ters_satiri = s.split(":", 1)[1].strip() if ":" in s else s
@@ -954,46 +1701,60 @@ def _detay_govdeyi_sadelestir_html(govde: str) -> str:
         if u.startswith("RİSK:"):
             risk_satiri = s.split(":", 1)[1].strip() if ":" in s else s
             continue
-
         icerik_satirlari.append(s)
 
-    # İçeriği 3 bölüme ayır: Durum / Etki / Fırsat
-    n = len(icerik_satirlari)
-    if n <= 3:
-        durum = icerik_satirlari[:1]
-        etki = icerik_satirlari[1:2]
-        firsat = icerik_satirlari[2:]
-    elif n <= 6:
-        durum = icerik_satirlari[:2]
-        etki = icerik_satirlari[2:4]
-        firsat = icerik_satirlari[4:]
-    else:
-        durum = icerik_satirlari[:2]
-        etki = icerik_satirlari[2:5]
-        firsat = icerik_satirlari[5:]
-
-    def blok_baslikli(baslik: str, satirs: list[str]) -> str:
-        if not satirs:
-            return ""
-        govde2 = "\n\n".join([f"• {_tg_html_escape(x)}" for x in satirs])
-        return f"<b>{baslik}</b>\n{govde2}"
-
     bloklar: list[str] = []
-    for b in (
-        blok_baslikli("🧭 Durum", durum),
-        blok_baslikli("🏗️ Etki Zinciri", etki),
-        blok_baslikli("🚀 Fırsat Alanı", firsat),
-    ):
-        if b:
-            bloklar.append(b)
+
+    # Numaralı yapı varsa her satırı kendi başlığıyla göster
+    numarali_var = any(NUMARALI.match(s) for s in icerik_satirlari)
+
+    if numarali_var:
+        for s in icerik_satirlari:
+            m = NUMARALI.match(s)
+            if m:
+                num = m.group(1)
+                icerik = m.group(2).strip()
+                emoji, baslik = ETIKET_MAP.get(num, ("▸", f"Adım {num}"))
+                bloklar.append(f"<b>{emoji} {baslik}</b>\n{_tg_html_escape(icerik)}")
+            else:
+                bloklar.append(_tg_html_escape(s))
+    else:
+        # Serbest metin: 3 bölüme böl
+        n = len(icerik_satirlari)
+        if n <= 3:
+            durum = icerik_satirlari[:1]
+            etki = icerik_satirlari[1:2]
+            firsat = icerik_satirlari[2:]
+        elif n <= 6:
+            durum = icerik_satirlari[:2]
+            etki = icerik_satirlari[2:4]
+            firsat = icerik_satirlari[4:]
+        else:
+            durum = icerik_satirlari[:2]
+            etki = icerik_satirlari[2:5]
+            firsat = icerik_satirlari[5:]
+
+        def blok_baslikli(emoji: str, baslik: str, satirs: list[str]) -> str:
+            if not satirs:
+                return ""
+            govde2 = "\n".join([f"› {_tg_html_escape(x)}" for x in satirs])
+            return f"<b>{emoji} {baslik}</b>\n{govde2}"
+
+        for b in (
+            blok_baslikli("▸", "Durum", durum),
+            blok_baslikli("▸", "Etki Zinciri", etki),
+            blok_baslikli("◆", "Fırsat Alanı", firsat),
+        ):
+            if b:
+                bloklar.append(b)
 
     alt: list[str] = []
     if risk_satiri:
-        alt.append(f"<b>⚠️ Risk</b>: {_tg_html_escape(risk_satiri)}")
+        alt.append(f"<b>▹ Risk</b>  {_tg_html_escape(risk_satiri)}")
     if ters_satiri:
-        alt.append(f"<b>🧯 Ters Senaryo</b>: {_tg_html_escape(ters_satiri)}")
+        alt.append(f"<b>▹ Ters Senaryo</b>  {_tg_html_escape(ters_satiri)}")
     if guven_satiri:
-        alt.append(f"<b>🎯 Güven</b>: {_tg_html_escape(guven_satiri)}")
+        alt.append(f"<b>◆ Güven</b>  {_tg_html_escape(guven_satiri)}")
     if alt:
         bloklar.append("\n".join(alt))
 
@@ -1018,24 +1779,35 @@ def sarmla_analiz_mesaji_html(
     elif analiz_turu == ANALIZ_JEOPOLITIK:
         mod_etiket = "Jeopolitik"
         uzun_baslik = "Jeopolitik · Uzun anlatım"
+    elif analiz_turu == ANALIZ_SEKTOR:
+        mod_etiket = "Sektör Trendleri"
+        uzun_baslik = "Sektör · Uzun anlatım"
+    elif analiz_turu == ANALIZ_TRENDLER:
+        mod_etiket = "Dünya Trendleri"
+        uzun_baslik = "Trendler · Uzun anlatım"
+    elif analiz_turu == ANALIZ_MAGAZIN:
+        mod_etiket = "Magazin/Viral"
+        uzun_baslik = "Magazin · Uzun anlatım"
+    elif analiz_turu == ANALIZ_OZEL_GUN:
+        mod_etiket = "Özel Günler"
+        uzun_baslik = "Özel Günler · Uzun anlatım"
+    elif analiz_turu == ANALIZ_DOGAL_AFET:
+        mod_etiket = "Doğal Afet"
+        uzun_baslik = "Doğal Afet · Uzun anlatım"
     else:
         mod_etiket = "Mevsim"
         uzun_baslik = "Mevsim · Uzun anlatım"
 
     alt_cizgi = "<b>━━━━━━━━━━━━━━━━━━━━</b>"
 
-    footer = (
-        f"\n{alt_cizgi}\n"
-        f"<i>{_tg_html_escape('Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir. Yatırım kararı için kendi araştırmanı yap.')}</i>\n\n"
-        f"<b>{_tg_html_escape('Yeni analiz:')}</b> /analiz"
-    )
+    footer = f"\n\n{ANALIZ_FOOTER_HTML}"
 
     if cikti_stili == CIKTI_OZET:
         govde_html = _ozet_satirlari_html(govde)
         return (
-            f"<b>⚡ Makro Lens</b> · <i>{_tg_html_escape('Kısa özet')}</i>\n"
+            f"<b>◆ Okwis AI</b> · <i>{_tg_html_escape('◆ Kısa Özet')}</i>\n"
             f"{alt_cizgi}\n"
-            f"📍 <b>{e_ulke}</b> · <i>{_tg_html_escape(mod_etiket)}</i>\n"
+            f"▸ <b>{e_ulke}</b> · <i>{_tg_html_escape(mod_etiket)}</i>\n"
             f"{alt_cizgi}\n\n"
             f"{govde_html}\n"
             f"{footer}"
@@ -1043,10 +1815,10 @@ def sarmla_analiz_mesaji_html(
 
     govde_html = _detay_govdeyi_sadelestir_html(govde)
     return (
-        f"<b>📊 Makro Lens</b> · <i>{_tg_html_escape(uzun_baslik)}</i>\n"
+        f"<b>◆ Okwis AI</b> · <i>{_tg_html_escape(uzun_baslik)}</i>\n"
         f"{alt_cizgi}\n"
-        f"🌍 <b>{e_ulke}</b>\n"
-        f"🧩 <i>{_tg_html_escape('Sade görünüm')}</i>\n"
+        f"▸ <b>{e_ulke}</b>\n"
+        f"🧩 <i>{_tg_html_escape('Detaylı Analiz')}</i>\n"
         f"{alt_cizgi}\n\n"
         f"{govde_html}"
         f"{footer}"
@@ -1054,7 +1826,7 @@ def sarmla_analiz_mesaji_html(
 
 # ─── Gemini Prompt ────────────────────────────────────────────────────────────
 
-def mevsim_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY) -> str:
+def mevsim_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
     """Yapılandırılmış bağlam + mevsim görevi ile LLM analizi (Gemini veya DeepSeek)."""
 
     from datetime import datetime
@@ -1066,77 +1838,75 @@ def mevsim_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DE
     bugun = datetime.now()
     ay_adi = aylar[bugun.month]
     yil = bugun.year
+    dil_notu = ANALIZ_DIL_NOTU
 
-    dil_notu = (
-        "Tüm yanıtı Türkçe yaz. Türkiye dışı ülkelerde somut varlık önerirken "
-        "gerekirse uluslararası sembolleri parantez içinde İngilizce ekleyebilirsin."
-        if ulke != "Türkiye"
-        else "Tüm yanıtı Türkçe yaz; BIST ve yerel şirket isimlerinde tutarlı ol."
-    )
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_detay = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+        varlik_notu = f"\n\n{varlik_detay}"
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_MEVSIM)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
     guven = _guven_skoru_hesapla(ANALIZ_MEVSIM, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    mod_direktifi = (
+        f"SEN BİR MEVSİM ANALİSTİSİN. Görevin: {ulke} için {ay_adi} {yil} mevsimsel döngüsünü analiz etmek.\n"
+        "Odak noktaların:\n"
+        "- Bu mevsimde hangi sektörler tarihsel olarak güçlenir/zayıflar?\n"
+        "- Enerji talebi, tarım, turizm, perakende döngüleri bu ayda nerede?\n"
+        "- Mevsimsel geçiş yaklaşıyorsa hangi sektörel kayma bekleniyor?\n"
+        "- Bağlamdaki haber başlıkları mevsimsel tezi destekliyor mu, çürütüyor mu?\n"
+        "YASAK: Genel makro veya jeopolitik analiz yapma. Sadece mevsimsel dinamiklerden çıkarım yap."
+    )
 
     if cikti_stili == CIKTI_OZET:
-        prompt = f"""
-{baglam_metni}
-
----
-
-### Görev (kısa özet kartı)
-Sen deneyimli bir makro yatırım analistsin. Yukarıdaki bağlamı kullanarak {ulke} için {ay_adi} {yil} mevsim tablosunu **tek bakışta** özetle.
-
-Ön-hesaplanan güven skoru (v1): {guven['toplam']}/100 ({guven['etiket']}).
-
-Çıktıyı **yalnızca** aşağıdaki sekiz satır olarak ver; her satır tam olarak `ETİKET: içerik` biçiminde olsun (ETİKET büyük harf ve Türkçe). İçerikler tek cümle veya virgüllü kısa liste olabilir.
-
-ÖZET: (bu mevsimde ülkede genel tablo ne, bir cümle)
-SEKTÖR: (1–2 öne çıkan sektör/tema)
-ŞİRKETLER: ({ulke} için bilgilendirme amaçlı tam üç şirket adı, virgülle; emin değilsen “isim vermek için veri yetersiz” yaz)
-VARLIK: (hisse/kripto dışı kısa kanal notu veya yoksa “—”)
-GİRİŞİM: (mevsime uygun bir girişim/yenilik teması, bir cümle)
-RİSK: (tek cümle risk)
-GÜVEN: ({guven['toplam']}/100 — {guven['etiket']}; kısa kullanıcı dili, teknik kısaltma kullanma)
-TERS_SENARYO: (bu tezi bozabilecek tek bir koşul, bir cümle)
-
-### Kurallar (özet)
-- Başka paragraf, giriş cümlesi veya numaralı liste ekleme; sadece bu sekiz satır
-- Düz metin; *, _, #, madde işareti kullanma
-- {dil_notu}
-- Uydurma veri kullanma; emin değilsen kısaca belirt
-- "Yatırım tavsiyesi değildir" veya benzeri ek uyarı/risk kapanış cümlesi yazma; bot footer ekleyecek
-"""
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — MEVSİM KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (bu mevsimde ne oluyor — mevsimsel dinamikten tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — mevsimsel momentum: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — mevsim geçişi yaklaşırken hangi sektör öne çıkar)\n"
+            "SEKTÖR: (bu mevsimde güçlenen 1-2 sektör)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından mevsimsel kazanan 3 isim)\n"
+            "VARLIK: (mevsimsel emtia/ETF/döviz kanalı veya —)\n"
+            "RİSK: (mevsimsel tezi bozacak tek koşul)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X olursa mevsimsel tez çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Mevsimsel veriden çıkarım yap. {dil_notu}"
+        )
     else:
-        prompt = f"""
-{baglam_metni}
-
----
-
-### Görev (uzun anlatım)
-Sen deneyimli bir makro yatırım analistsin. Yukarıdaki bağlamı dikkate alarak {ulke} için {ay_adi} {yil} dönemine odaklı mevsim analizi üret.
-
-Ön-hesaplanan güven skoru (v1): {guven['toplam']}/100 ({guven['etiket']}).
-
-Şu adımları izle:
-1. Bu ay ülke için hangi mevsim fazı anlamlı? (bağlamdaki meteorolojik mevsimle tutarlı ol)
-2. Bu fazda tipik ekonomik/tüketim hareketleri neler? (enerji, tarım, turizm, perakende vb.)
-3. En az iki adımlı neden-sonuç zinciri kur: makro/mevsim etkisi → öne çıkan sektör veya tema
-4. **Yükselen / öne çıkan sektör temaları:** Bu mevsimle bağlantılı 1–2 ana sektör veya tema adını net söyle (ör. enerji, turizm teknolojileri, perakende lojistiği).
-5. **Üç şirket örneği ({ulke}):** Az önce vurguladığın sektör temasıyla uyumlu, o ülkenin kamuya açık piyasasında gerçekten işlem gören veya yaygın bilinen **tam üç** şirket adı ver; yalnızca bilgilendirme amaçlı örnek olduğunu ima et. Bu üçlüyü tek cümlede virgülle sıralayabilirsin. Emin olmadığın isimleri uydurma: eminsen yaz, değilsen sektörü anlatıp “somut isim vermek için veri yetersiz” de.
-6. **Varlık çeşitliliği:** Sadece hisse veya kripto ile sınırlanma; uygunsa kısaca emtia, tahvil/ETF veya döviz gibi başka kanallardan bahset (zorunlu değil, zorlama).
-7. **Girişim fırsatları:** Aynı mevsim ve ülke bağlamında **girişim / yenilik / yan proje** açısından 1–2 cümle ekle: hangi problem alanlarında fırsat oluşur, hangi B2B veya tüketici ihtiyaçları artar, erken aşama hangi tema gündemde olabilir (somut “şunu kur” talimatı değil, tema düzeyinde).
-8. Ayrı bir cümlede **GÜVEN** satırı ver: “GÜVEN: {guven['toplam']}/100 ({guven['etiket']}) ...” (kullanıcı dili; teknik kısaltma yok).
-9. Ayrı bir cümlede **TERS_SENARYO** ver: “Bu tezi bozabilecek ana koşul ...”.
-
-### Kurallar
-- Toplam **en fazla 10 kısa cümle**; arkadaşça, akıcı düz metin; her cümle mümkünse 20-22 kelimeyi aşmasın
-- Teknik finans jargonundan kaçın
-- Sonda tek cümle risk notu zorunlu
-- Bilmediğin spesifik veriyi uydurma; emin değilsen kısaca belirt
-- {dil_notu}
-- "Yatırım tavsiyesi değildir" veya benzeri kapanış cümlesi üretme; bunu mesaj sonunda yalnız bot ekler
-"""
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — MEVSİM DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. MEVSİMSEL DURUM: Bu ay hangi mevsimsel döngü aktif? Hangi sektörler bu döngüde?\n"
+            "2. ETKİ ZİNCİRİ: Mevsimden sektöre, sektörden varlığa — en az 2 adım.\n"
+            "3. KISA VADE (1-2 hafta): Mevsimsel momentum ne yönde? al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Mevsim geçişi yaklaşırken hangi sektör/varlık öne çıkar?\n"
+            "5. UZUN VADE (3-12 ay): Bu mevsimsel döngünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından mevsimsel kazanan 3 şirket/varlık — neden bu dönemde?\n"
+            "7. GİRİŞİM AÇISI: Bu mevsimde büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — mevsimsel veri kalitesi neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X olursa mevsimsel tez çöker.\n\n"
+            f"Kurallar: Mevsimsel veriden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
 
     try:
-        text = llm_metin_uret(prompt)
+        text = llm_metin_uret(prompt, user_id)
         if not text:
             return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
         return text
@@ -1145,7 +1915,45 @@ Sen deneyimli bir makro yatırım analistsin. Yukarıdaki bağlamı dikkate alar
         return _llm_hata_kullanici_metni(e)
 
 
-def hava_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY) -> str:
+def _hava_petrol_lojistik_directive(ay_adi: str, ulke: str) -> str:
+    """
+    Hava → lojistik yakıt → petrol talebi zinciri. 
+    Kar/yağmur/sıcaklık değişimleri lojistik verimliliğini etkileyip petrol talebini oynatabilir.
+    """
+    return f"""
+**PETROL-LOJISTIK ZİNCİRİ ({ay_adi}):**
+Hava koşullarının lojistik verimliliği → yakıt tüketimi → petrol talebine doğru etkisi:
+
+1. **KAR/YAĞMUR:** Karayolu taşımacılığın hızı düşer, yakıt tüketimi artar. Mekanizm: 
+   - Kar: Lastik sürtünmesi ↑, motor güç ↑ → dizel/petrol tüketimi +2–4% (kısa vade)
+   - Aşırı yağmur: Görüş ↓, yol risk ↑ → tempo yavaşlama, motor boşta → yakıt +1–3%
+
+2. **SICAKLIK AŞIRILIĞI:** 
+   - Şiddetli soğuk: Yakıt viskozitesi ↑, motor cold-start enerji tüketimi ↑ → +1–2%
+   - Şiddetli sıcak: Hava taşımacılığı kliması/ticari uçak fuel pumpları çalışma → kerozin artar, petrol talebinde dolaylı artış
+
+3. **TAŞIMACININ POZİSYONU (DAĞITIM ETKİSİ):**
+   - Zor hava → nakliye birikimi → demand patch → kısa vadede petrol talep pulses
+   - Hava iyileşirse → dağıtıcılar rotaları serbest seçer → talep dağılır (fiyat baskı hafifler)
+
+4. **OPEC/STOK HAPSKALIĞİ:**
+   - {ulke}'de karayolu ~60% ticari lojistik taşımacılık → hava-koşullu yakıt dalgalanmalarına hassas
+   - Fakat **OPEC kararları, Brent/WTI stok seviyeleri, dolar kuru** ana fiyat belirleyiciler
+   - **Sonuç:** Hava lojistik TALEPLE talep pulse'ı (mikro-varyasyon); OPEC/stok/dolar FIYATI tayin eder
+
+5. **TÜRKIYE ÖZGÜ (NET İTHALAÇCI):**
+   - Petrol %~80+ ithal → dış Brent fiyatına doğrudan bağımlı, local talep marjinal etkileyebilir
+   - Karadeniz/İç Anadolu coğrafyası: kış aylarında kar-çamur volatilitesi → lojistik baskısı yüksek
+   - {ay_adi} hava: karayolu taşımacılık zorluk düzeyini ne ölçüde arttırıyor? → Türkiye yakıt tüketim pulsını tahmin etmek için kriter
+
+**ÖZET SORULAR (HAva-PETROL KOMBİNASYONU):**
+- "{ay_adi} tahmin karayolu taşımacılık verimliliğine nasıl etki ediyor?" → yakıt tüketim pulse
+- "Brent/WTI + OPEC hareketi + dolar o pulse'ı sönümleyebilir mi, yoksa amplify edebilir mi?"
+- "Türkiye katılı petrol stokları + dış fiyat + lojistik talep kombinasyonunun net etkisi yatırımcıya ne anlatıyor?"
+"""
+
+
+def hava_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
     """Güncel hava + tahmin bağlamıyla makro/yatırım temalı hava analizi (LLM)."""
 
     from datetime import datetime
@@ -1156,78 +1964,78 @@ def hava_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETA
     bugun = datetime.now()
     ay_adi = aylar[bugun.month - 1]
     yil = bugun.year
+    dil_notu = ANALIZ_DIL_NOTU
 
-    dil_notu = (
-        "Tüm yanıtı Türkçe yaz. Türkiye dışı ülkelerde somut varlık önerirken "
-        "gerekirse uluslararası sembolleri parantez içinde İngilizce ekleyebilirsin."
-        if ulke != "Türkiye"
-        else "Tüm yanıtı Türkçe yaz; BIST ve yerel şirket isimlerinde tutarlı ol."
-    )
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_detay = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+        varlik_notu = f"\n\n{varlik_detay}\n\n**HAVA BAĞLANTISI:** Yukarıdaki hava verisi bu varlığın fiyatını nasıl etkileyeceğini göz önünde tut."
+        if "petrol" in varlik.lower() or "crude" in varlik.lower() or "gaz" in varlik.lower():
+            petrol_hava_ek = _hava_petrol_lojistik_directive(ay_adi, ulke)
+            varlik_notu += f"\n\n{petrol_hava_ek}"
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_HAVA)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
     guven = _guven_skoru_hesapla(ANALIZ_HAVA, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    mod_direktifi = (
+        f"SEN BİR HAVA-EKONOMİ ANALİSTİSİN. Görevin: {ulke} başkentinin anlık hava ve 5 günlük tahmininden ekonomik çıkarım yapmak.\n"
+        "Odak noktaların:\n"
+        "- Mevcut hava koşulları (sıcaklık, yağış, rüzgar) hangi sektörleri doğrudan etkiliyor?\n"
+        "- 5 günlük tahmin lojistik, enerji talebi, tarım veya turizm için ne anlama geliyor?\n"
+        "- Aşırı hava olayı var mı? Varsa hangi tedarik zinciri veya üretim aksayabilir?\n"
+        "- Hava verisi bağlamdaki haber başlıklarıyla örtüşüyor mu?\n"
+        "YASAK: Hava verisinden bağımsız genel makro analiz yapma. Sadece hava verisinden çıkarım yap."
+    )
 
     if cikti_stili == CIKTI_OZET:
-        prompt = f"""
-{baglam_metni}
-
----
-
-### Görev (kısa özet — hava)
-Sen deneyimli bir makro yatırım analistsin. Yukarıdaki **gerçek hava verisini** kullanarak {ulke} ({ay_adi} {yil}) için ekonomi ve piyasalar açısından **tek bakışta** özet üret.
-
-Ön-hesaplanan güven skoru (v1): {guven['toplam']}/100 ({guven['etiket']}).
-
-Çıktıyı **yalnızca** sekiz satır olarak ver; her satır `ETİKET: içerik` (ETİKET büyük harf, Türkçe).
-
-ÖZET: (anlık + günlük 5 güne kadar trend ne anlatıyor, bir cümle; gerekirse ilk 24 saat vurgusu; ufku “önümüzdeki birkaç gün / kısa vade” ile sınırla)
-SEKTÖR: (bu hava ile öne çıkan 1–2 sektör/tema: enerji, tarım, sigorta, perakende, lojistik, turizm vb.)
-ŞİRKETLER: (en fazla üç isim, yalnızca **temsilî örnek**; “örneğin” veya “temsilen” geçsin; hava→sektör köprüsü kısa; emin değilsen veya uygun değilse “isim vermek için veri yetersiz”)
-VARLIK: (hisse dışı kısa kanal: emtia/ETF vb. veya “—”)
-GİRİŞİM: (hava/iklim/lojistik ile ilgili bir girişim teması, bir cümle; kısa vadeli talep/operasyon çerçevesinde)
-RİSK: (tek cümle risk; hava tahmininin belirsizliği dahil)
-GÜVEN: ({guven['toplam']}/100 — {guven['etiket']}; kısa kullanıcı dili, teknik kısaltma kullanma)
-TERS_SENARYO: (bu tezi bozabilecek tek bir koşul, bir cümle)
-
-### Kurallar (özet)
-- Sadece bu sekiz satır; numaralı liste yok; *, _, # yok
-- Tahmin verisi en fazla ~5 gün: “uzun vadeli”, “aylar boyunca”, “stratejik dönem” gibi bu tahmini uzatan ifadeler kullanma
-- Şirket adları yatırım tavsiyesi değildir; al/sat ima etme
-- {dil_notu}
-- Veride olmayan sıcaklık veya olayı uydurma
-- "Yatırım tavsiyesi değildir" veya benzeri kapanış cümlesi üretme; bunu mesaj sonunda yalnız bot ekler
-"""
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — HAVA KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (mevcut hava koşullarının ekonomik özeti — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — hava tahmininden sektörel etki: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — mevsimsel hava geçişinin sektörel yansıması)\n"
+            "SEKTÖR: (hava koşullarından en çok etkilenen 1-2 sektör)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından hava-hassas 3 isim)\n"
+            "VARLIK: (hava bağlantılı emtia/ETF veya —)\n"
+            "RİSK: (hava tezini bozacak tek koşul)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer hava X yönde değişirse tez çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Hava verisinden çıkarım yap. {dil_notu}"
+        )
     else:
-        prompt = f"""
-{baglam_metni}
-
----
-
-### Görev (uzun anlatım — hava)
-Sen deneyimli bir makro yatırım analistsin. Yukarıdaki **anlık hava, günlük min–max özet (yaklaşık 5 güne kadar) ve ilk 24 saatlik 3 saat dilimleri** verisini temel alarak {ulke} için {ay_adi} {yil} çerçevesinde analiz üret.
-
-Ön-hesaplanan güven skoru (v1): {guven['toplam']}/100 ({guven['etiket']}).
-
-**Ufuk:** Bu veri en fazla ~**5 günlük** tahmindir; analizi **önümüzdeki birkaç gün / kısa vade** ile çerçevele. Bu tahmini haftalar veya aylar boyunca sürecekmiş gibi anlatma; “uzun vadeli dağıtım”, “stratejik dönem boyunca” gibi ifadelerden kaçın.
-
-Şunları kapsa:
-1. Anlık koşullar; **günlük özetten** birkaç günün yönü (ısınma/soğuma, kuruluk/yağışlılık eğilimi) ve istersen ilk 24 saatteki kısa vadeli değişim (veriye sadık kal).
-2. Bu koşulların tüketim, enerji talebi, tarım, ulaştırma, perakende, turizm üzerinden **en az iki adımlı** neden-sonuç; zayıf veya spekülatif bağları **kısa tut** ve mümkünse “olası”, “dolaylı” dil kullan.
-3. **Sektör temaları:** 1–2 ana tema (ör. doğalgaz/elektrik, gıda zinciri, e-ticaret kargo, seyahat iptalleri).
-4. **Şirket örnekleri ({ulke}, en fazla üç):** yalnızca **temsilî örnek**; “örneğin”, “temsilen” benzeri ifade kullan; hava→sektör→isim zincirini **tek cümlede** ve **yatırım tavsiyesi ima etmeden** kur. Emin değilsen isim verme, kısaca belirt.
-5. **Varlık çeşitliliği:** uygunsa kısaca emtia/ETF/tahvil veya döviz kanalı (zorunlu değil).
-6. **Girişim açısı:** hava olayına bağlı **kısa vadeli** talep veya operasyonel fırsat teması (talimat değil, tema).
-7. Son cümle: tek cümle **risk** (hava modeli belirsizliği, politik/regülasyon müdahalesi vb.).
-8. Ayrı bir cümlede **GÜVEN** satırı ver: “GÜVEN: {guven['toplam']}/100 ({guven['etiket']}) ...” (kullanıcı dili; teknik kısaltma yok).
-9. Ayrı bir cümlede **TERS_SENARYO** ver: “Bu tezi bozabilecek ana koşul ...”.
-
-### Kurallar
-- En fazla **10 kısa cümle**; düz metin; her cümle mümkünse 20-22 kelimeyi aşmasın
-- Teknik jargondan kaçın; “al/sat”, “mutlaka”, “kesin hareket” dili kullanma
-- {dil_notu}
-- "Yatırım tavsiyesi değildir" veya benzeri kapanış cümlesi üretme; bunu mesaj sonunda yalnız bot ekler
-"""
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — HAVA DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. HAVA DURUMU: Anlık koşullar ve 5 günlük tahmin — ne görüyorum?\n"
+            "2. ETKİ ZİNCİRİ: Hava → sektör → varlık fiyatı — en az 2 adım.\n"
+            "3. KISA VADE (1-2 hafta): Hava tahmininden sektörel etki. al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Mevsimsel hava geçişi yaklaşırken hangi sektör/varlık öne çıkar?\n"
+            "5. UZUN VADE (3-12 ay): Bu hava döngüsünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından hava-hassas 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu hava koşullarında büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — hava verisi kalitesi neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer hava X yönde değişirse tez çöker.\n\n"
+            f"Kurallar: Hava verisinden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
 
     try:
-        text = llm_metin_uret(prompt)
+        text = llm_metin_uret(prompt, user_id)
         if not text:
             return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
         return text
@@ -1236,99 +2044,83 @@ Sen deneyimli bir makro yatırım analistsin. Yukarıdaki **anlık hava, günlü
         return _llm_hata_kullanici_metni(e)
 
 
-def jeopolitik_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY) -> str:
+def jeopolitik_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
     """Jeopolitik haber başlıkları bağlamıyla makro/yatırım temalı jeopolitik analizi (LLM)."""
 
     from datetime import datetime
-
     bugun = datetime.now()
-    aylar = (
-        "Ocak",
-        "Şubat",
-        "Mart",
-        "Nisan",
-        "Mayıs",
-        "Haziran",
-        "Temmuz",
-        "Ağustos",
-        "Eylül",
-        "Ekim",
-        "Kasım",
-        "Aralık",
-    )
+    aylar = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
     ay_adi = aylar[bugun.month - 1]
     yil = bugun.year
+    dil_notu = ANALIZ_DIL_NOTU
 
-    dil_notu = (
-        "Tüm yanıtı Türkçe yaz. Türkiye dışı ülkelerde somut varlık önerirken "
-        "gerekirse uluslararası sembolleri parantez içinde İngilizce ekleyebilirsin."
-        if ulke != "Türkiye"
-        else "Tüm yanıtı Türkçe yaz; BIST ve yerel şirket isimlerinde tutarlı ol."
-    )
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_detay = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+        varlik_notu = f"\n\n{varlik_detay}\n\n**JEOPOLİTİK BAĞLANTISI:** Yukarıdaki jeopolitik gelişmeleri bu varlığın fiyat dinamikleriyle ilişkilendirtip analiz et."
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_JEOPOLITIK)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
     guven = _guven_skoru_hesapla(ANALIZ_JEOPOLITIK, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    mod_direktifi = (
+        f"SEN BİR JEOPOLİTİK RİSK ANALİSTİSİN. Görevin: Bağlamdaki güncel haber başlıklarından {ulke} için jeopolitik risk haritası çıkarmak.\n"
+        "Odak noktaların:\n"
+        "- Bağlamdaki haberlerde hangi jeopolitik gerilimler, çatışmalar, yaptırımlar veya diplomatik gelişmeler var?\n"
+        "- Bu gelişmeler {ulke}'nin enerji, ticaret, savunma veya döviz kanallarını nasıl etkiliyor?\n"
+        "- Hangi haber başlığı en yüksek piyasa riskini taşıyor? Neden?\n"
+        "- Jeopolitik risk artıyor mu, azalıyor mu? Hangi varlıklar bu değişimden kazanır/kaybeder?\n"
+        "YASAK: Bağlamdaki haberlerle ilgisiz genel makro analiz yapma. Sadece jeopolitik haberlerden çıkarım yap."
+    )
 
     if cikti_stili == CIKTI_OZET:
-        prompt = f"""
-{baglam_metni}
-
----
-
-### Görev (kısa özet — jeopolitik)
-Sen deneyimli bir makro yatırım analistsin. Yukarıdaki jeopolitik haber başlıkları ve hedef ülke bilgisine dayanarak {ulke} ({ay_adi} {yil}) için ekonomi ve piyasalar açısından tek bakışta özet üret.
-
-Ön-hesaplanan güven skoru (v1): {guven['toplam']}/100 ({guven['etiket']}).
-
-Çıktıyı yalnızca aşağıdaki sekiz satır olarak ver; her satır tam olarak `ETİKET: içerik` biçiminde olsun (ETİKET büyük harf ve Türkçe).
-
-ÖZET: (son jeopolitik gelişmelerin makro/piyasa özeti; belirsizlik içeren kısa dil kullan, bir cümle)
-SEKTÖR: (1–2 sektör/tema)
-ŞİRKETLER: (en fazla üç şirket adı, yalnızca temsilî örnek; emin değilsen “isim vermek için veri yetersiz”)
-VARLIK: (emtia/ETF/döviz vb. kısa kanal veya “—”)
-GİRİŞİM: (jeopolitik risk ile ilgili girişim/operasyon teması, bir cümle)
-RİSK: (tek cümle risk; haberlerin hızlı değişebilirliği dahil)
-GÜVEN: ({guven['toplam']}/100 — {guven['etiket']}; kısa kullanıcı dili, teknik kısaltma kullanma)
-TERS_SENARYO: (bu tezi bozabilecek tek bir koşul, bir cümle)
-
-### Kurallar (özet)
-- Sadece bu sekiz satır; numaralı liste yok; *, _, # yok
-- Tahmin dili: “olası”, “dolaylı”, “kısa vadede etkileyebilir” gibi ifadeleri tercih et; kesinlik kurma
-- Şirket adı uydurma yapma; emin değilsen isim verme
-- Teknik jargondan kaçın; “al/sat”, “mutlaka”, “kesin hareket” dili kullanma
-- {dil_notu}
-- "Yatırım tavsiyesi değildir" veya benzeri kapanış cümlesi üretme; bunu mesaj sonunda yalnız bot ekler
-"""
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — JEOPOLİTİK KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (bağlamdaki en kritik jeopolitik gelişme ve piyasa etkisi — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — jeopolitik riskten etkilenen varlık: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — jeopolitik gerilim sürer/azalırsa hangi sektör öne çıkar)\n"
+            "SEKTÖR: (jeopolitik gelişmeden en çok etkilenen 1-2 sektör)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından jeopolitik-hassas 3 isim)\n"
+            "VARLIK: (jeopolitik riskten kazanan emtia/ETF/döviz veya —)\n"
+            "RİSK: (jeopolitik tezi tersine çevirecek tek gelişme)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X diplomatik/askeri gelişme olursa tez çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Bağlamdaki haberlerden çıkarım yap. {dil_notu}"
+        )
     else:
-        prompt = f"""
-{baglam_metni}
-
----
-
-### Görev (uzun anlatım — jeopolitik)
-Sen deneyimli bir makro yatırım analistsin. Yukarıdaki jeopolitik haber başlıkları ve hedef ülke bağlamını dikkate alarak {ulke} ({ay_adi} {yil}) için makro ve sektör etkisi odaklı jeopolitik analizi üret.
-
-Ön-hesaplanan güven skoru (v1): {guven['toplam']}/100 ({guven['etiket']}).
-
-Şunları kapsa:
-1. Haberlerde öne çıkan jeopolitik risk kanalını (enerji/emtia, ticaret/lojistik, savunma, yaptırımlar vb.) 1–2 cümleyle özetle.
-2. En az iki adımlı neden-sonuç zinciri kur: jeopolitik risk → makro değişken (fiyat, tedarik, güvenlik algısı, para/kur riski gibi) → öne çıkan sektör/tema.
-3. 1–2 ana sektör/tema adını net söyle.
-4. Ülke için (kamuya açık) bilinen **en fazla üç** şirket örneğini tek cümlede virgülle ver; sadece temsilî örnek olduğunu ima et; emin değilsen isim verme, kısa belirt.
-5. Varlık çeşitliliği: mümkünse emtia/ETF/döviz gibi kısa bir kanal ekle (zorunlu değil).
-6. Girişim açısı: jeopolitik kaynaklı talep veya operasyonel ihtiyaçla ilgili kısa bir tema (talimat değil).
-7. Son cümle: tek cümle risk (haberlerin hızlı değişebilirliği + belirsizlik).
-8. Ayrı bir cümlede **GÜVEN** satırı ver: “GÜVEN: {guven['toplam']}/100 ({guven['etiket']}) ...” (kullanıcı dili; teknik kısaltma yok).
-9. Ayrı bir cümlede **TERS_SENARYO** ver: “Bu tezi bozabilecek ana koşul ...”.
-
-### Kurallar
-- En fazla 10 kısa cümle; düz metin; her cümle mümkünse 20-22 kelimeyi aşmasın
-- Kesin ifade kurma; “olası/dolaylı” dil kullan
-- Teknik finans jargonu minimum; “al/sat”, “mutlaka”, “kesin hareket” yok
-- {dil_notu}
-- "Yatırım tavsiyesi değildir" veya benzeri kapanış cümlesi üretme; bunu mesaj sonunda yalnız bot ekler
-"""
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — JEOPOLİTİK DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. JEOPOLİTİK TABLO: Bağlamdaki haberlerde ne görüyorum? En kritik gelişme hangisi?\n"
+            "2. ETKİ ZİNCİRİ: Jeopolitik gelişme → enerji/ticaret/savunma kanalı → piyasa etkisi.\n"
+            "3. KISA VADE (1-2 hafta): Jeopolitik riskten etkilenen varlık. al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Gerilim sürer/azalırsa hangi sektör/varlık öne çıkar?\n"
+            "5. UZUN VADE (3-12 ay): Bu jeopolitik döngünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından jeopolitik-hassas 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu jeopolitik ortamda büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — haber kalitesi ve jeopolitik netlik neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X diplomatik/askeri gelişme olursa tez çöker.\n\n"
+            f"Kurallar: Bağlamdaki haberlerden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
 
     try:
-        text = llm_metin_uret(prompt)
+        text = llm_metin_uret(prompt, user_id)
         if not text:
             return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
         return text
@@ -1337,16 +2129,749 @@ Sen deneyimli bir makro yatırım analistsin. Yukarıdaki jeopolitik haber başl
         return _llm_hata_kullanici_metni(e)
 
 
-# ─── Telegram Handler'ları ────────────────────────────────────────────────────
+# ─── Sektör Trendleri Analizi ─────────────────────────────────────────────────
+
+def sektor_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
+    now = datetime.now()
+    ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+    ay_adi = ay_adlari[now.month - 1]
+    yil = now.year
+    dil_notu = "Her zaman Türkçe yaz. Yabancı şirket/sembol adları parantez içinde orijinal haliyle kalabilir."
+    guven = _guven_skoru_hesapla(ANALIZ_SEKTOR, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_notu = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_SEKTOR)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
+    mod_direktifi = (
+        f"SEN BİR SEKTÖR ANALİSTİSİN. Görevin: Bağlamdaki iş dünyası ve teknoloji haberlerinden {ulke} için sektörel momentum haritası çıkarmak.\n"
+        "Odak noktaların:\n"
+        "- Bağlamdaki haberlerde hangi sektörler öne çıkıyor? Hangileri gerileme sinyali veriyor?\n"
+        "- Hangi şirket haberleri sektörel bir trendi temsil ediyor (tek şirket değil, sektör sinyali)?\n"
+        "- Teknoloji, enerji, finans, sağlık, tüketim — hangisi şu an momentum kazanıyor?\n"
+        "- Bu sektörel hareket {ulke} piyasasına nasıl yansıyor?\n"
+        "YASAK: Bağlamdaki haberlerle ilgisiz genel makro veya jeopolitik analiz yapma. Sadece sektör haberlerinden çıkarım yap."
+    )
+
+    if cikti_stili == CIKTI_OZET:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — SEKTÖR KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (bağlamdaki haberlerden en güçlü sektörel sinyal — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — sektörel momentum: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — hangi sektör büyümeye devam eder, hangisi yavaşlar)\n"
+            "SEKTÖR: (bağlamdaki haberlerden öne çıkan 1-2 sektör)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından sektörel kazanan 3 isim)\n"
+            "VARLIK: (sektörel ETF/emtia/döviz kanalı veya —)\n"
+            "RİSK: (sektörel tezi bozacak tek gelişme)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X sektörel gelişme olursa tez çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Bağlamdaki haberlerden çıkarım yap. {dil_notu}"
+        )
+    else:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — SEKTÖR DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. SEKTÖREL TABLO: Bağlamdaki haberlerde hangi sektörler öne çıkıyor? Hangileri gerileme sinyali veriyor?\n"
+            "2. ETKİ ZİNCİRİ: Haber → sektörel momentum → varlık fiyatı — en az 2 adım.\n"
+            "3. KISA VADE (1-2 hafta): Sektörel momentum ne yönde? al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Hangi sektör büyümeye devam eder? Neden?\n"
+            "5. UZUN VADE (3-12 ay): Bu sektörel döngünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından sektörel kazanan 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu sektörel ortamda büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — haber kalitesi ve sektörel netlik neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X sektörel gelişme olursa tez çöker.\n\n"
+            f"Kurallar: Bağlamdaki haberlerden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
+
+    try:
+        text = llm_metin_uret(prompt, user_id)
+        if not text:
+            return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
+        return text
+    except Exception as e:
+        logger.exception("LLM sektör analizi: %s", e)
+        return _llm_hata_kullanici_metni(e)
+
+
+# ─── Dünya Trendleri Analizi ──────────────────────────────────────────────────
+
+def trendler_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
+    now = datetime.now()
+    ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+    ay_adi = ay_adlari[now.month - 1]
+    yil = now.year
+    dil_notu = "Her zaman Türkçe yaz. Yabancı şirket/sembol adları parantez içinde orijinal haliyle kalabilir."
+    guven = _guven_skoru_hesapla(ANALIZ_TRENDLER, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_notu = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_TRENDLER)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
+    mod_direktifi = (
+        f"SEN BİR DÜNYA TRENDLERİ ANALİSTİSİN. Görevin: Bağlamdaki güncel dünya gündemi haberlerinden {ulke} için piyasa yansıması çıkarmak.\n"
+        "Odak noktaların:\n"
+        "- Bağlamdaki haberlerde hangi küresel trendler, viral olaylar veya sosyal hareketler öne çıkıyor?\n"
+        "- Bu trendler tüketici davranışını, teknoloji benimsemesini veya sosyal tercihleri nasıl değiştiriyor?\n"
+        "- Hangi trend {ulke} piyasasında somut bir yatırım fırsatı veya riski yaratıyor?\n"
+        "- Trend kısa vadeli viral mi, yoksa uzun vadeli yapısal bir değişim mi?\n"
+        "YASAK: Bağlamdaki haberlerle ilgisiz genel makro veya jeopolitik analiz yapma. Sadece trend haberlerinden çıkarım yap."
+    )
+
+    if cikti_stili == CIKTI_OZET:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — DÜNYA TRENDLERİ KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (bağlamdaki en güçlü küresel trend ve piyasa yansıması — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — trend momentumu: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — trend yapısal mı viral mı? Hangi sektör kazanır?)\n"
+            "SEKTÖR: (trendin en çok etkilediği 1-2 sektör)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından trend-kazanan 3 isim)\n"
+            "VARLIK: (trend bağlantılı ETF/emtia/döviz veya —)\n"
+            "RİSK: (trend tezini bozacak tek gelişme)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X olursa trend tezi çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Bağlamdaki haberlerden çıkarım yap. {dil_notu}"
+        )
+    else:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — DÜNYA TRENDLERİ DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. TREND TABLOSU: Bağlamdaki haberlerde hangi küresel trendler öne çıkıyor?\n"
+            "2. ETKİ ZİNCİRİ: Trend → tüketici/teknoloji davranışı → sektör → varlık fiyatı.\n"
+            "3. KISA VADE (1-2 hafta): Trend momentumu ne yönde? al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Trend yapısal mı viral mı? Hangi sektör kazanır?\n"
+            "5. UZUN VADE (3-12 ay): Bu trendin uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından trend-kazanan 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu trend ortamında büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — haber kalitesi ve trend netliği neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X olursa trend tezi çöker.\n\n"
+            f"Kurallar: Bağlamdaki haberlerden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
+
+    try:
+        text = llm_metin_uret(prompt, user_id)
+        if not text:
+            return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
+        return text
+    except Exception as e:
+        logger.exception("LLM trendler analizi: %s", e)
+        return _llm_hata_kullanici_metni(e)
+
+
+# ─── Magazin / Viral Analizi ──────────────────────────────────────────────────
+
+def magazin_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
+    now = datetime.now()
+    ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+    ay_adi = ay_adlari[now.month - 1]
+    yil = now.year
+    dil_notu = "Her zaman Türkçe yaz. Yabancı şirket/sembol adları parantez içinde orijinal haliyle kalabilir."
+    guven = _guven_skoru_hesapla(ANALIZ_MAGAZIN, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_notu = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_MAGAZIN)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
+    mod_direktifi = (
+        f"SEN BİR MAGAZİN-PİYASA ANALİSTİSİN. Görevin: Bağlamdaki magazin, eğlence ve viral haberlerden {ulke} için somut piyasa çıkarımı yapmak.\n"
+        "Odak noktaların:\n"
+        "- Bağlamdaki haberlerde hangi ünlü, marka veya viral olay öne çıkıyor?\n"
+        "- Bu olay hangi şirketin hissesini, hangi sektörü veya hangi tüketici davranışını etkiliyor?\n"
+        "- Viral etki kısa vadeli spekülasyon mu, yoksa uzun vadeli marka değeri değişimi mi?\n"
+        "- Hangi haber başlığı en somut yatırım sinyali taşıyor? Neden?\n"
+        "YASAK: Bağlamdaki haberlerle ilgisiz genel makro analiz yapma. Her çıkarım bağlamdaki somut bir habere dayandırılmalı."
+    )
+
+    if cikti_stili == CIKTI_OZET:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — MAGAZİN/VİRAL KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (bağlamdaki en güçlü magazin/viral haber ve piyasa etkisi — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — viral etki: al/izle/kaçın — hangi hisse/marka?)\n"
+            "ORTA_VADE: (1-3 ay — viral etki kalıcı mı geçici mi? Marka değeri değişimi?)\n"
+            "MARKA_ETKİSİ: (bağlamdaki haberden etkilenen 1-2 marka/şirket)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından magazin-hassas 3 isim)\n"
+            "VARLIK: (viral etki bağlantılı ETF/hisse/döviz veya —)\n"
+            "RİSK: (viral tezi bozacak tek gelişme)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X olursa viral tez çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Bağlamdaki haberlerden çıkarım yap. {dil_notu}"
+        )
+    else:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — MAGAZİN/VİRAL DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. MAGAZİN TABLOSU: Bağlamdaki haberlerde hangi ünlü/marka/viral olay öne çıkıyor?\n"
+            "2. ETKİ ZİNCİRİ: Viral haber → marka algısı → tüketici davranışı → hisse/sektör fiyatı.\n"
+            "3. KISA VADE (1-2 hafta): Viral etki hangi hisse/markayı etkiliyor? al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Viral etki kalıcı mı geçici mi? Marka değeri değişimi?\n"
+            "5. UZUN VADE (3-12 ay): Bu magazin döngüsünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından magazin-hassas 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu viral ortamda büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — haber kalitesi ve viral netlik neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X olursa viral tez çöker.\n\n"
+            f"Kurallar: Her çıkarım bağlamdaki somut bir habere dayandırılmalı. al/izle/kaçın kullan. {dil_notu}"
+        )
+
+    try:
+        text = llm_metin_uret(prompt, user_id)
+        if not text:
+            return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
+        return text
+    except Exception as e:
+        logger.exception("LLM magazin analizi: %s", e)
+        return _llm_hata_kullanici_metni(e)
+
+
+# ─── Özel Günler Analizi ──────────────────────────────────────────────────────
+
+def ozel_gun_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
+    now = datetime.now()
+    ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+    ay_adi = ay_adlari[now.month - 1]
+    yil = now.year
+    dil_notu = "Her zaman Türkçe yaz. Yabancı şirket/sembol adları parantez içinde orijinal haliyle kalabilir."
+    guven = _guven_skoru_hesapla(ANALIZ_OZEL_GUN, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_notu = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_OZEL_GUN)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
+    mod_direktifi = (
+        f"SEN BİR ÖZEL GÜN-TÜKETİM ANALİSTİSİN. Görevin: Bağlamdaki yaklaşan bayram/tatil/özel günlerden {ulke} için tüketim ve sektörel çıkarım yapmak.\n"
+        "Odak noktaların:\n"
+        "- Bağlamdaki özel günler hangi sektörlerde talep artışı yaratıyor? (perakende, gıda, seyahat, lojistik, hediye)\n"
+        "- Özel günün öncesi (1-2 hafta) ve sonrası (1-2 hafta) tüketim kalıbı nasıl değişiyor?\n"
+        "- Bu özel gün {ulke} piyasasında hangi şirketlere somut gelir artışı sağlıyor?\n"
+        "- Lojistik kapasitesi zorlanıyor mu? Hangi tedarik zinciri riski var?\n"
+        "YASAK: Bağlamdaki özel günlerle ilgisiz genel makro analiz yapma. Sadece özel gün dinamiklerinden çıkarım yap."
+    )
+
+    if cikti_stili == CIKTI_OZET:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — ÖZEL GÜNLER KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (yaklaşan en kritik özel gün ve tüketim etkisi — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — özel gün öncesi tüketim dalgası: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — özel gün sonrası tüketim yavaşlaması ve sektörel etki)\n"
+            "SEKTÖR: (özel günden en çok kazanan 1-2 sektör)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından özel gün-kazanan 3 isim)\n"
+            "VARLIK: (özel gün bağlantılı ETF/emtia/döviz veya —)\n"
+            "RİSK: (özel gün tezini bozacak tek koşul)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X olursa özel gün tüketim tezi çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Bağlamdaki özel günlerden çıkarım yap. {dil_notu}"
+        )
+    else:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — ÖZEL GÜNLER DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. ÖZEL GÜN TABLOSU: Bağlamdaki yaklaşan özel günler neler? Hangisi en büyük tüketim etkisi yaratıyor?\n"
+            "2. ETKİ ZİNCİRİ: Özel gün → tüketim dalgası → sektör → şirket geliri — en az 2 adım.\n"
+            "3. KISA VADE (1-2 hafta): Özel gün öncesi tüketim dalgası. al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Özel gün sonrası tüketim yavaşlaması ve sektörel etki.\n"
+            "5. UZUN VADE (3-12 ay): Bu özel gün döngüsünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından özel gün-kazanan 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu özel gün ortamında büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — özel gün verisi kalitesi neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X olursa özel gün tüketim tezi çöker.\n\n"
+            f"Kurallar: Bağlamdaki özel günlerden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
+
+    try:
+        text = llm_metin_uret(prompt, user_id)
+        if not text:
+            return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
+        return text
+    except Exception as e:
+        logger.exception("LLM özel gün analizi: %s", e)
+        return _llm_hata_kullanici_metni(e)
+
+
+# ─── Doğal Afet Analizi ───────────────────────────────────────────────────────
+
+def dogal_afet_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKTI_DETAY, varlik: str = "", user_id: int | str | None = None) -> str:
+    now = datetime.now()
+    ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+    ay_adi = ay_adlari[now.month - 1]
+    yil = now.year
+    dil_notu = "Her zaman Türkçe yaz. Yabancı şirket/sembol adları parantez içinde orijinal haliyle kalabilir."
+    guven = _guven_skoru_hesapla(ANALIZ_DOGAL_AFET, baglam_metni)
+    g_toplam = guven["toplam"]
+    g_etiket = guven["etiket"]
+
+    varlik_notu = ""
+    if varlik and varlik.strip():
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_notu = _varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)
+
+    prob_notu = _ilgili_prob_zincirleri(ANALIZ_DOGAL_AFET)
+    if prob_notu:
+        varlik_notu += f"\n\n{prob_notu}"
+
+    mod_direktifi = (
+        f"SEN BİR DOĞAL AFET-EKONOMİ ANALİSTİSİN. Görevin: Bağlamdaki USGS deprem verileri ve afet haberlerinden {ulke} için somut ekonomik çıkarım yapmak.\n"
+        "Odak noktaların:\n"
+        "- Bağlamdaki depremler veya afetler hangi bölgeleri etkiliyor? Bu bölgelerin ekonomik önemi nedir?\n"
+        "- Afet hangi sektörleri doğrudan etkiliyor? (inşaat, sigorta, enerji altyapısı, lojistik, gıda)\n"
+        "- Yeniden yapılanma ekonomisi ne zaman başlar? Hangi sektörler bu süreçten kazanır?\n"
+        "- Afet bölgesi {ulke} ile ticaret veya tedarik zinciri bağlantısı var mı?\n"
+        "YASAK: Bağlamdaki afet verileriyle ilgisiz genel makro analiz yapma. Sadece afet verilerinden çıkarım yap. Afet yoksa bunu açıkça belirt."
+    )
+
+    if cikti_stili == CIKTI_OZET:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — DOĞAL AFET KISA ÖZET\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Tam olarak 9 satır yaz, ETİKET: içerik formatında:\n\n"
+            "ÖZET: (bağlamdaki en kritik afet/deprem ve ekonomik etkisi — tek cümle)\n"
+            "KISA_VADE: (1-2 hafta — afet sonrası acil ihtiyaç sektörü: al/izle/kaçın)\n"
+            "ORTA_VADE: (1-3 ay — yeniden yapılanma ekonomisi hangi sektörü büyütür)\n"
+            "SEKTÖR: (afetten en çok kazanan 1-2 sektör: inşaat/sigorta/enerji/lojistik)\n"
+            f"ŞİRKETLER: ({ulke} piyasasından afet-kazanan 3 isim)\n"
+            "VARLIK: (afet bağlantılı emtia/ETF/döviz veya —)\n"
+            "RİSK: (afet tezini bozacak tek koşul)\n"
+            f"GÜVEN: ({g_toplam}/100 — {g_etiket})\n"
+            "TERS_SENARYO: (eğer X olursa afet ekonomi tezi çöker)\n\n"
+            f"Kurallar: Sadece 9 satır. Bağlamdaki afet verilerinden çıkarım yap. {dil_notu}"
+        )
+    else:
+        prompt = (
+            f"{baglam_metni}{varlik_notu}\n\n"
+            "---\n"
+            f"{_ANALIST_KIMLIK}\n\n"
+            f"{mod_direktifi}\n\n"
+            f"Görev: {ulke} / {ay_adi} {yil} — DOĞAL AFET DETAYLI ANALİZ\n"
+            f"Güven: {g_toplam}/100 ({g_etiket})\n\n"
+            "Şu yapıda yaz (10-12 cümle, düz metin):\n\n"
+            "1. AFET TABLOSU: Bağlamdaki depremler/afetler neler? Hangi bölge, hangi büyüklük, hangi ekonomik önem?\n"
+            "2. ETKİ ZİNCİRİ: Afet → altyapı hasarı → tedarik zinciri → sektör → varlık fiyatı.\n"
+            "3. KISA VADE (1-2 hafta): Afet sonrası acil ihtiyaç sektörü. al/izle/kaçın.\n"
+            "4. ORTA VADE (1-3 ay): Yeniden yapılanma ekonomisi hangi sektörü büyütür?\n"
+            "5. UZUN VADE (3-12 ay): Bu afet döngüsünün uzun vadeli kazananı kim?\n"
+            f"6. SOMUT FIRSATLAR: {ulke} piyasasından afet-kazanan 3 şirket/varlık — neden şimdi?\n"
+            "7. GİRİŞİM AÇISI: Bu afet ortamında büyüyen hangi ihtiyaç/problem alanı var?\n"
+            f"8. GÜVEN: {g_toplam}/100 ({g_etiket}) — USGS verisi ve haber kalitesi neden bu skoru veriyor?\n"
+            "9. TERS_SENARYO: Eğer X olursa afet ekonomi tezi çöker.\n\n"
+            f"Kurallar: Bağlamdaki afet verilerinden çıkarım yap. al/izle/kaçın kullan. {dil_notu}"
+        )
+
+    try:
+        text = llm_metin_uret(prompt, user_id)
+        if not text:
+            return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
+        return text
+    except Exception as e:
+        logger.exception("LLM doğal afet analizi: %s", e)
+        return _llm_hata_kullanici_metni(e)
+
+
+# ─── Okwis — Tanrının Gözü (Tüm Modların Birleşimi) ─────────────────────────
+
+async def _topla_tum_baglamlari(
+    ulke: str,
+    ilerleme_cb=None,  # async callable(tamamlanan: int, toplam: int, mod_adi: str, basarili: bool)
+) -> dict[str, str]:
+    """
+    Tüm modların bağlamlarını topla.
+    ilerleme_cb verilirse her mod tamamlandığında çağrılır — canlı bildirim için.
+    """
+    MODLAR = [
+        ("mevsim",     "◈ Mevsim",        topla_mevsim_baglami),
+        ("jeopolitik", "◈ Jeopolitik",     topla_jeopolitik_baglami),
+        ("sektor",     "◈ Sektör",         topla_sektor_baglami),
+        ("trendler",   "◈ Dünya Trendleri",topla_trendler_baglami),
+        ("magazin",    "◈ Magazin",        topla_magazin_baglami),
+        ("ozel_gun",   "◈ Özel Günler",    topla_ozel_gunler_baglami),
+        ("dogal_afet", "◈ Doğal Afet",     topla_dogal_afet_baglami),
+        ("hava",       "◈ Hava",           topla_hava_baglami),
+    ]
+    toplam = len(MODLAR)
+    baglamlar: dict[str, str] = {}
+
+    for i, (anahtar, adi, fn) in enumerate(MODLAR, start=1):
+        try:
+            deger = await asyncio.to_thread(fn, ulke)
+            baglamlar[anahtar] = deger
+            basarili = True
+        except Exception as e:
+            logger.warning("Okwis bağlam hatası (%s): %s", anahtar, e)
+            baglamlar[anahtar] = ""
+            basarili = False
+
+        if ilerleme_cb:
+            try:
+                await ilerleme_cb(i, toplam, adi, basarili)
+            except Exception:
+                pass  # bildirim hatası analizi durdurmasın
+
+    return baglamlar
+
+
+def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", profil: dict | None = None, stil: str = "kisa", user_id: int | str | None = None) -> str:
+    """Okwis — Tanrının Gözü.
+    stil: 'kisa' → net, aksiyon odaklı özet | 'detay' → tam derinlikli analiz
+    """
+    now = datetime.now()
+    ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
+    ay_adi = ay_adlari[now.month - 1]
+    yil = now.year
+
+    etiketler = {
+        "mevsim": "MEVSİM", "hava": "HAVA", "jeopolitik": "JEOPOLİTİK",
+        "sektor": "SEKTÖR", "trendler": "TRENDLER", "magazin": "MAGAZİN",
+        "ozel_gun": "ÖZEL GÜNLER", "dogal_afet": "DOĞAL AFET",
+    }
+    parcalar = []
+    for key, etiket in etiketler.items():
+        v = baglamlar.get(key, "").strip()
+        if v:
+            # Kısa analizde daha az bağlam, detaylıda daha fazla
+            limit = 300 if stil == "kisa" else 600
+            parcalar.append(f"[{etiket}]\n{v[:limit]}")
+    birlestik_baglam = "\n\n".join(parcalar)
+
+    # Varlık araması varsa Tavily ile zenginleştir
+    try:
+        from web_arama import varlik_sorgulari, tavily_ara, tavily_metin_ozeti, _api_key
+        if varlik and varlik.strip() and _api_key():
+            varlik_sonuclar = []
+            gorulmus: set[str] = set()
+            for sorgu in varlik_sorgulari(ulke, varlik)[:2]:
+                for s in tavily_ara(sorgu, max_sonuc=3, guncel_mi=True):
+                    if s["url"] not in gorulmus:
+                        gorulmus.add(s["url"])
+                        varlik_sonuclar.append(s)
+            varlik_sonuclar.sort(key=lambda x: x["score"], reverse=True)
+            tavily_blok = tavily_metin_ozeti(varlik_sonuclar[:4], baslik=f"Güncel Web Araması — {varlik}")
+            if tavily_blok:
+                birlestik_baglam += f"\n\n{tavily_blok}"
+    except Exception as _e:
+        import logging as _lg
+        _lg.getLogger(__name__).warning("Okwis Tavily araması başarısız: %s", _e)
+
+    profil_blogu = _profil_okwis_blogu(profil)
+    profil_var = bool(profil_blogu)
+    prob_notu = _ilgili_prob_zincirleri("sektor")
+
+    # ── KISA ANALİZ ──────────────────────────────────────────────────────────
+    if stil == "kisa":
+        if profil_var:
+            varlik_ek = f'\nKullanıcı özellikle "{varlik}" üzerine odaklanmak istiyor.' if varlik and varlik.strip() else ""
+            prompt = (
+                f"{profil_blogu}\n\n---\n"
+                + f"{birlestik_baglam}\n\n"
+                + f"{_ANALIST_KIMLIK}\n\n"
+                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS KİŞİSEL KISA ANALİZ{varlik_ek}\n\n"
+                + "Profildeki varlıkları merkeze alarak, 4 satırda net aksiyon ver:\n\n"
+                + "POZİSYON: (her varlık için şu an ne yapmalısın — AL/TUT/AZALT/SAT — tek satır)\n"
+                + "FİYAT: (somut fiyat hedefleri — giriş seviyesi / çıkış seviyesi / stop-loss)\n"
+                + "ZAMANLAMA: (ne zaman aksiyon — kısa vade 1-2 hafta / orta vade 1-3 ay)\n"
+                + "UYARI: (şu an yapılmaması gereken tek şey — somut)\n\n"
+                + "Kurallar: Sadece 4 satır. 'Senin X'in', 'elindeki Y' dili kullan. Soyut değil, somut fiyat/tarih ver. Türkçe yaz."
+            )
+        elif varlik and varlik.strip():
+            prompt = (
+                f"{birlestik_baglam}\n\n"
+                + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{_ANALIST_KIMLIK}\n\n"
+                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS VARLIK KISA ANALİZ: {varlik}\n\n"
+                + "8 modun verisini bu varlık için filtrele. 4 satırda net aksiyon ver:\n\n"
+                + f"POZİSYON: ({varlik} için şu an: AL/TUT/KAÇIN — ve neden, hangi modun verisi)\n"
+                + f"FİYAT: (somut fiyat seviyeleri — giriş / hedef / stop-loss)\n"
+                + "ZAMANLAMA: (kısa vade 1-2 hafta / orta vade 1-3 ay — hangi sinyal tetikleyici)\n"
+                + "YAPMA: (şu an kesinlikle yapılmaması gereken — somut)\n\n"
+                + "Kurallar: Sadece 4 satır. Somut fiyat/seviye ver. Kaçamak dil yok. Türkçe yaz."
+            )
+        else:
+            prompt = (
+                f"{birlestik_baglam}\n\n"
+                + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{_ANALIST_KIMLIK}\n\n"
+                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS GENEL KISA ANALİZ\n\n"
+                + "8 modun verisini sentezle. 4 satırda net aksiyon ver:\n\n"
+                + f"YÜKSELEN: (şu an en güçlü 2-3 sektör — hangi modun verisi, neden)\n"
+                + f"AL_İZLE: ({ulke} piyasasından 3 somut varlık — hangi modun sinyaline dayanıyor)\n"
+                + "ZAMANLAMA: (kısa vade 1-2 hafta / orta vade 1-3 ay — hangi sinyal tetikleyici)\n"
+                + "KAÇIN: (şu an uzak durulması gereken — somut isim/sektör)\n\n"
+                + "Kurallar: Sadece 4 satır. Gerçek isim ver. Kaçamak dil yok. Türkçe yaz."
+            )
+
+    # ── DETAYLI ANALİZ ───────────────────────────────────────────────────────
+    else:
+        if profil_var:
+            varlik_ek = f'\nKullanıcı özellikle "{varlik}" üzerine odaklanmak istiyor.' if varlik and varlik.strip() else ""
+            prompt = (
+                f"{profil_blogu}\n\n---\n"
+                + f"{birlestik_baglam}\n\n"
+                + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{_ANALIST_KIMLIK}\n\n"
+                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS KİŞİSEL DETAYLI ANALİZ{varlik_ek}\n\n"
+                + "Profildeki varlıkları ve 8 modun verisini kullanarak tam derinlikli analiz yap:\n\n"
+                + "PORTFÖY DURUMU: (profildeki her varlık için ayrı değerlendirme — mevcut pozisyon sağlıklı mı?)\n"
+                + "POZİSYON STRATEJİSİ: (her varlık için somut strateji — ne kadar süre tut, hangi seviyede ekle/azalt)\n"
+                + "FİYAT HARİTASI: (her varlık için 3 seviye — agresif giriş / konservatif giriş / stop-loss)\n"
+                + "ZAMANLAMA: (kısa vade 1-2 hafta / orta vade 1-3 ay / uzun vade 3-12 ay — her dönem için aksiyon)\n"
+                + "YENİ FIRSAT: (mevcut piyasa koşullarında profiline uygun yeni pozisyon var mı? — somut, neden şimdi)\n"
+                + "RİSK YÖNETİMİ: (portföyünü tehdit eden 2-3 risk — ve her biri için hedge/koruma stratejisi)\n"
+                + "YAPMA LİSTESİ: (şu an kesinlikle yapılmaması gereken 2-3 şey — somut, neden)\n\n"
+                + "Kurallar: 'Senin portföyün', 'elindeki X' dili kullan. Her başlık somut fiyat/tarih içermeli. Türkçe yaz."
+            )
+        elif varlik and varlik.strip():
+            prompt = (
+                f"{birlestik_baglam}\n\n"
+                + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{_ANALIST_KIMLIK}\n\n"
+                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS VARLIK DETAYLI ANALİZ: {varlik}\n\n"
+                + f"8 modun tüm verisini {varlik} için derinlemesine analiz et:\n\n"
+                + f"MEVCUT DURUM: ({varlik} şu an hangi fiyat/seviyede, momentum ne yönde — hangi modun verisi)\n"
+                + f"POZİSYON STRATEJİSİ: (AL/TUT/KAÇIN ve neden — hangi koşulda pozisyon aç, hangi koşulda kapat)\n"
+                + f"FİYAT HARİTASI: (3 kritik seviye — güçlü destek / direnç / stop-loss — ve neden bu seviyeler)\n"
+                + "ZAMANLAMA: (kısa 1-2 hafta / orta 1-3 ay / uzun 3-12 ay — her dönem için ayrı aksiyon)\n"
+                + "KATALIZ: (fiyatı tetikleyecek olay nedir — hangi haber/veri/tarih izlenmeli)\n"
+                + "YAPMA: (şu an kesinlikle yapılmaması gereken — somut, neden bu tezi bozar)\n"
+                + "RİSK: (en büyük 2 risk ve her biri için koruma stratejisi)\n\n"
+                + "Kurallar: Her başlık somut fiyat/tarih/seviye içermeli. Kaçamak dil yok. Türkçe yaz."
+            )
+        else:
+            prompt = (
+                f"{birlestik_baglam}\n\n"
+                + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{_ANALIST_KIMLIK}\n\n"
+                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS GENEL DETAYLI ANALİZ\n\n"
+                + "8 modun tüm verisini derinlemesine sentezle:\n\n"
+                + f"MAKRO TABLO: (8 moddan çıkan en güçlü 3 sinyal — ne görüyorum, neden önemli)\n"
+                + f"YÜKSELEN SEKTÖRLER: (momentum kazanan 2-3 sektör — hangi mod destekliyor, ne kadar sürer)\n"
+                + f"POZİSYON FİKİRLERİ: ({ulke} piyasasından 3 somut varlık — giriş seviyesi / hedef / stop-loss)\n"
+                + "ZAMANLAMA: (kısa 1-2 hafta / orta 1-3 ay / uzun 3-12 ay — her dönem için ayrı aksiyon)\n"
+                + "DÜŞEN/KAÇIN: (momentum kaybeden 1-2 sektör/varlık — somut, neden şimdi)\n"
+                + "GİRİŞİM FIRSATI: (bu dönemde büyüyen problem alanı — kim çözüyor, neden şimdi)\n"
+                + "TERS SENARYO: (tüm tezi çökertecek 1 gelişme — hangi modun verisi bu riski işaret ediyor)\n\n"
+                + "Kurallar: Her başlık somut isim/fiyat/tarih içermeli. Gerçek isim ver. Türkçe yaz."
+            )
+
+    try:
+        text = llm_metin_uret(prompt, user_id)
+        if not text:
+            return "Şu an model boş yanıt döndü. Biraz sonra tekrar dene."
+        return text.strip()
+    except Exception as e:
+        logger.exception("LLM Okwis analizi: %s", e)
+        return _llm_hata_kullanici_metni(e)
 
 def _karsilama_mesaji_html() -> str:
     return (
-        "👋 Merhaba! Ben <b>Makro Lens</b>.\n\n"
+        "◆ Merhaba. Ben <b>Okwis AI</b>.\n\n"
         "Mevsimler, hava olayları, jeopolitik gelişmeler gibi "
         "büyük resim faktörlerin piyasalara etkisini analiz ediyorum.\n\n"
         "Başlamak için <b>/analiz</b> yaz.\n"
         "Analiz sırasında çıkmak için <b>/cancel</b> veya <b>/start</b> kullanabilirsin."
     )
+
+
+# ─── Profil Komutları ─────────────────────────────────────────────────────────
+
+async def profil_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/profil komutu — profil görüntüle veya güncelleme akışını başlat"""
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        await update.message.reply_text("Kullanıcı bilgisi alınamadı.")
+        return ConversationHandler.END
+
+    mevcut = _kullanici_profili_al(user_id)
+
+    if mevcut:
+        klavye = [
+            [
+                InlineKeyboardButton("✏️ Güncelle", callback_data="profil_guncelle"),
+                InlineKeyboardButton("🗑 Sil", callback_data="profil_sil"),
+            ],
+            [InlineKeyboardButton("✕ Kapat", callback_data="profil_kapat")],
+        ]
+        await update.message.reply_text(
+            _kullanici_profili_html(mevcut) + "\n\n<i>Ne yapmak istersin?</i>",
+            parse_mode=ParseMode.HTML,
+            reply_markup=InlineKeyboardMarkup(klavye),
+        )
+        return PROFIL_METIN_BEKLENIYOR
+    else:
+        await update.message.reply_text(
+            "<b>◆ Okwis Kişisel Profil</b>\n"
+            "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+            "Profilini tanımlarsan Okwis analizi tamamen sana özel yapar.\n\n"
+            "<b>Ne yazabilirsin?</b>\n"
+            "- Elindeki varlıklar ve miktarları (bitcoin, altın, hisse vb.)\n"
+            "- Risk toleransın (agresif / dengeli / muhafazakar)\n"
+            "- Yatırım ufkun (kısa / orta / uzun vade)\n"
+            "- İlgi alanların (kripto, emtia, teknoloji hisseleri vb.)\n"
+            "- Hedeflerin (birikim, pasif gelir, büyüme vb.)\n\n"
+            "<b>Örnek:</b>\n"
+            "<i>0.5 BTC, 2 ETH, 10 gram altın var. Risk toleransım orta. "
+            "Kripto ve emtiaya odaklanıyorum. 1-2 yıl vadeli düşünüyorum. "
+            "Hedefim portföyü 3x büyütmek.</i>\n\n"
+            "Profilini şimdi yaz:",
+            parse_mode=ParseMode.HTML,
+        )
+        context.user_data["profil_mod"] = "yeni"
+        return PROFIL_METIN_BEKLENIYOR
+
+
+async def profil_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Profil menüsü buton tıklamaları"""
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id if update.effective_user else None
+
+    if query.data == "profil_kapat":
+        await query.edit_message_text("◆ Profil ekranı kapatıldı.")
+        return ConversationHandler.END
+
+    if query.data == "profil_sil":
+        if user_id and _kullanici_profili_sil(user_id):
+            await query.edit_message_text(
+                "◆ Profilin silindi.\n\n"
+                "<i>Okwis artık genel analiz yapacak. "
+                "Yeniden tanımlamak için /profil yaz.</i>",
+                parse_mode=ParseMode.HTML,
+            )
+        else:
+            await query.edit_message_text("Profil bulunamadı.")
+        return ConversationHandler.END
+
+    if query.data == "profil_guncelle":
+        await query.edit_message_text(
+            "<b>◆ Profili Güncelle</b>\n\n"
+            "Yeni profilini yaz. Mevcut profil tamamen değiştirilecek.\n\n"
+            "<b>Örnek:</b>\n"
+            "<i>0.5 BTC, 2 ETH, 10 gram altın var. Risk toleransım orta. "
+            "Kripto ve emtiaya odaklanıyorum. 1-2 yıl vadeli düşünüyorum.</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        context.user_data["profil_mod"] = "guncelle"
+        return PROFIL_METIN_BEKLENIYOR
+
+    return PROFIL_METIN_BEKLENIYOR
+
+
+async def profil_metin_al(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Kullanıcı profil metnini yazdı — kaydet"""
+    if not update.message:
+        return PROFIL_METIN_BEKLENIYOR
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        await update.message.reply_text("Kullanıcı bilgisi alınamadı.")
+        return ConversationHandler.END
+
+    metin = update.message.text.strip()
+
+    if len(metin) < 10:
+        await update.message.reply_text(
+            "Profil çok kısa. En az birkaç cümle yaz — varlıkların, risk toleransın, hedeflerin gibi."
+        )
+        return PROFIL_METIN_BEKLENIYOR
+
+    if len(metin) > 2000:
+        await update.message.reply_text(
+            f"Profil çok uzun ({len(metin)} karakter). 2000 karaktere kadar yazabilirsin."
+        )
+        return PROFIL_METIN_BEKLENIYOR
+
+    _kullanici_profili_kaydet(user_id, metin)
+    mod = context.user_data.get("profil_mod", "yeni")
+    eylem = "güncellendi" if mod == "guncelle" else "kaydedildi"
+
+    await update.message.reply_text(
+        f"<b>◆ Profil {eylem}!</b>\n\n"
+        f"{_tg_html_escape(metin[:300])}{'...' if len(metin) > 300 else ''}\n\n"
+        "<i>Artık Okwis analizi tamamen sana özel olacak. "
+        "/analiz ile dene.</i>",
+        parse_mode=ParseMode.HTML,
+    )
+    context.user_data.pop("profil_mod", None)
+    return ConversationHandler.END
+
+
+async def profil_iptal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Profil akışını iptal et"""
+    context.user_data.pop("profil_mod", None)
+    await update.message.reply_text(
+        "Profil işlemi iptal edildi. /profil ile tekrar başlayabilirsin."
+    )
+    return ConversationHandler.END
 
 
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1372,29 +2897,150 @@ async def iptal(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return ConversationHandler.END
 
 
+async def okwis_detay_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Okwis kısa analizden sonra 'Daha derin analiz' veya 'Yeter' butonu"""
+    query = update.callback_query
+    await query.answer()
+    user_id = update.effective_user.id if update.effective_user else None
+
+    if query.data == "okwis_kapat":
+        await query.edit_message_text("◆ Tamam. Yeni analiz için /analiz yaz.")
+        return ConversationHandler.END
+
+    # Daha derin analiz — kaydedilmiş bağlamları kullan, tekrar çekme
+    baglamlar = context.user_data.get("okwis_baglamlar")
+    profil = context.user_data.get("okwis_profil")
+    ulke = context.user_data.get("ulke", "")
+    varlik = context.user_data.get("varlik", "")
+
+    if not baglamlar or not ulke:
+        await query.edit_message_text(
+            "Oturum sıfırlandı. Yeniden başlamak için /analiz yaz."
+        )
+        return ConversationHandler.END
+
+    await query.edit_message_text(
+        f"◆ <b>{_tg_html_escape(ulke)}</b> · <i>Okwis Derin Analiz</i>\n\n"
+        "🔬 Derinlemesine analiz yapılıyor…",
+        parse_mode=ParseMode.HTML,
+    )
+
+    try:
+        analiz = await asyncio.to_thread(okwis_analizi_yap, ulke, baglamlar, varlik, profil, "detay", user_id)
+    except Exception as e:
+        logger.exception("Okwis detay analizi hatası: %s", e)
+        await query.edit_message_text("Detay analizi üretilirken bir hata oluştu. /analiz ile tekrar dene.")
+        return ConversationHandler.END
+
+    alt_cizgi = "<b>━━━━━━━━━━━━━━━━━━━━</b>"
+    varlik_satir = f" · <i>{_tg_html_escape(varlik)}</i>" if varlik else ""
+    profil_satir = " · <i>Kişisel Profil Aktif</i>" if profil else ""
+
+    birlestik_baglam_kart = " ".join(v for v in baglamlar.values() if v)
+    guven_olayi_detay = _guven_skoru_hesapla("okwis", birlestik_baglam_kart)
+    detay_guven_karti = _guven_karti_html("okwis", birlestik_baglam_kart, guven_olayi_detay, user_id)
+
+    mesaj = (
+        f"<b>◆ Okwis — Tanrının Gözü</b> · <i>Derin Analiz</i>\n"
+        f"{alt_cizgi}\n"
+        f"▸ <b>{_tg_html_escape(ulke)}</b>{varlik_satir}{profil_satir}\n"
+        f"{alt_cizgi}\n\n"
+        f"{_tg_html_escape(analiz)}\n\n"
+        f"{detay_guven_karti}\n\n"
+        f"{ANALIZ_FOOTER_HTML}"
+    )
+    await gonder_parcali_html(query, context, mesaj)
+    return ConversationHandler.END
+
+
 async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/yardim komutu"""
     mesaj = (
         "<b>📖 Nasıl kullanılır?</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
         "<b>/analiz</b> — Yeni bir analiz başlat\n"
+        "  ◆ <b>Okwis</b> — Tüm modları paralel tarar, ultra sade sonuç verir\n"
+        "  ◈ <b>Tüm Modlar</b> — 8 moddan istediğini seç (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)\n\n"
+        "<b>/profil</b> — Kişisel portföy profilini tanımla\n"
+        "  Varlıkların, risk toleransın ve hedeflerini yazarsan Okwis analizi tamamen sana özel olur.\n\n"
         "<b>/hesabim</b> — Plan, kalan Pro gün ve kullanım durumu\n"
-        "<b>/performans</b> — Canlı güven skoru özeti\n"
+        "<b>/bildirim</b> — Alarm bildirimlerini aç/kapat (Pro/Claude)\n"
+        "<b>/performans</b> — Canlı güven skoru özeti + tahmin istatistikleri\n"
+        "<b>/gecmis</b> — Son tahmin geçmişi (/gecmis 20 ile daha fazla gör)\n"
         "<b>/start</b> — Karşılama; analiz akışındaysan akışı kapatır\n"
-        "<b>/cancel</b> — Analiz akışını iptal eder\n\n"
+        "<b>/cancel</b> — Analiz akışını iptal eder\n"
+        "<b>/skip</b> — Varlık sorusunu geç, genel analiz yap\n\n"
         f"Ücretsiz kullanım limiti: günde <b>{ANALIZ_GUNLUK_LIMIT}</b> analiz.\n"
-        "Ülke seçtikten sonra <b>uzun anlatım</b> veya <b>kısa özet</b> çıktısı seçebilirsin.\n"
+        "Ülke seçtikten sonra varlık odağı yazabilir (altın, petrol, bitcoin vb.) veya <b>BOŞ</b> / <b>/skip</b> ile geçebilirsin.\n"
         "<b>Hava</b> modu için <code>OPENWEATHER_API_KEY</code> (.env) gerekir.\n\n"
-        "<i>Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</i>\n"
+        f"<i>Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</i>\n"
         "<i>Yatırım kararı için kendi araştırmanı yap.</i>"
     )
     await update.message.reply_text(mesaj, parse_mode=ParseMode.HTML)
 
 
 async def performans(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """/performans — canlı güven skoru özet paneli"""
-    metin = _performans_ozeti_hesapla()
+    """/performans — canlı güven skoru özet paneli + tahmin istatistiği"""
+    guven_metni = _performans_ozeti_hesapla()
+    istat = _tahmin_istatistik()
+    if istat["toplam"] > 0:
+        istat_satir = (
+            f"\n\n<b>◆ Tahmin İstatistikleri</b>\n"
+            f"Toplam: <b>{istat['toplam']}</b> · Doğrulanan: <b>{istat['dogrulanan']}</b>"
+        )
+        if istat["oran"] is not None:
+            istat_satir += f" · Doğruluk: <b>{istat['oran']:.0f}%</b>"
+        istat_satir += "\n<i>/gecmis ile detayları gör.</i>"
+        metin = guven_metni + istat_satir
+    else:
+        metin = guven_metni
     await update.message.reply_text(metin, parse_mode=ParseMode.HTML)
+
+
+async def gecmis(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/gecmis [n] — son tahmin geçmişi"""
+    n = 10
+    if context.args:
+        try:
+            n = max(1, min(int(context.args[0]), 30))
+        except ValueError:
+            n = 10
+    metin = _gecmis_tahminler_html(n)
+    await update.message.reply_text(metin, parse_mode=ParseMode.HTML)
+
+
+async def bildirim_ayar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/bildirim — alarm bildirimlerini aç/kapat (sadece Pro/Claude)"""
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        await update.message.reply_text("Kullanıcı bilgisi alınamadı.")
+        return
+
+    # Sadece Pro/Claude
+    if not _kullanici_pro_mu(user_id):
+        await update.message.reply_text(
+            "◆ Alarm bildirimleri <b>Pro</b> veya <b>Claude</b> plan gerektiriyor.\n\n"
+            "<i>/hesabim ile planını görüntüle.</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    su_an_acik = kullanici_bildirim_acik_mi(user_id)
+    yeni_durum = not su_an_acik
+    kullanici_bildirim_ayarla(user_id, yeni_durum)
+
+    if yeni_durum:
+        mesaj = (
+            "🔔 <b>Alarm bildirimleri açıldı.</b>\n\n"
+            "Piyasayı etkileyen kritik gelişmelerde otomatik ikaz alacaksın.\n"
+            "<i>Kapatmak için tekrar /bildirim yaz.</i>"
+        )
+    else:
+        mesaj = (
+            "🔕 <b>Alarm bildirimleri kapatıldı.</b>\n\n"
+            "<i>Tekrar açmak için /bildirim yaz.</i>"
+        )
+    await update.message.reply_text(mesaj, parse_mode=ParseMode.HTML)
 
 
 async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1410,7 +3056,7 @@ async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kalan = _kalan_pro_gun(pro_until) if pro_mu else 0
     gunluk = _gunluk_kullanim_oku(user_id)
 
-    plan_satiri = "Pro ✅" if pro_mu else "Ücretsiz"
+    plan_satiri = "Claude ◆◆" if plan.get("plan") == "claude" else ("Pro ◆" if pro_mu else "Ücretsiz")
     pro_satiri = (
         f"Pro bitiş: <b>{_tg_html_escape(pro_until)}</b> · kalan <b>{kalan}</b> gün"
         if pro_mu and pro_until
@@ -1459,7 +3105,7 @@ async def pro_ver(update: Update, context: ContextTypes.DEFAULT_TYPE):
         detail=f"gun={gun}; pro_until={bitis.isoformat()}",
     )
     await update.message.reply_text(
-        f"✅ Pro atandı.\nuser_id={hedef_user_id}\npro_until={bitis.isoformat()}"
+        f"◆ Pro atandı.\nuser_id={hedef_user_id}\npro_until={bitis.isoformat()}"
     )
 
 
@@ -1487,7 +3133,69 @@ async def pro_iptal(update: Update, context: ContextTypes.DEFAULT_TYPE):
         admin_user_id=admin_id,
         detail="manual revoke",
     )
-    await update.message.reply_text(f"✅ Pro iptal edildi. user_id={hedef_user_id}")
+    await update.message.reply_text(f"◆ Pro iptal edildi. user_id={hedef_user_id}")
+
+
+async def claude_ver(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/claude_ver <user_id> <gun> — admin: Claude planı ata"""
+    admin_id = update.effective_user.id if update.effective_user else None
+    if not _admin_mi(admin_id):
+        await update.message.reply_text("Bu komut yalnız admin için.")
+        return
+
+    if len(context.args) < 2:
+        await update.message.reply_text("Kullanım: /claude_ver <user_id> <gun>")
+        return
+    try:
+        hedef_user_id = int(context.args[0])
+        gun = int(context.args[1])
+        if gun <= 0:
+            raise ValueError
+    except ValueError:
+        await update.message.reply_text("Geçersiz parametre. Örnek: /claude_ver 123456789 30")
+        return
+
+    bitis = date.today() + timedelta(days=gun)
+    data = _plan_kayitlarini_yukle()
+    data[str(hedef_user_id)] = {"plan": "claude", "pro_until": bitis.isoformat()}
+    _plan_kayitlarini_kaydet(data)
+    _odeme_olayi_kaydet(
+        action="claude_grant",
+        hedef_user_id=hedef_user_id,
+        admin_user_id=admin_id,
+        detail=f"gun={gun}; pro_until={bitis.isoformat()}",
+    )
+    claude_durum = "✓ CLAUDE_API_KEY tanımlı" if CLAUDE_API_KEY else "⚠ CLAUDE_API_KEY eksik — .env'e ekle"
+    await update.message.reply_text(
+        f"◆ Claude planı atandı.\nuser_id={hedef_user_id}\npro_until={bitis.isoformat()}\n{claude_durum}"
+    )
+
+
+async def claude_iptal(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/claude_iptal <user_id> — admin: Claude planını kaldır"""
+    admin_id = update.effective_user.id if update.effective_user else None
+    if not _admin_mi(admin_id):
+        await update.message.reply_text("Bu komut yalnız admin için.")
+        return
+    if not context.args:
+        await update.message.reply_text("Kullanım: /claude_iptal <user_id>")
+        return
+    try:
+        hedef_user_id = int(context.args[0])
+    except ValueError:
+        await update.message.reply_text("Geçersiz user_id.")
+        return
+
+    data = _plan_kayitlarini_yukle()
+    data[str(hedef_user_id)] = {"plan": "free", "pro_until": ""}
+    _plan_kayitlarini_kaydet(data)
+    _odeme_olayi_kaydet(
+        action="claude_revoke",
+        hedef_user_id=hedef_user_id,
+        admin_user_id=admin_id,
+        detail="manual revoke",
+    )
+    await update.message.reply_text(f"◆ Claude planı iptal edildi. user_id={hedef_user_id}")
 
 
 async def odeme_kayit(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -1533,75 +3241,183 @@ async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
         if asildi:
             await update.message.reply_text(
                 (
-                    f"⛔ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
+                    f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
                     "Yarın tekrar deneyebilirsin. Manuel Pro yükseltme için admin ile iletişime geç."
                 )
             )
             return ConversationHandler.END
 
     klavye = [
-        [InlineKeyboardButton("🍂 Mevsimler", callback_data="mod_mevsim")],
-        [InlineKeyboardButton("🌦 Hava durumu", callback_data="mod_hava")],
-        [InlineKeyboardButton("⚔️ Jeopolitik", callback_data="mod_jeopolitik")],
-        [InlineKeyboardButton("📅 Özel Günler — Yakında", callback_data="yakinda")],
+        [
+            InlineKeyboardButton("◆ Okwis — Tanrının Gözü", callback_data="mod_okwis"),
+        ],
+        [
+            InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar"),
+        ],
     ]
     reply_markup = InlineKeyboardMarkup(klavye)
 
     await update.message.reply_text(
-        "Hangi modu kullanmak istersin?",
+        "Nasıl analiz yapalım?",
         reply_markup=reply_markup
     )
     return MOD_SECIMI
 
 
 async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Kullanıcı mod seçti — ülke ekranını göster"""
+    """Kullanıcı mod seçti"""
     query = update.callback_query
     await query.answer()
 
     if query.data == "yakinda":
-        await query.edit_message_text("🔜 Bu mod yakında geliyor! /analiz ile Mevsim modunu deneyebilirsin.")
+        await query.edit_message_text("◆ Bu mod yakında geliyor. /analiz ile tekrar dene.")
         return ConversationHandler.END
+
+    # Tüm Modlar menüsü — 8 mod ekranını göster
+    if query.data == "menu_tum_modlar":
+        klavye = [
+            [InlineKeyboardButton("◈ Mevsimler", callback_data="mod_mevsim"),
+             InlineKeyboardButton("◈ Hava Durumu", callback_data="mod_hava")],
+            [InlineKeyboardButton("◈ Jeopolitik", callback_data="mod_jeopolitik"),
+             InlineKeyboardButton("◈ Sektör Trendleri", callback_data="mod_sektor")],
+            [InlineKeyboardButton("◈ Dünya Trendleri", callback_data="mod_trendler"),
+             InlineKeyboardButton("◈ Magazin/Viral", callback_data="mod_magazin")],
+            [InlineKeyboardButton("◈ Özel Günler", callback_data="mod_ozel_gun"),
+             InlineKeyboardButton("◈ Doğal Afet", callback_data="mod_dogal_afet")],
+        ]
+        await query.edit_message_text(
+            "Hangi modu kullanmak istersin?",
+            reply_markup=InlineKeyboardMarkup(klavye)
+        )
+        return MOD_SECIMI
 
     # Modu kaydet
     context.user_data["mod"] = query.data
 
-    # Ülke seçim butonları oluştur
+    # Ülke seçim butonları
     klavye = []
     for i in range(0, len(ULKELER), 2):
-        satir = []
-        satir.append(InlineKeyboardButton(ULKELER[i], callback_data=f"ulke_{ULKELER[i]}"))
+        satir = [InlineKeyboardButton(ULKELER[i], callback_data=f"ulke_{ULKELER[i]}")]
         if i + 1 < len(ULKELER):
             satir.append(InlineKeyboardButton(ULKELER[i+1], callback_data=f"ulke_{ULKELER[i+1]}"))
         klavye.append(satir)
 
-    reply_markup = InlineKeyboardMarkup(klavye)
-    await query.edit_message_text("Hangi ülke için analiz yapalım?", reply_markup=reply_markup)
+    mod_adi = "◆ Okwis — Tanrının Gözü" if query.data == "mod_okwis" else query.data.replace("mod_", "").capitalize()
+    await query.edit_message_text(
+        f"<b>{mod_adi}</b>\n\nHangi ülke için analiz yapalım?",
+        reply_markup=InlineKeyboardMarkup(klavye),
+        parse_mode=ParseMode.HTML,
+    )
     return ULKE_SECIMI
 
 
 async def ulke_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Kullanıcı ülke seçti — çıktı formatı (uzun / kısa) sor"""
+    """Kullanıcı ülke seçti — varlık sorusu sor"""
     query = update.callback_query
     await query.answer()
 
     ulke = query.data.replace("ulke_", "")
     context.user_data["ulke"] = ulke
+    mod = context.user_data.get("mod", "")
+    user_id = update.effective_user.id if update.effective_user else None
+
+    # Okwis için varlık sorusu farklı — format seçimi yok
+    if mod == "mod_okwis":
+        # Profil var mı kontrol et
+        profil = _kullanici_profili_al(user_id) if user_id else None
+        profil_notu = ""
+        if profil:
+            profil_notu = "\n\n◆ <b>Kişisel profilin aktif</b> — analiz portföyüne göre özelleştirilecek."
+        else:
+            profil_notu = "\n\n<i>Profil tanımlanmamış. /profil ile portföyünü tanıtırsan analiz sana özel olur.</i>"
+
+        await query.edit_message_text(
+            f"◆ {ulke} seçildi.\n\n"
+            "◆ <b>Okwis</b> tüm modları tarayacak.\n\n"
+            "Odaklanmak istediğin bir varlık var mı?\n"
+            "Örneğin: altın, petrol, bitcoin, dolar...\n\n"
+            f"Yazarak cevap ver veya genel analiz için <b>BOŞ</b> yaz.{profil_notu}",
+            parse_mode=ParseMode.HTML,
+        )
+        return VARLIK_SORGUSU
+
+    await query.edit_message_text(
+        f"◆ {ulke} seçildi.\n\n"
+        "Özellikle odaklanmak istediğin bir varlık var mı?\n"
+        "Örneğin: kripto, altın, petrol, doğalgaz, vs.\n\n"
+        "Yazarak cevap ver veya boş geçmek için BOŞ yaz (genel analiz yapılır).",
+    )
+    return VARLIK_SORGUSU
+
+
+async def varlik_sorgusu_cevap(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Kullanıcı varlık adı yazdı veya BOŞ/boş yaptı"""
+    if update.message:
+        metin = update.message.text.strip()
+        mod = context.user_data.get("mod", "")
+
+        if metin.lower() in ("boş", "bos", ""):
+            context.user_data["varlik"] = ""
+            skip_msg = "Tamam, genel analiz yapacağım."
+        else:
+            context.user_data["varlik"] = metin
+            skip_msg = f"Adım. <b>{_tg_html_escape(metin)}</b> üzerinde odaklanıp analiz yapacağım."
+
+        # Okwis: format seçimi yok, direkt analiz başlat
+        if mod == "mod_okwis":
+            klavye = [[InlineKeyboardButton("◆ Okwis Analizi Başlat", callback_data="cikti_detay")]]
+            await update.message.reply_text(
+                f"{skip_msg}\n\n◆ Hazır olduğunda başlat:",
+                reply_markup=InlineKeyboardMarkup(klavye),
+                parse_mode=ParseMode.HTML,
+            )
+            return FORMAT_SECIMI
+
+        # Diğer modlar: uzun/kısa seçimi
+        klavye = [
+            [
+                InlineKeyboardButton("📖 Uzun anlatım", callback_data="cikti_detay"),
+                InlineKeyboardButton("◆ Kısa Özet", callback_data="cikti_ozet"),
+            ],
+        ]
+        await update.message.reply_text(
+            f"{skip_msg}\n\n"
+            "Nasıl göstereyim?\n"
+            "• Uzun anlatım — detaylı metin\n"
+            "• Kısa özet — kritik satırlar, tek bakışta",
+            reply_markup=InlineKeyboardMarkup(klavye),
+            parse_mode=ParseMode.HTML,
+        )
+        return FORMAT_SECIMI
+
+    return VARLIK_SORGUSU
+
+
+async def varlik_skip(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/skip komutu — varlık sorusunu geç, genel analiz yap"""
+    context.user_data["varlik"] = ""
+    mod = context.user_data.get("mod", "")
+
+    if mod == "mod_okwis":
+        klavye = [[InlineKeyboardButton("◆ Okwis Analizi Başlat", callback_data="cikti_detay")]]
+        await update.message.reply_text(
+            "Tamam, genel analiz yapacağım.\n\n◆ Hazır olduğunda başlat:",
+            reply_markup=InlineKeyboardMarkup(klavye),
+        )
+        return FORMAT_SECIMI
 
     klavye = [
         [
             InlineKeyboardButton("📖 Uzun anlatım", callback_data="cikti_detay"),
-            InlineKeyboardButton("⚡ Kısa özet", callback_data="cikti_ozet"),
+            InlineKeyboardButton("◆ Kısa Özet", callback_data="cikti_ozet"),
         ],
     ]
-    reply_markup = InlineKeyboardMarkup(klavye)
-
-    await query.edit_message_text(
-        f"✅ {ulke} seçildi.\n\n"
+    await update.message.reply_text(
+        "Tamam, genel analiz yapacağım.\n\n"
         "Nasıl göstereyim?\n"
         "• Uzun anlatım — detaylı metin\n"
-        "• Kısa özet — kritik satırlar, tek mobakışta",
-        reply_markup=reply_markup,
+        "• Kısa özet — kritik satırlar, tek bakışta",
+        reply_markup=InlineKeyboardMarkup(klavye),
     )
     return FORMAT_SECIMI
 
@@ -1613,6 +3429,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
 
     ulke = context.user_data.get("ulke")
     mod = context.user_data.get("mod", "mod_mevsim")
+    varlik = context.user_data.get("varlik", "")
 
     if not ulke:
         await query.edit_message_text(
@@ -1626,7 +3443,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
         if asildi:
             await query.edit_message_text(
                 (
-                    f"⛔ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
+                    f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
                     "Yarın tekrar deneyebilirsin. Manuel Pro yükseltme için admin ile iletişime geç."
                 )
             )
@@ -1634,19 +3451,149 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
 
     stil = CIKTI_OZET if query.data == "cikti_ozet" else CIKTI_DETAY
     stil_etiket = "kısa özet" if stil == CIKTI_OZET else "uzun anlatım"
-    if mod == "mod_hava":
+    if mod == "mod_okwis":
+        mod_kisa = "okwis"
+        varlik_goster = f" · {varlik}" if varlik else ""
+        await query.edit_message_text(f"◆ Okwis tarama başlıyor{varlik_goster}… Tüm modlar paralel çalışıyor.")
+    elif mod == "mod_hava":
         mod_kisa = "hava"
     elif mod == "mod_jeopolitik":
         mod_kisa = "jeopolitik"
+    elif mod == "mod_sektor":
+        mod_kisa = "sektör"
+    elif mod == "mod_trendler":
+        mod_kisa = "trendler"
+    elif mod == "mod_magazin":
+        mod_kisa = "magazin"
+    elif mod == "mod_ozel_gun":
+        mod_kisa = "özel günler"
+    elif mod == "mod_dogal_afet":
+        mod_kisa = "doğal afet"
     else:
         mod_kisa = "mevsim"
 
-    await query.edit_message_text(f"🔍 {ulke} · {mod_kisa} · {stil_etiket} hazırlanıyor…")
+    # Tüm modlar için adım adım bildirim yardımcısı
+    async def bildirim(adim: str, detay: str = "") -> None:
+        try:
+            metin = f"◆ <b>{_tg_html_escape(ulke)}</b> · <i>{_tg_html_escape(mod_kisa)}</i>\n\n{_tg_html_escape(adim)}"
+            if detay:
+                metin += f"\n<i>{_tg_html_escape(detay)}</i>"
+            await query.edit_message_text(metin, parse_mode=ParseMode.HTML)
+        except Exception:
+            pass
+
+    # Okwis zaten kendi hazırlanıyor mesajını yazdı, diğer modlar için adım bildirimleri
+    if mod != "mod_okwis":
+        await bildirim("⏳ Veri kaynakları taranıyor…", "Canlı veriler çekiliyor")
 
     try:
         analiz_turu = ANALIZ_MEVSIM
         baglam = ""
-        if mod == "mod_mevsim":
+        if mod == "mod_okwis":
+            analiz_turu = "okwis"
+
+            # Canlı ilerleme bildirimi
+            tamamlanan_modlar: list[str] = []
+
+            async def okwis_ilerleme(tamamlanan: int, toplam: int, mod_adi: str, basarili: bool) -> None:
+                durum = "▸" if basarili else "▹"
+                tamamlanan_modlar.append(f"{durum} {mod_adi}")
+                kalan = toplam - tamamlanan
+                satirlar = "\n".join(tamamlanan_modlar)
+                devam = f"\n⏳ {kalan} mod daha…" if kalan > 0 else ""
+                try:
+                    await query.edit_message_text(
+                        f"◆ <b>Okwis tarama yapıyor…</b>\n\n{satirlar}{devam}",
+                        parse_mode=ParseMode.HTML,
+                    )
+                except Exception:
+                    pass  # Telegram rate limit vb. — sessizce geç
+
+            baglamlar = await _topla_tum_baglamlari(ulke, ilerleme_cb=okwis_ilerleme)
+
+            # Çıkarım aşaması bildirimleri
+            await query.edit_message_text(
+                f"◆ <b>Okwis tarama tamamlandı.</b>\n\n"
+                + "\n".join(tamamlanan_modlar)
+                + "\n\n🧠 Sosyal ihtimal zincirleri değerlendiriliyor…",
+                parse_mode=ParseMode.HTML,
+            )
+
+            # Kullanıcı profilini al
+            profil = _kullanici_profili_al(user_id) if user_id else None
+
+            analiz = await asyncio.to_thread(okwis_analizi_yap, ulke, baglamlar, varlik, profil, "kisa", user_id)
+
+            await query.edit_message_text(
+                f"◆ <b>Okwis tarama tamamlandı.</b>\n\n"
+                + "\n".join(tamamlanan_modlar)
+                + "\n\n✨ Sonuç üretiliyor…",
+                parse_mode=ParseMode.HTML,
+            )
+
+            alt_cizgi = "<b>━━━━━━━━━━━━━━━━━━━━</b>"
+            varlik_satir = f" · <i>{_tg_html_escape(varlik)}</i>" if varlik else ""
+            profil_satir = " · <i>Kişisel Profil Aktif</i>" if profil else ""
+
+            # Okwis güven kartı — tüm bağlamların birleşimi üzerinden
+            birlestik_baglam_kart = " ".join(v for v in baglamlar.values() if v)
+            guven_olayi_kart = _guven_skoru_hesapla("okwis", birlestik_baglam_kart)
+            okwis_guven_karti = _guven_karti_html("okwis", birlestik_baglam_kart, guven_olayi_kart, user_id)
+
+            mesaj = (
+                f"<b>◆ Okwis — Tanrının Gözü</b> · <i>Kısa Özet</i>\n"
+                f"{alt_cizgi}\n"
+                f"▸ <b>{_tg_html_escape(ulke)}</b>{varlik_satir}{profil_satir}\n"
+                f"{alt_cizgi}\n\n"
+                f"{_tg_html_escape(analiz)}\n\n"
+                f"{okwis_guven_karti}\n\n"
+                f"{ANALIZ_FOOTER_HTML}"
+            )
+
+            # Bağlamları ve profili kaydet — detay analizi için tekrar çekmeyeceğiz
+            context.user_data["okwis_baglamlar"] = baglamlar
+            context.user_data["okwis_profil"] = profil
+
+            # Kısa analizi gönder + "Daha derin?" butonu
+            detay_klavye = InlineKeyboardMarkup([[
+                InlineKeyboardButton("🔍 Daha derin analiz", callback_data="okwis_detay"),
+                InlineKeyboardButton("✕ Yeter", callback_data="okwis_kapat"),
+            ]])
+            await gonder_parcali_html(query, context, mesaj)
+            # Son mesajın altına buton ekle
+            try:
+                await context.bot.send_message(
+                    chat_id=query.message.chat_id,
+                    text="Daha derin ve detaylı analiz ister misin?",
+                    reply_markup=detay_klavye,
+                )
+            except Exception:
+                pass
+            # Metrik kaydı
+            birlestik_baglam = " ".join(v for v in baglamlar.values() if v)
+            guven_olayi = _guven_skoru_hesapla("okwis", birlestik_baglam)
+            _analiz_olayi_kaydet(
+                analiz_turu="okwis",
+                ulke=ulke,
+                cikti_stili="okwis",
+                guven=guven_olayi,
+                baglam_metni=birlestik_baglam[:500],
+            )
+            # Okwis tahmin kaydet
+            _tahmin_kaydet(
+                mod="okwis",
+                ulke=ulke,
+                varlik=varlik,
+                analiz_metni=analiz,
+                user_id=user_id,
+            )
+            if user_id is not None:
+                yeni = _gunluk_kullanim_arttir(user_id)
+                logger.info("Günlük kullanım arttı (okwis): user=%s %s/%s", user_id, yeni, ANALIZ_GUNLUK_LIMIT)
+            return OKWIS_DETAY_SECIMI
+
+        elif mod == "mod_mevsim":
+            await bildirim("📡 Adım 1/3 — Mevsim verileri ve haber başlıkları çekiliyor…", "Reuters, BBC RSS + ulke_mevsim.json")
             try:
                 baglam = await asyncio.to_thread(topla_mevsim_baglami, ulke)
             except Exception:
@@ -1658,9 +3605,12 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                     parse_mode=ParseMode.HTML,
                 )
                 return ConversationHandler.END
-            analiz = await asyncio.to_thread(mevsim_analizi_yap, ulke, baglam, stil)
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "prob_zinciri.json analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(mevsim_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_hava":
             analiz_turu = ANALIZ_HAVA
+            await bildirim("📡 Adım 1/3 — Hava verisi çekiliyor…", "OpenWeatherMap API (anlık + 5 günlük tahmin)")
             try:
                 baglam = await asyncio.to_thread(topla_hava_baglami, ulke)
             except HavaModuHatasi as e:
@@ -1677,9 +3627,12 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                     parse_mode=ParseMode.HTML,
                 )
                 return ConversationHandler.END
-            analiz = await asyncio.to_thread(hava_analizi_yap, ulke, baglam, stil)
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Hava-lojistik-enerji zinciri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(hava_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_jeopolitik":
             analiz_turu = ANALIZ_JEOPOLITIK
+            await bildirim("📡 Adım 1/3 — Jeopolitik haber başlıkları çekiliyor…", "Reuters World News, BBC World News RSS")
             try:
                 baglam = await asyncio.to_thread(topla_jeopolitik_baglami, ulke)
             except Exception:
@@ -1691,7 +3644,84 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                     parse_mode=ParseMode.HTML,
                 )
                 return ConversationHandler.END
-            analiz = await asyncio.to_thread(jeopolitik_analizi_yap, ulke, baglam, stil)
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Jeopolitik-enerji-savunma zinciri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(jeopolitik_analizi_yap, ulke, baglam, stil, varlik, user_id)
+        elif mod == "mod_sektor":
+            analiz_turu = ANALIZ_SEKTOR
+            await bildirim("📡 Adım 1/3 — Sektör haber başlıkları çekiliyor…", "Reuters Business, BBC Business, Reuters Technology RSS")
+            try:
+                baglam = await asyncio.to_thread(topla_sektor_baglami, ulke)
+            except Exception:
+                logger.exception("Sektör bağlamı toplanamadı (ülke=%s)", ulke)
+                await query.edit_message_text(
+                    "<b>Sektör bağlamı yüklenemedi</b>\n\nRSS kaynağı veya ağ sorunu olabilir. Lütfen bir süre sonra <b>/analiz</b> ile tekrar dene.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Teknoloji-sektör dönüşüm zincirleri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(sektor_analizi_yap, ulke, baglam, stil, varlik, user_id)
+        elif mod == "mod_trendler":
+            analiz_turu = ANALIZ_TRENDLER
+            await bildirim("📡 Adım 1/3 — Dünya trend haberleri çekiliyor…", "BBC News, Reuters World, BBC Technology RSS")
+            try:
+                baglam = await asyncio.to_thread(topla_trendler_baglami, ulke)
+            except Exception:
+                logger.exception("Trendler bağlamı toplanamadı (ülke=%s)", ulke)
+                await query.edit_message_text(
+                    "<b>Trendler bağlamı yüklenemedi</b>\n\nRSS kaynağı veya ağ sorunu olabilir. Lütfen bir süre sonra <b>/analiz</b> ile tekrar dene.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Teknoloji trendi-sektör dönüşüm zincirleri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(trendler_analizi_yap, ulke, baglam, stil, varlik, user_id)
+        elif mod == "mod_magazin":
+            analiz_turu = ANALIZ_MAGAZIN
+            await bildirim("📡 Adım 1/3 — Magazin ve viral haber başlıkları çekiliyor…", "BBC Entertainment, Reuters Entertainment RSS")
+            try:
+                baglam = await asyncio.to_thread(topla_magazin_baglami, ulke)
+            except Exception:
+                logger.exception("Magazin bağlamı toplanamadı (ülke=%s)", ulke)
+                await query.edit_message_text(
+                    "<b>Magazin bağlamı yüklenemedi</b>\n\nRSS kaynağı veya ağ sorunu olabilir. Lütfen bir süre sonra <b>/analiz</b> ile tekrar dene.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Viral-marka-tüketici davranışı zincirleri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(magazin_analizi_yap, ulke, baglam, stil, varlik, user_id)
+        elif mod == "mod_ozel_gun":
+            analiz_turu = ANALIZ_OZEL_GUN
+            await bildirim("📡 Adım 1/3 — Özel gün takvimi ve haber başlıkları çekiliyor…", "ozel_gunler.json + Reuters Business RSS")
+            try:
+                baglam = await asyncio.to_thread(topla_ozel_gunler_baglami, ulke)
+            except Exception:
+                logger.exception("Özel günler bağlamı toplanamadı (ülke=%s)", ulke)
+                await query.edit_message_text(
+                    "<b>Özel günler bağlamı yüklenemedi</b>\n\nBir süre sonra <b>/analiz</b> ile tekrar dene.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Özel gün-tüketim dalgası zincirleri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(ozel_gun_analizi_yap, ulke, baglam, stil, varlik, user_id)
+        elif mod == "mod_dogal_afet":
+            analiz_turu = ANALIZ_DOGAL_AFET
+            await bildirim("📡 Adım 1/3 — Deprem ve afet verileri çekiliyor…", "USGS Earthquake API (M5+, son 7 gün) + Reuters/BBC RSS")
+            try:
+                baglam = await asyncio.to_thread(topla_dogal_afet_baglami, ulke)
+            except Exception:
+                logger.exception("Doğal afet bağlamı toplanamadı (ülke=%s)", ulke)
+                await query.edit_message_text(
+                    "<b>Doğal afet bağlamı yüklenemedi</b>\n\nUSGS veya RSS kaynağı geçici olabilir. Bir süre sonra <b>/analiz</b> ile tekrar dene.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            await bildirim("🧠 Adım 2/3 — Sosyal ihtimal zincirleri değerlendiriliyor…", "Afet-yeniden yapılanma ekonomisi zincirleri analiz ediliyor")
+            await bildirim("✨ Adım 3/3 — AI çıkarım yapıyor…", "Gemini / DeepSeek analiz üretiyor")
+            analiz = await asyncio.to_thread(dogal_afet_analizi_yap, ulke, baglam, stil, varlik, user_id)
         else:
             analiz = "Bu mod henüz aktif değil."
 
@@ -1704,7 +3734,26 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             baglam_metni=baglam,
         )
 
-        mesaj = sarmla_analiz_mesaji_html(ulke, stil, analiz, analiz_turu=analiz_turu)
+        # Tahmin kaydet
+        _tahmin_kaydet(
+            mod=analiz_turu,
+            ulke=ulke,
+            varlik=varlik,
+            analiz_metni=analiz,
+            user_id=user_id,
+        )
+
+        # Güven kartını analiz mesajına ekle
+        guven_karti = _guven_karti_html(analiz_turu, baglam, guven_olayi, user_id)
+        mesaj_govde = sarmla_analiz_mesaji_html(ulke, stil, analiz, analiz_turu=analiz_turu)
+        if guven_karti and ANALIZ_FOOTER_HTML in mesaj_govde:
+            mesaj = mesaj_govde.replace(
+                ANALIZ_FOOTER_HTML,
+                f"{guven_karti}\n\n{ANALIZ_FOOTER_HTML}"
+            )
+        else:
+            mesaj = mesaj_govde + (f"\n\n{guven_karti}" if guven_karti else "")
+
         await gonder_parcali_html(query, context, mesaj)
         if user_id is not None:
             yeni = _gunluk_kullanim_arttir(user_id)
@@ -1747,7 +3796,14 @@ def main():
         states={
             MOD_SECIMI: [CallbackQueryHandler(mod_secildi)],
             ULKE_SECIMI: [CallbackQueryHandler(ulke_secildi)],
+            VARLIK_SORGUSU: [
+                MessageHandler(filters.TEXT & ~filters.COMMAND, varlik_sorgusu_cevap),
+                CommandHandler("skip", varlik_skip),
+            ],
             FORMAT_SECIMI: [CallbackQueryHandler(cikti_format_secildi)],
+            OKWIS_DETAY_SECIMI: [
+                CallbackQueryHandler(okwis_detay_secildi, pattern="^okwis_(detay|kapat)$"),
+            ],
         },
         fallbacks=[
             CommandHandler("start", start_ve_konusmayi_bitir),
@@ -1757,12 +3813,33 @@ def main():
 
     # Konuşma önce: aktif akışta /start ve /cancel fallbacks ile biter.
     app.add_handler(conv_handler)
+
+    # Profil ConversationHandler
+    profil_handler = ConversationHandler(
+        entry_points=[CommandHandler("profil", profil_baslat)],
+        states={
+            PROFIL_METIN_BEKLENIYOR: [
+                CallbackQueryHandler(profil_callback, pattern="^profil_"),
+                MessageHandler(filters.TEXT & ~filters.COMMAND, profil_metin_al),
+            ],
+        },
+        fallbacks=[
+            CommandHandler("cancel", profil_iptal),
+            CommandHandler("start", start_ve_konusmayi_bitir),
+        ],
+    )
+    app.add_handler(profil_handler)
+
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("yardim", yardim))
     app.add_handler(CommandHandler("hesabim", hesabim))
     app.add_handler(CommandHandler("performans", performans))
+    app.add_handler(CommandHandler("gecmis", gecmis))
+    app.add_handler(CommandHandler("bildirim", bildirim_ayar))
     app.add_handler(CommandHandler("pro_ver", pro_ver))
     app.add_handler(CommandHandler("pro_iptal", pro_iptal))
+    app.add_handler(CommandHandler("claude_ver", claude_ver))
+    app.add_handler(CommandHandler("claude_iptal", claude_iptal))
     app.add_handler(CommandHandler("odeme_kayit", odeme_kayit))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, diger_mesajlar))
 
@@ -1773,6 +3850,30 @@ def main():
         AI_FALLBACK_DEEPSEEK,
         len(_gemini_anahtarlari()),
     )
+
+    # ── Alarm sistemi ────────────────────────────────────────────────────────
+    async def _alarm_job(context) -> None:
+        try:
+            await alarm_tara_ve_bildir(
+                bot=context.bot,
+                plan_kayitlari_yukle_fn=_plan_kayitlarini_yukle,
+                kullanici_pro_mu_fn=_kullanici_pro_mu,
+            )
+        except Exception as e:
+            logger.exception("Alarm job hatası: %s", e)
+
+    job_queue = app.job_queue
+    if job_queue is not None:
+        job_queue.run_repeating(
+            _alarm_job,
+            interval=ALARM_ARALIK_SANIYE,
+            first=60,  # Bot başladıktan 60 saniye sonra ilk tarama
+            name="okwis_alarm",
+        )
+        logger.info("Alarm sistemi başlatıldı (her %d saniye)", ALARM_ARALIK_SANIYE)
+    else:
+        logger.warning("JobQueue mevcut değil — alarm sistemi başlatılamadı")
+
     app.run_polling()
 
 

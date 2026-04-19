@@ -1,0 +1,111 @@
+﻿[
+  {
+    "id": "mevsim_tuketim_dongusu",
+    "baslik": "Mevsimsel Tüketim Döngüsü",
+    "tetikleyici": "Mevsim geçişi (kış→ilkbahar, yaz→sonbahar)",
+    "zincir": [
+      {"adim": 1, "olay": "Hava sıcaklığı değişimi", "etki": "Enerji tüketim kalıbı değişir (ısıtma/soğutma)", "olasilik": 0.90},
+      {"adim": 2, "olay": "Enerji talebi kayması", "etki": "Doğalgaz/elektrik fiyatlarında mevsimsel baskı", "olasilik": 0.80},
+      {"adim": 3, "olay": "Lojistik maliyet değişimi", "etki": "Yakıt tüketimi → taşımacılık maliyeti → enflasyon baskısı", "olasilik": 0.65},
+      {"adim": 4, "olay": "Tüketici harcama kalıbı kayması", "etki": "Perakende, gıda, giyim sektörlerinde mevsimsel talep dalgası", "olasilik": 0.75}
+    ],
+    "net_etki": "Mevsim geçişlerinde enerji + perakende sektörü öne çıkar; lojistik maliyetleri enflasyona katkı yapar.",
+    "ilgili_modlar": ["mevsim", "hava", "sektor"]
+  },
+  {
+    "id": "jeopolitik_enerji_kanalı",
+    "baslik": "Jeopolitik Gerilim → Enerji Fiyat Kanalı",
+    "tetikleyici": "Bölgesel çatışma, yaptırım, ticaret kısıtlaması",
+    "zincir": [
+      {"adim": 1, "olay": "Jeopolitik gerilim tırmanması", "etki": "Risk algısı artar, güvenli liman varlıklara talep yükselir", "olasilik": 0.85},
+      {"adim": 2, "olay": "Enerji arz güzergahı riski", "etki": "Petrol/doğalgaz fiyatlarında volatilite artışı", "olasilik": 0.70},
+      {"adim": 3, "olay": "Enerji fiyatı yükselişi", "etki": "Üretim maliyetleri artar → sanayi marjları daralır", "olasilik": 0.65},
+      {"adim": 4, "olay": "Merkez bankası tepkisi", "etki": "Enflasyon baskısı → faiz kararları → döviz kuru etkisi", "olasilik": 0.55},
+      {"adim": 5, "olay": "Savunma harcamaları artışı", "etki": "Savunma sanayi, siber güvenlik, uzay sektörü büyür", "olasilik": 0.60}
+    ],
+    "net_etki": "Jeopolitik gerilim enerji fiyatlarını yukarı iter, savunma sektörünü büyütür, sanayi marjlarını daraltır.",
+    "ilgili_modlar": ["jeopolitik", "sektor", "trendler"]
+  },
+  {
+    "id": "dogal_afet_yeniden_yapilanma",
+    "baslik": "Doğal Afet → Yeniden Yapılanma Ekonomisi",
+    "tetikleyici": "Deprem, sel, kasırga, yangın (büyük ölçekli)",
+    "zincir": [
+      {"adim": 1, "olay": "Afet gerçekleşir", "etki": "Altyapı hasarı, üretim durması, lojistik kesintisi", "olasilik": 1.0},
+      {"adim": 2, "olay": "Acil ihtiyaç dalgası", "etki": "Gıda, ilaç, barınak, enerji talebinde ani artış", "olasilik": 0.90},
+      {"adim": 3, "olay": "Sigorta ödemeleri ve kamu harcaması", "etki": "İnşaat, mühendislik, malzeme sektörlerine talep akışı", "olasilik": 0.75},
+      {"adim": 4, "olay": "Yeniden yapılanma dönemi (6-24 ay)", "etki": "Çimento, çelik, enerji altyapısı, teknoloji yatırımları öne çıkar", "olasilik": 0.70},
+      {"adim": 5, "olay": "Uzun vadeli dayanıklılık yatırımı", "etki": "Afet direnci teknolojileri, iklim adaptasyonu, akıllı altyapı büyür", "olasilik": 0.55}
+    ],
+    "net_etki": "Afet kısa vadede yıkım yaratır; orta-uzun vadede inşaat, enerji, sigorta ve teknoloji sektörlerine yatırım fırsatı açar.",
+    "ilgili_modlar": ["dogal_afet", "sektor"]
+  },
+  {
+    "id": "ozel_gun_tuketim_dalgasi",
+    "baslik": "Özel Gün / Bayram → Tüketim Dalgası",
+    "tetikleyici": "Bayram, tatil, alışveriş günü (Kara Cuma, 11.11 vb.)",
+    "zincir": [
+      {"adim": 1, "olay": "Özel gün yaklaşır (1-3 hafta önce)", "etki": "Perakende, e-ticaret, reklam harcamaları artar", "olasilik": 0.85},
+      {"adim": 2, "olay": "Tüketici harcaması zirve yapar", "etki": "Gıda, hediye, seyahat, lojistik sektörlerinde talep patlaması", "olasilik": 0.80},
+      {"adim": 3, "olay": "Lojistik kapasitesi zorlanır", "etki": "Kargo, depolama, son mil teslimat maliyetleri yükselir", "olasilik": 0.65},
+      {"adim": 4, "olay": "Sonrası (1-2 hafta)", "etki": "Tüketici harcaması yavaşlar, iade dönemi başlar, stok eritme", "olasilik": 0.70}
+    ],
+    "net_etki": "Özel günler perakende ve lojistik için kısa vadeli güçlü talep yaratır; sonrasında harcama yavaşlaması gelir.",
+    "ilgili_modlar": ["ozel_gun", "sektor", "magazin"]
+  },
+  {
+    "id": "teknoloji_trendi_sektor_donusum",
+    "baslik": "Teknoloji Trendi → Sektörel Dönüşüm",
+    "tetikleyici": "Yapay zeka, otomasyon, yeşil enerji, blockchain gibi büyük teknoloji dalgaları",
+    "zincir": [
+      {"adim": 1, "olay": "Yeni teknoloji benimsenmesi hızlanır", "etki": "Erken benimseyenler rekabet avantajı kazanır, geç kalanlar pazar payı kaybeder", "olasilik": 0.75},
+      {"adim": 2, "olay": "Sermaye akışı teknoloji sektörüne yönelir", "etki": "Geleneksel sektörlerde değer erozyonu, teknoloji hisselerinde prim", "olasilik": 0.70},
+      {"adim": 3, "olay": "İşgücü piyasası dönüşümü", "etki": "Bazı meslekler otomasyona uğrar, yeni beceri talebi artar", "olasilik": 0.65},
+      {"adim": 4, "olay": "Regülasyon gecikmesi", "etki": "Düzenleyici belirsizlik volatilite yaratır; erken regülasyon piyasayı daraltabilir", "olasilik": 0.60},
+      {"adim": 5, "olay": "Olgunlaşma ve konsolidasyon", "etki": "Büyük oyuncular küçükleri satın alır; sektör oligopolleşir", "olasilik": 0.55}
+    ],
+    "net_etki": "Teknoloji dalgaları kısa vadede volatilite, uzun vadede sektörel yeniden yapılanma ve kazanan/kaybeden ayrışması yaratır.",
+    "ilgili_modlar": ["trendler", "sektor"]
+  },
+  {
+    "id": "enflasyon_faiz_doviz_zinciri",
+    "baslik": "Enflasyon → Faiz → Döviz → Piyasa Zinciri",
+    "tetikleyici": "Enflasyon verisi açıklaması, merkez bankası kararı",
+    "zincir": [
+      {"adim": 1, "olay": "Enflasyon beklentinin üzerinde gelir", "etki": "Merkez bankası faiz artırım baskısı artar", "olasilik": 0.80},
+      {"adim": 2, "olay": "Faiz artışı veya artış sinyali", "etki": "Tahvil getirileri yükselir, hisse değerlemeleri baskılanır", "olasilik": 0.75},
+      {"adim": 3, "olay": "Döviz kuru tepkisi", "etki": "Yüksek faizli para birimi güçlenir; gelişmekte olan piyasalar baskı altına girer", "olasilik": 0.70},
+      {"adim": 4, "olay": "Kredi maliyeti artışı", "etki": "Tüketici harcaması yavaşlar, konut ve otomotiv sektörü daralır", "olasilik": 0.65},
+      {"adim": 5, "olay": "Büyüme yavaşlaması", "etki": "Resesyon riski artar; savunmacı sektörler (sağlık, gıda) öne çıkar", "olasilik": 0.50}
+    ],
+    "net_etki": "Enflasyon-faiz zinciri hisse piyasalarını baskılar, döviz volatilitesi yaratır; savunmacı varlıklar ve yüksek faizli para birimleri öne çıkar.",
+    "ilgili_modlar": ["mevsim", "jeopolitik", "sektor", "trendler"]
+  },
+  {
+    "id": "magazin_viral_marka_etkisi",
+    "baslik": "Viral Olay / Magazin → Marka ve Tüketici Davranışı",
+    "tetikleyici": "Ünlü skandalı, viral sosyal medya olayı, boykot çağrısı",
+    "zincir": [
+      {"adim": 1, "olay": "Viral olay patlak verir", "etki": "Sosyal medya trafiği ve medya ilgisi zirve yapar", "olasilik": 1.0},
+      {"adim": 2, "olay": "Marka ilişkilendirmesi", "etki": "İlgili marka/şirket hissesi kısa vadede volatilite yaşar", "olasilik": 0.65},
+      {"adim": 3, "olay": "Tüketici tepkisi (boykot veya destek)", "etki": "Satış rakamlarına 2-8 hafta içinde yansıma", "olasilik": 0.55},
+      {"adim": 4, "olay": "Medya döngüsü sona erer", "etki": "Etki büyük ölçüde kaybolur; kalıcı hasar nadirdir", "olasilik": 0.70}
+    ],
+    "net_etki": "Viral olaylar kısa vadeli marka volatilitesi yaratır; uzun vadeli etki genellikle sınırlıdır ancak sektörel trend sinyali taşıyabilir.",
+    "ilgili_modlar": ["magazin", "trendler"]
+  },
+  {
+    "id": "iklim_tarim_gida_zinciri",
+    "baslik": "İklim Anomalisi → Tarım → Gıda Enflasyonu",
+    "tetikleyici": "Kuraklık, aşırı yağış, don olayı, mevsim dışı hava",
+    "zincir": [
+      {"adim": 1, "olay": "İklim anomalisi (kuraklık/sel/don)", "etki": "Tarımsal üretim düşer veya hasat gecikmesi yaşanır", "olasilik": 0.80},
+      {"adim": 2, "olay": "Tarımsal arz daralması", "etki": "Buğday, mısır, soya, kahve gibi emtia fiyatları yükselir", "olasilik": 0.75},
+      {"adim": 3, "olay": "Gıda enflasyonu", "etki": "Tüketici fiyat endeksine yansıma; düşük gelirli haneler daha fazla etkilenir", "olasilik": 0.70},
+      {"adim": 4, "olay": "Sosyal baskı ve siyasi tepki", "etki": "Hükümetler ihracat kısıtlaması veya sübvansiyon uygulayabilir", "olasilik": 0.55},
+      {"adim": 5, "olay": "Tarım teknolojisi yatırımı", "etki": "Agritech, sulama, dayanıklı tohum sektörlerine sermaye akışı", "olasilik": 0.50}
+    ],
+    "net_etki": "İklim anomalileri gıda emtiasını yukarı iter, enflasyon baskısı yaratır; tarım teknolojisi uzun vadede fırsat sunar.",
+    "ilgili_modlar": ["mevsim", "hava", "dogal_afet", "sektor"]
+  }
+]

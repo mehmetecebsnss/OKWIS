@@ -171,7 +171,13 @@ def topla_hava_baglami(ulke: str) -> str:
         "\n".join(gunluk_satirlar) if gunluk_satirlar else "(Günlük özet oluşturulamadı.)",
         "### İlk 24 saat (3 saatlik dilimler)",
         "\n".join(tahmin_satirlari) if tahmin_satirlari else "(Tahmin listesi boş.)",
-        "### Not",
-        "Bu veriler bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.",
+        "### Analiz Rehberi",
+        f"""Yukarıdaki hava verilerinden şu soruları yanıtla:
+1. ANLIK DURUM: Mevcut hava koşulları ({sehir}) hangi sektörleri doğrudan etkiliyor?
+2. 5 GÜNLÜK TAHMİN: Önümüzdeki 5 günde hava nasıl değişiyor? Bu değişim lojistik, enerji veya tarımı nasıl etkiler?
+3. AŞIRI HAVA: Aşırı sıcaklık, yağış veya fırtına var mı? Hangi tedarik zinciri veya üretim aksayabilir?
+4. ENERJİ ETKİSİ: Hava koşulları ısıtma/soğutma talebini nasıl etkiliyor? Enerji fiyatlarına yansıması?
+5. {ulke.upper()} ÖZGÜ: Bu hava koşullarının {ulke} piyasasına özgü etkisi nedir?
+NOT: Sadece OpenWeather verisine dayan. 5 günlük tahmini aylık/yıllık tahmin gibi sunma.""",
     ]
     return "\n".join(parcalar)

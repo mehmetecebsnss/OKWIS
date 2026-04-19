@@ -4,6 +4,155 @@ Kod veya davranış değişikliklerinin kısa kaydı. Ayrıntılı parça listes
 
 ---
 
+## 2026-04-10 — Piyasa Yönü Tahmini (PİYASA_YÖNÜ) Eklendi
+
+**Amaç:** Analizlerin sonunda botun piyasa yönünü tahmin etmesi (bullish/nötr/bearish) ve "eğer mevcut koşullar devam ederse ne olur" senaryosu vermesi.
+
+**Yapılanlar:**
+
+### 1. Özet Modları (CIKTI_OZET) — ✅ TAMAMLANDI
+**Mevsim/Hava/Jeopolitik özet çıktılarına `PİYASA_YÖNÜ` satırı eklendi:**
+
+- **Mevsim Özet:** 
+  - Yeni output: 9 satır (önceden 8)
+  - Format: `PİYASA_YÖNÜ: (bullish/nötr/bearish; kısa neden + "Eğer ... devam ederse ... olacak" senaryosu)`
+  - Örnek: *"PİYASA_YÖNÜ: Bullish; Mevsimsel talep artışı sektörleri destekliyor. Eğer bu koşullar devam ederse enerji ve turizm hisseleri yükselişte kalabilir."*
+
+- **Hava Özet:** 
+  - Yeni output: 9 satır (önceden 8)
+  - Format: `PİYASA_YÖNÜ: (bullish/nötr/bearish; "Bu hava koşulları sektörleri ... yönlerine itiyor" + senaryo)`
+  - Bağlam: Hava data → sektörel talep → piyasa yönü zinciri
+
+- **Jeopolitik Özet:** 
+  - Yeni output: 9 satır (önceden 8)
+  - Format: `PİYASA_YÖNÜ: (bearish/nötr/bullish; "Bu gelişmeler risk iştahını ... şeklinde etkileyebilir" gibi)`
+  - Bağlam: Jeopolitik riski → risk-on/risk-off → piyasa yönü
+
+### 2. Uzun Anlatım Modları (CIKTI_DETAY) — 🔄 KISMÎ TAMAMLANDI
+**Hava modunun uzun anlatımına "PİYASA TAHMINI" adımı eklendi (adım 8):**
+- Cümle limiti: 10 → 11 cümle
+- Adım 8: "**PİYASA TAHMINI:** Bull ish/Nötr/Bearish + kısa neden. Sonra 'Eğer ... devam ederse' senaryosu"
+- Diğer adımlar (GÜVEN, TERS_SENARYO) sıra değişti (9 → 9. GÜVEN, 10 → 10. TERS_SENARYO)
+
+**Mevsim ve Jeopolitik uzun anlatım:** Benzer yapı tanımlandı ama kod-level entegrasyonu teknik encoding issues nedeniyle şu aşamaya kaldı. (Çevrimdışı Python script ile yapılabilir)
+
+### 3. Örnek Çıktı Formatı
+
+```
+ÖZET: Kış ayı enerji talebinin pik noktasında; sektörel katılım yüksek
+...
+RİSK: Jeopolitik şoklar enerji fiyatlarını hızlıca oynatabilir
+PİYASA_YÖNÜ: Bullish; Enerji talep baskısı ve dolar zayıflığı üst tarafı destekliyor. Eğer OPEC kesiş kararı almazsa, yaz aylarında düşüş beklenir.
+GÜVEN: 75/100 — YüksekTERS_SENARYO: Enerji fiyatları aniden düşebilir (jeopolitik rahatlaması, üretim artışı).
+```
+
+### 4. Teknik Detaylar
+- **Mevsim özet:** PİYASA_YÖNÜ enjektif (line 1305)
+- **Hava özet:** PİYASA_YÖNÜ enjekted (line 1448)
+- **Jeopolitik özet:** PİYASA_YÖNÜ enjeksiyonundan (line 1559)
+- **Hava detay:** Cümle limit güncelleme (line 1485: 10 → 11)
+
+### 5. Sonuç
+Kullanıcı artık:
+- ✅ Piyasa yönü tahmini (bullish/nötr/bearish) alıyor
+- ✅ "Eğer bu koşullar devam ederse ..." senaryosunu okuyor
+- ✅ Her moda (mevsim/hava/jeopolitik) özgü yön tahmini görüyor
+- ❌ Uzun anlatım versiyonları henüz tam aşama (Python refactor gerekli)
+
+**Sonraki Adım:** Mevsim ve Jeopolitik detay modlarında da matching PİYASA TAHMINI step'i eklemek
+
+---
+
+## 2026-04-10 — Petrol-Hava Lojistik Zinciri Specificity (Hava Modunda)
+
+**Amaç:** Hava modu + Petrol varlığı kombinasyonunda, bot sadece "hava havası enerji talebini etkiler" değil, detaylı **lojistik yakıt zinciri** (kar → karayolu taşımacılık verimsizlik → yakıt tüketimi ↑) anlatması, fakat OPEC/stok/dolar kuru gibi ana fiyat belirleyicilerin petrol fiyatını kontrol ettiği net olması.
+
+**Yapılanlar:**
+1. **`_hava_petrol_lojistik_directive(ay_adi, ulke)`** ✨ YENİ — Petrol-Hava bağlantı formatı
+   - **kar/yağmur mekanizması:** Lastik sürtünmesi, motor boşta kaldırma → yakıt +2–4%
+   - **Sıcaklık aşırılıkları:** Cold-start, ticari uçak kerozin → yakıt +1–3%
+   - **Taşımacıların pozisyonu:** Zor hava → talep birikimi (mikro pulse); iyileşme → dağılma (fiyat rahatlaması)
+   - **OPEC/Stok/Dolar Kontrolü:** Lojistik talep pulse marjinal; ana belirleyiciler stok, OPEC, dolar kuruna devam
+   - **Türkiye özgü:** %~80 ithal petrol → Brent kuruna bağımlı; karayolu ~60% ticari lojistik → hava volatilitesi
+
+2. **`hava_analizi_yap()` içine entegrasyon:**
+   - varlik "petrol" ise → `_hava_petrol_lojistik_directive()` çağrılır
+   - varlik_notu'na enjekte edilen lojistik directive sayesinde model hava→lojistik→yakıt→petrol zincirini analiz ediyor
+   - Prompt: "Hava koşullarının lojistik verimliliğine etkisi × Türkiye petrol ithalatçılığı × OPEC/stok/dolar → Petrol fiyat riski nedir?"
+
+3. **Sonuç:** Hava modunda petrol yazarsa, bot artık:
+   - ✅ Kar/yağmur verimliliğine net etkisi açıklıyor (lojistik yakıt tüketimi +X%)
+   - ✅ O tüketim pulse'inin OPEC/stok/dolar tarafından sönüme uğrayabileceğini anlatıyor
+   - ✅ Türkiye ithalatçı perspektifini (Brent bağımlılığı) net hale getiriyor
+   - ❌ Sadece "enerji talep" gibi genel ifadelerle kalmıyor
+
+**Sonraki Adım:** Hava modunda petrol yazılı testimize beklemede — user feedback üzerine ek refinement
+
+---
+
+## 2026-04-10 — Varlık Spesifik Direktif Sistemi (Petrol Fiyat Bilinçlendirmesi)
+
+**Amaç:** Kullanıcı "petrol" yazarsa, modele mevsime göre petrol fiyatının nasıl davrandığını, tüketim dinamiklerini, fiyat etkileyen faktörleri anlatması gereken detaylı direktif oluşturmak. Böylece bot sadece "petrol'e odaklan" değil, "kış ayında petrol enerji talebinden şu kadar ETKİLENİR, bu nedenle fiyat böyle hareket eder" açıklaması yapar.
+
+**Yapılanlar:**
+1. **`_varlik_tipi_tespit(varlik)`** ✨ YENİ — Metin girdisinden varlık türü tespit (emtia/kripto/hisse/doviz/diğer)
+   - Emtia: petrol, altın, doğalgaz, bakır, soya, buğday, kahve, nikel, etc.
+   - Kripto: bitcoin, ethereum, altcoin, etc.
+   - Hisse: Apple, Microsoft, Tesla, etc.
+   - Para: dolar, euro, sterlin, etc.
+
+2. **`_varlik_detay_directive(varlik, varlik_tipi, ay_adi, ulke)`** ✨ YENİ — Varlık + ay kombinasyonuna göre mevsimsel "fiyat bilinci" direktifi
+   - **Petrol (Emtia):** 
+     - Kış: "Enerji talebinin pik noktası — isınma talebinden petrol genelde %X yükseliş..."
+     - Yaz: "Ulaştırma talebinin zirve — klima, turizm motorlama..."
+     - Geçiş: "Belirsizlik ve jeopolitik şoklara duyarlı..."
+   - **Altın:** Reel faiz, dolar kuru, jeopolitik "güvenli liman" rolü
+   - **Kripto:** Makro risk ortamı, merkez bankası politikası
+   - **Hisse:** Sektörel mevsimsellik, kazanç döngüsü, faiz etkileri
+   - **Para:** Faiz farkı (carry trade), ticaret dengesi, jeopolitik
+
+3. **Mevsim/Hava/Jeopolitik analizlerine entegrasyon:**
+   - Mevsim analizi: `varlik_notu = f"{varlik_detay}"` olarak prompt başına enjekte
+   - Hava analizi: `varlik_detay + "HAVA BAĞLANTISI:"` → hava verisi ile varlık fiyatı bağlantısı
+   - Jeopolitik: `varlik_detay + "JEOPOLİTİK BAĞLANTISI:"` → jeopolitik gelişmeler ve varlık fiyatının ilişkisi
+
+4. **Örnek Çıktı (Mevsim + Petrol):**
+   ```
+   **VARLIK ANALİZİ — PETROL (Ocak):**
+   Ocak kış döneminin ortası; enerji talebinin pik noktası.
+   — Isınma ve doğalgaz talebinden petrol fiyatları tipik yükseli gösterir
+   — Enerji enflasyonu → taşımacılık, lojistik maliyetleri artar
+   — Coğrafi riskler (Orta Doğu, Rusya) petrol volatilitesini arttırır
+   — OPEC karmaşası, dolar kuru, stok seviyeleri asıl belirleyiciler
+   **Soru:** Türkiye'de bu dönemde enerji talebinin fiyatlaşması nasıl?
+   **Bilinçlendir:** Petrol genelde kış aylarında enerji talebinden yüksek volatilite gösterir...
+   ```
+
+**Sonuç:** Petrol (veya altın, kripto, vb.) yazıldığında, analiz artık varlığa özgü mevsimsel/makro fiyat dinamiklerini detaylı açıklıyor. Kullanıcı "petrol fiyatları kış'ta neden yükseliyor, hangi faktörler?" sorusunun cevabını tablo olarak değil, prompt'tan gelen metin içinde görüyor.
+
+---
+
+## 2026-04-10 — Varlık Odaklı Sorgu (Güncelleme-Önerileri.md — Sat.243)
+
+**Amaç:** Ülke seçiminden sonra kullanıcıya "Odaklanmak istediğin bir varlık var mı? (kripto, altın, petrol vb.)" sorusu sorarak varlık-odaklı analiz yapmak. Seçenek menüsü yok; yazı ile input (isteğe bağlı olarak `/skip` ile geçiş).
+
+**Yapılanlar:**
+1. **Yeni state:** `VARLIK_SORGUSU = 2` eklendi; state sırası: MOD(0) → ULKE(1) → VARLIK(2) → FORMAT(3)
+2. **`ulke_secildi()` güncellemesi:** Ülke seçiminden sonra varlık sorusu göster; `VARLIK_SORGUSU` state'ine git
+3. **`varlik_sorgusu_cevap()` (YENİ):** MessageHandler ile metin input alır; `/skip` yazarsa `varlik=""` (genel analiz); değilse input'u kaydet; FORMAT_SECIMI'ye git
+4. **Analiz fonksiyonları güncellemesi:** `mevsim_analizi_yap()`, `hava_analizi_yap()`, `jeopolitik_analizi_yap()` — yeni parametr `varlik: str = ""` eklendi
+5. **Varlik enjeksiyonu:** Her prompt başında, eğer varlik boş değilse: 
+   ```
+   **ODAKLANAN VARLIK:** Kullanıcı özellikle **{varlik}** üzerinde odaklanmak istiyor. Bu varlığın [MOD konteksti]'nde nasıl etkileneceğini ön planda tut.
+   ```
+6. **`cikti_format_secildi()` güncelleme:** `varlik = context.user_data.get("varlik", "")` alınıp tüm analiz fn'larına geçilir
+7. **ConversationHandler güncelleme:** VARLIK_SORGUSU state'i eklendi; MessageHandler(filters.TEXT & ~filters.COMMAND, varlik_sorgusu_cevap)
+8. **Dokümantasyon:** [VARLIK_ODAKLI_ANALIZ.md](VARLIK_ODAKLI_ANALIZ.md) oluşturuldu (detaylı kullanıcı akışı, test listesi)
+
+**Sonuç:** Kullanıcı artık /analiz → Mod → Ülke → **Varlık yazma** → Çıktı stili → Varlık-odaklı analiz akışını deneyimliyor. Varlık yazmaması / `/skip` → genel analiz yapılır.
+
+---
+
 ## 2026-04-09 — Parça I (manuel): Pro plan yetkilendirme + hesap ekranı
 
 **Amaç:** Telegram Stars olmadan, admin tarafından bot üzerinden manuel Pro atama/iptal ile monetizasyon operasyonunu başlatmak.

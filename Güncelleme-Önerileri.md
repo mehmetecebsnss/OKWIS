@@ -241,3 +241,20 @@ Bu **4 bileşenli güven skoru** sistemi, finansal AI ürünlerinde **Kensho**, 
 
 
 Analiz modlarından herhangi birisini seçtikten ve daha sonra ülkeyi seçtikten sonra bize bir soru sorsa soruda şu; özellikle odaklandığın bir varlık var mı mesela Kripto altın petrol vs.? Bizim bu soruya vereceğimiz cevap yoksa her zamanki gibi genel analizini yapmaya devam eder eğer varsa, cevap olarak yazdığımız şeye odaklı bir analiz yapar. Bu arada kritik nokta şu, bu odak emtiasını yazı ile yazmalıyız bize seçenek vermemeli.
+
+
+Şimdi seninle bu botu asıl amacımız olan versiyonuna yükselteceğiz. Sosyal ihtimaller zinciri oluşturacağız. Bu listenin içeriğinde yüzlerce neden sonuç ilişkisi yer alacak. örneğin, kış ayına girdiğimizde emlak fiyatları yükselir yaz ayına girdiğimizde düşer gibi. Hep bir neden sonuç, Tez ve anti tez olacak şekilde ihtimaller sıralanacak. Asıl olay şu, biz analiz yaptırdığımızda yapay zeka bu ihtimalleri analiz etmeden analizi yapmayacak. Bu sayede analize göre sosyal ihtimaller listesindeki olguları inceleyip bize daha sağlam bir analiz yapacak. Benim yapacağım ise bu sosyal analizler data setini tarihten bu güne dek bildiğimiz ve gerçekleşen ihtimallerle doldurmak olacak. Ne kadar çok ihtimal bilgisi elimizde olursa o kadar zeki ve geçmişten ders çıkarmayı bilen bir model olur elimizde.
+
+Spesifik değil genel olarak bildiğimiz bütün ihtimalleri alacak o anki mod seçimine uygun olanlardan çıkarımlar yapacak.
+
+Sık sorulan sorular
+Q: İhtimaller hangi seviyede olsun? Genel (Mevsim/Hava/Jeopolitik) mi yoksa Sektör-spesifik (Emlak/Enerji/Kripto/Hisse/Tarım/Lojistik) mi?
+A: Spesifik değil genel olarak bildiğimiz bütün ihtimalleri alacak o anki mod seçimine uygun olanlardan çıkarımlar yapacak.
+Q: Neden-sonuç zincirinin derinliği ne olsun?
+A: Derin (5+ seviye): Karmaşık senaryo ağlı - Hiper detaylı zincirleme etkiler
+Q: Verileri nasıl saklamalı?
+A: JSON dosyası (prob_zinciri.json) - Basit, version control uyumlu, hızlı
+Q: AI prompt'a nasıl entegre edelim?
+A: İkisi de — Genel ihtimal context + filtrelenmiş spesifik ihtimaller - Beste of both worlds
+Q: Bot çıktısında ihtimal referanslarını göstermeli mi?
+A: İsteğe bağlı — /analiz vs /analiz_detay_zincirleri - Kullanıcı seçer
