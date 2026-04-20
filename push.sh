@@ -9,7 +9,7 @@
 # İlk kullanımdan önce PI_IP ve PI_USER'ı doldur.
 # ============================================================
 
-PI_IP="192.168.1.XXX"    # <- Pi'nin IP adresini buraya yaz (hostname -I ile öğren)
+PI_IP="192.168.1.144"    # Pi'nin IP adresi
 PI_USER="pi"              # <- Pi kullanıcı adı (genelde 'pi')
 LOCAL_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 
