@@ -1,4 +1,4 @@
-.env
+# Python
 .venv/
 venv/
 __pycache__/
@@ -6,39 +6,28 @@ __pycache__/
 .pytest_cache/
 .mypy_cache/
 
-# Auto-generated entries
-# Dependencies
-node_modules/
-npm-debug.log*
-yarn-debug.log*
-yarn-error.log*
-
-# Build outputs
-dist/
-build/
-*.log
-
-# Environment files
+# Ortam dosyaları — API anahtarları burada, asla commit etme
 .env
 .env.*
 !.env.example
 
-# IDE files
+# Kullanıcı verileri ve metrikler — kişisel veri, GitHub'a gitmesin
+metrics/
+
+# Build / log
+dist/
+build/
+*.log
+*.tmp
+*.temp
+.cache/
+
+# IDE
 .vscode/
 .idea/
 *.swp
 *.swo
 
-# OS files
+# OS
 .DS_Store
 Thumbs.db
-
-# Temporary files
-*.tmp
-*.temp
-.cache/
-
-# Sensitive files (auto-detected)
-.env
-.env.example
-
