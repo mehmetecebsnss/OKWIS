@@ -138,7 +138,6 @@ NOT: Özel gün verisi JSON'dan geliyor — bu veriye dayan. Bağlamda olmayan g
         gunler_text,
         "### Güncel haber bağlamı",
         rss_text,
-        analiz_rehberi,
     ]
 
     return "\n".join(parcalar)

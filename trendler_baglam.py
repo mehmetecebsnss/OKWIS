@@ -168,5 +168,4 @@ NOT: Her çıkarım bağlamdaki somut bir habere dayandırılmalı. Bağlamda ol
     if tavily_blok:
         parcalar.append(tavily_blok)
 
-    parcalar.append(analiz_rehberi)
     return "\n".join(parcalar)

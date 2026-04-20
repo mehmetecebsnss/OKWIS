@@ -215,6 +215,4 @@ NOT: Mevsimsel veriye ve haber başlıklarına dayan. Bağlamda olmayan verileri
     if tavily_blok:
         parcalar.append(tavily_blok)
 
-    parcalar.append(analiz_rehberi)
-
     return "\n".join(parcalar)

@@ -159,5 +159,4 @@ NOT: Eğer bağlamda somut magazin/viral haber yoksa bunu açıkça belirt. Uydu
     if tavily_blok:
         parcalar.append(tavily_blok)
 
-    parcalar.append(analiz_rehberi)
     return "\n".join(parcalar)

@@ -195,5 +195,4 @@ NOT: Eğer bağlamda somut afet verisi yoksa bunu açıkça belirt ve mevcut ver
     if tavily_blok:
         parcalar.append(tavily_blok)
 
-    parcalar.append(analiz_rehberi)
     return "\n".join(parcalar)

@@ -1,111 +1,5403 @@
-﻿[
+[
   {
     "id": "mevsim_tuketim_dongusu",
     "baslik": "Mevsimsel Tüketim Döngüsü",
     "tetikleyici": "Mevsim geçişi (kış→ilkbahar, yaz→sonbahar)",
     "zincir": [
-      {"adim": 1, "olay": "Hava sıcaklığı değişimi", "etki": "Enerji tüketim kalıbı değişir (ısıtma/soğutma)", "olasilik": 0.90},
-      {"adim": 2, "olay": "Enerji talebi kayması", "etki": "Doğalgaz/elektrik fiyatlarında mevsimsel baskı", "olasilik": 0.80},
-      {"adim": 3, "olay": "Lojistik maliyet değişimi", "etki": "Yakıt tüketimi → taşımacılık maliyeti → enflasyon baskısı", "olasilik": 0.65},
-      {"adim": 4, "olay": "Tüketici harcama kalıbı kayması", "etki": "Perakende, gıda, giyim sektörlerinde mevsimsel talep dalgası", "olasilik": 0.75}
+      {
+        "adim": 1,
+        "olay": "Hava sıcaklığı değişimi",
+        "etki": "Enerji tüketim kalıbı değişir (ısıtma/soğutma)",
+        "olasilik": 0.9
+      },
+      {
+        "adim": 2,
+        "olay": "Enerji talebi kayması",
+        "etki": "Doğalgaz/elektrik fiyatlarında mevsimsel baskı",
+        "olasilik": 0.8
+      },
+      {
+        "adim": 3,
+        "olay": "Lojistik maliyet değişimi",
+        "etki": "Yakıt tüketimi → taşımacılık maliyeti → enflasyon baskısı",
+        "olasilik": 0.65
+      },
+      {
+        "adim": 4,
+        "olay": "Tüketici harcama kalıbı kayması",
+        "etki": "Perakende, gıda, giyim sektörlerinde mevsimsel talep dalgası",
+        "olasilik": 0.75
+      }
     ],
     "net_etki": "Mevsim geçişlerinde enerji + perakende sektörü öne çıkar; lojistik maliyetleri enflasyona katkı yapar.",
-    "ilgili_modlar": ["mevsim", "hava", "sektor"]
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ]
   },
   {
     "id": "jeopolitik_enerji_kanalı",
     "baslik": "Jeopolitik Gerilim → Enerji Fiyat Kanalı",
     "tetikleyici": "Bölgesel çatışma, yaptırım, ticaret kısıtlaması",
     "zincir": [
-      {"adim": 1, "olay": "Jeopolitik gerilim tırmanması", "etki": "Risk algısı artar, güvenli liman varlıklara talep yükselir", "olasilik": 0.85},
-      {"adim": 2, "olay": "Enerji arz güzergahı riski", "etki": "Petrol/doğalgaz fiyatlarında volatilite artışı", "olasilik": 0.70},
-      {"adim": 3, "olay": "Enerji fiyatı yükselişi", "etki": "Üretim maliyetleri artar → sanayi marjları daralır", "olasilik": 0.65},
-      {"adim": 4, "olay": "Merkez bankası tepkisi", "etki": "Enflasyon baskısı → faiz kararları → döviz kuru etkisi", "olasilik": 0.55},
-      {"adim": 5, "olay": "Savunma harcamaları artışı", "etki": "Savunma sanayi, siber güvenlik, uzay sektörü büyür", "olasilik": 0.60}
+      {
+        "adim": 1,
+        "olay": "Jeopolitik gerilim tırmanması",
+        "etki": "Risk algısı artar, güvenli liman varlıklara talep yükselir",
+        "olasilik": 0.85
+      },
+      {
+        "adim": 2,
+        "olay": "Enerji arz güzergahı riski",
+        "etki": "Petrol/doğalgaz fiyatlarında volatilite artışı",
+        "olasilik": 0.7
+      },
+      {
+        "adim": 3,
+        "olay": "Enerji fiyatı yükselişi",
+        "etki": "Üretim maliyetleri artar → sanayi marjları daralır",
+        "olasilik": 0.65
+      },
+      {
+        "adim": 4,
+        "olay": "Merkez bankası tepkisi",
+        "etki": "Enflasyon baskısı → faiz kararları → döviz kuru etkisi",
+        "olasilik": 0.55
+      },
+      {
+        "adim": 5,
+        "olay": "Savunma harcamaları artışı",
+        "etki": "Savunma sanayi, siber güvenlik, uzay sektörü büyür",
+        "olasilik": 0.6
+      }
     ],
     "net_etki": "Jeopolitik gerilim enerji fiyatlarını yukarı iter, savunma sektörünü büyütür, sanayi marjlarını daraltır.",
-    "ilgili_modlar": ["jeopolitik", "sektor", "trendler"]
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor",
+      "trendler"
+    ]
   },
   {
     "id": "dogal_afet_yeniden_yapilanma",
     "baslik": "Doğal Afet → Yeniden Yapılanma Ekonomisi",
     "tetikleyici": "Deprem, sel, kasırga, yangın (büyük ölçekli)",
     "zincir": [
-      {"adim": 1, "olay": "Afet gerçekleşir", "etki": "Altyapı hasarı, üretim durması, lojistik kesintisi", "olasilik": 1.0},
-      {"adim": 2, "olay": "Acil ihtiyaç dalgası", "etki": "Gıda, ilaç, barınak, enerji talebinde ani artış", "olasilik": 0.90},
-      {"adim": 3, "olay": "Sigorta ödemeleri ve kamu harcaması", "etki": "İnşaat, mühendislik, malzeme sektörlerine talep akışı", "olasilik": 0.75},
-      {"adim": 4, "olay": "Yeniden yapılanma dönemi (6-24 ay)", "etki": "Çimento, çelik, enerji altyapısı, teknoloji yatırımları öne çıkar", "olasilik": 0.70},
-      {"adim": 5, "olay": "Uzun vadeli dayanıklılık yatırımı", "etki": "Afet direnci teknolojileri, iklim adaptasyonu, akıllı altyapı büyür", "olasilik": 0.55}
+      {
+        "adim": 1,
+        "olay": "Afet gerçekleşir",
+        "etki": "Altyapı hasarı, üretim durması, lojistik kesintisi",
+        "olasilik": 1.0
+      },
+      {
+        "adim": 2,
+        "olay": "Acil ihtiyaç dalgası",
+        "etki": "Gıda, ilaç, barınak, enerji talebinde ani artış",
+        "olasilik": 0.9
+      },
+      {
+        "adim": 3,
+        "olay": "Sigorta ödemeleri ve kamu harcaması",
+        "etki": "İnşaat, mühendislik, malzeme sektörlerine talep akışı",
+        "olasilik": 0.75
+      },
+      {
+        "adim": 4,
+        "olay": "Yeniden yapılanma dönemi (6-24 ay)",
+        "etki": "Çimento, çelik, enerji altyapısı, teknoloji yatırımları öne çıkar",
+        "olasilik": 0.7
+      },
+      {
+        "adim": 5,
+        "olay": "Uzun vadeli dayanıklılık yatırımı",
+        "etki": "Afet direnci teknolojileri, iklim adaptasyonu, akıllı altyapı büyür",
+        "olasilik": 0.55
+      }
     ],
     "net_etki": "Afet kısa vadede yıkım yaratır; orta-uzun vadede inşaat, enerji, sigorta ve teknoloji sektörlerine yatırım fırsatı açar.",
-    "ilgili_modlar": ["dogal_afet", "sektor"]
+    "ilgili_modlar": [
+      "dogal_afet",
+      "sektor"
+    ]
   },
   {
     "id": "ozel_gun_tuketim_dalgasi",
     "baslik": "Özel Gün / Bayram → Tüketim Dalgası",
     "tetikleyici": "Bayram, tatil, alışveriş günü (Kara Cuma, 11.11 vb.)",
     "zincir": [
-      {"adim": 1, "olay": "Özel gün yaklaşır (1-3 hafta önce)", "etki": "Perakende, e-ticaret, reklam harcamaları artar", "olasilik": 0.85},
-      {"adim": 2, "olay": "Tüketici harcaması zirve yapar", "etki": "Gıda, hediye, seyahat, lojistik sektörlerinde talep patlaması", "olasilik": 0.80},
-      {"adim": 3, "olay": "Lojistik kapasitesi zorlanır", "etki": "Kargo, depolama, son mil teslimat maliyetleri yükselir", "olasilik": 0.65},
-      {"adim": 4, "olay": "Sonrası (1-2 hafta)", "etki": "Tüketici harcaması yavaşlar, iade dönemi başlar, stok eritme", "olasilik": 0.70}
+      {
+        "adim": 1,
+        "olay": "Özel gün yaklaşır (1-3 hafta önce)",
+        "etki": "Perakende, e-ticaret, reklam harcamaları artar",
+        "olasilik": 0.85
+      },
+      {
+        "adim": 2,
+        "olay": "Tüketici harcaması zirve yapar",
+        "etki": "Gıda, hediye, seyahat, lojistik sektörlerinde talep patlaması",
+        "olasilik": 0.8
+      },
+      {
+        "adim": 3,
+        "olay": "Lojistik kapasitesi zorlanır",
+        "etki": "Kargo, depolama, son mil teslimat maliyetleri yükselir",
+        "olasilik": 0.65
+      },
+      {
+        "adim": 4,
+        "olay": "Sonrası (1-2 hafta)",
+        "etki": "Tüketici harcaması yavaşlar, iade dönemi başlar, stok eritme",
+        "olasilik": 0.7
+      }
     ],
     "net_etki": "Özel günler perakende ve lojistik için kısa vadeli güçlü talep yaratır; sonrasında harcama yavaşlaması gelir.",
-    "ilgili_modlar": ["ozel_gun", "sektor", "magazin"]
+    "ilgili_modlar": [
+      "ozel_gun",
+      "sektor",
+      "magazin"
+    ]
   },
   {
     "id": "teknoloji_trendi_sektor_donusum",
     "baslik": "Teknoloji Trendi → Sektörel Dönüşüm",
     "tetikleyici": "Yapay zeka, otomasyon, yeşil enerji, blockchain gibi büyük teknoloji dalgaları",
     "zincir": [
-      {"adim": 1, "olay": "Yeni teknoloji benimsenmesi hızlanır", "etki": "Erken benimseyenler rekabet avantajı kazanır, geç kalanlar pazar payı kaybeder", "olasilik": 0.75},
-      {"adim": 2, "olay": "Sermaye akışı teknoloji sektörüne yönelir", "etki": "Geleneksel sektörlerde değer erozyonu, teknoloji hisselerinde prim", "olasilik": 0.70},
-      {"adim": 3, "olay": "İşgücü piyasası dönüşümü", "etki": "Bazı meslekler otomasyona uğrar, yeni beceri talebi artar", "olasilik": 0.65},
-      {"adim": 4, "olay": "Regülasyon gecikmesi", "etki": "Düzenleyici belirsizlik volatilite yaratır; erken regülasyon piyasayı daraltabilir", "olasilik": 0.60},
-      {"adim": 5, "olay": "Olgunlaşma ve konsolidasyon", "etki": "Büyük oyuncular küçükleri satın alır; sektör oligopolleşir", "olasilik": 0.55}
+      {
+        "adim": 1,
+        "olay": "Yeni teknoloji benimsenmesi hızlanır",
+        "etki": "Erken benimseyenler rekabet avantajı kazanır, geç kalanlar pazar payı kaybeder",
+        "olasilik": 0.75
+      },
+      {
+        "adim": 2,
+        "olay": "Sermaye akışı teknoloji sektörüne yönelir",
+        "etki": "Geleneksel sektörlerde değer erozyonu, teknoloji hisselerinde prim",
+        "olasilik": 0.7
+      },
+      {
+        "adim": 3,
+        "olay": "İşgücü piyasası dönüşümü",
+        "etki": "Bazı meslekler otomasyona uğrar, yeni beceri talebi artar",
+        "olasilik": 0.65
+      },
+      {
+        "adim": 4,
+        "olay": "Regülasyon gecikmesi",
+        "etki": "Düzenleyici belirsizlik volatilite yaratır; erken regülasyon piyasayı daraltabilir",
+        "olasilik": 0.6
+      },
+      {
+        "adim": 5,
+        "olay": "Olgunlaşma ve konsolidasyon",
+        "etki": "Büyük oyuncular küçükleri satın alır; sektör oligopolleşir",
+        "olasilik": 0.55
+      }
     ],
     "net_etki": "Teknoloji dalgaları kısa vadede volatilite, uzun vadede sektörel yeniden yapılanma ve kazanan/kaybeden ayrışması yaratır.",
-    "ilgili_modlar": ["trendler", "sektor"]
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ]
   },
   {
     "id": "enflasyon_faiz_doviz_zinciri",
     "baslik": "Enflasyon → Faiz → Döviz → Piyasa Zinciri",
     "tetikleyici": "Enflasyon verisi açıklaması, merkez bankası kararı",
     "zincir": [
-      {"adim": 1, "olay": "Enflasyon beklentinin üzerinde gelir", "etki": "Merkez bankası faiz artırım baskısı artar", "olasilik": 0.80},
-      {"adim": 2, "olay": "Faiz artışı veya artış sinyali", "etki": "Tahvil getirileri yükselir, hisse değerlemeleri baskılanır", "olasilik": 0.75},
-      {"adim": 3, "olay": "Döviz kuru tepkisi", "etki": "Yüksek faizli para birimi güçlenir; gelişmekte olan piyasalar baskı altına girer", "olasilik": 0.70},
-      {"adim": 4, "olay": "Kredi maliyeti artışı", "etki": "Tüketici harcaması yavaşlar, konut ve otomotiv sektörü daralır", "olasilik": 0.65},
-      {"adim": 5, "olay": "Büyüme yavaşlaması", "etki": "Resesyon riski artar; savunmacı sektörler (sağlık, gıda) öne çıkar", "olasilik": 0.50}
+      {
+        "adim": 1,
+        "olay": "Enflasyon beklentinin üzerinde gelir",
+        "etki": "Merkez bankası faiz artırım baskısı artar",
+        "olasilik": 0.8
+      },
+      {
+        "adim": 2,
+        "olay": "Faiz artışı veya artış sinyali",
+        "etki": "Tahvil getirileri yükselir, hisse değerlemeleri baskılanır",
+        "olasilik": 0.75
+      },
+      {
+        "adim": 3,
+        "olay": "Döviz kuru tepkisi",
+        "etki": "Yüksek faizli para birimi güçlenir; gelişmekte olan piyasalar baskı altına girer",
+        "olasilik": 0.7
+      },
+      {
+        "adim": 4,
+        "olay": "Kredi maliyeti artışı",
+        "etki": "Tüketici harcaması yavaşlar, konut ve otomotiv sektörü daralır",
+        "olasilik": 0.65
+      },
+      {
+        "adim": 5,
+        "olay": "Büyüme yavaşlaması",
+        "etki": "Resesyon riski artar; savunmacı sektörler (sağlık, gıda) öne çıkar",
+        "olasilik": 0.5
+      }
     ],
     "net_etki": "Enflasyon-faiz zinciri hisse piyasalarını baskılar, döviz volatilitesi yaratır; savunmacı varlıklar ve yüksek faizli para birimleri öne çıkar.",
-    "ilgili_modlar": ["mevsim", "jeopolitik", "sektor", "trendler"]
+    "ilgili_modlar": [
+      "mevsim",
+      "jeopolitik",
+      "sektor",
+      "trendler"
+    ]
   },
   {
     "id": "magazin_viral_marka_etkisi",
     "baslik": "Viral Olay / Magazin → Marka ve Tüketici Davranışı",
     "tetikleyici": "Ünlü skandalı, viral sosyal medya olayı, boykot çağrısı",
     "zincir": [
-      {"adim": 1, "olay": "Viral olay patlak verir", "etki": "Sosyal medya trafiği ve medya ilgisi zirve yapar", "olasilik": 1.0},
-      {"adim": 2, "olay": "Marka ilişkilendirmesi", "etki": "İlgili marka/şirket hissesi kısa vadede volatilite yaşar", "olasilik": 0.65},
-      {"adim": 3, "olay": "Tüketici tepkisi (boykot veya destek)", "etki": "Satış rakamlarına 2-8 hafta içinde yansıma", "olasilik": 0.55},
-      {"adim": 4, "olay": "Medya döngüsü sona erer", "etki": "Etki büyük ölçüde kaybolur; kalıcı hasar nadirdir", "olasilik": 0.70}
+      {
+        "adim": 1,
+        "olay": "Viral olay patlak verir",
+        "etki": "Sosyal medya trafiği ve medya ilgisi zirve yapar",
+        "olasilik": 1.0
+      },
+      {
+        "adim": 2,
+        "olay": "Marka ilişkilendirmesi",
+        "etki": "İlgili marka/şirket hissesi kısa vadede volatilite yaşar",
+        "olasilik": 0.65
+      },
+      {
+        "adim": 3,
+        "olay": "Tüketici tepkisi (boykot veya destek)",
+        "etki": "Satış rakamlarına 2-8 hafta içinde yansıma",
+        "olasilik": 0.55
+      },
+      {
+        "adim": 4,
+        "olay": "Medya döngüsü sona erer",
+        "etki": "Etki büyük ölçüde kaybolur; kalıcı hasar nadirdir",
+        "olasilik": 0.7
+      }
     ],
     "net_etki": "Viral olaylar kısa vadeli marka volatilitesi yaratır; uzun vadeli etki genellikle sınırlıdır ancak sektörel trend sinyali taşıyabilir.",
-    "ilgili_modlar": ["magazin", "trendler"]
+    "ilgili_modlar": [
+      "magazin",
+      "trendler"
+    ]
   },
   {
     "id": "iklim_tarim_gida_zinciri",
     "baslik": "İklim Anomalisi → Tarım → Gıda Enflasyonu",
     "tetikleyici": "Kuraklık, aşırı yağış, don olayı, mevsim dışı hava",
     "zincir": [
-      {"adim": 1, "olay": "İklim anomalisi (kuraklık/sel/don)", "etki": "Tarımsal üretim düşer veya hasat gecikmesi yaşanır", "olasilik": 0.80},
-      {"adim": 2, "olay": "Tarımsal arz daralması", "etki": "Buğday, mısır, soya, kahve gibi emtia fiyatları yükselir", "olasilik": 0.75},
-      {"adim": 3, "olay": "Gıda enflasyonu", "etki": "Tüketici fiyat endeksine yansıma; düşük gelirli haneler daha fazla etkilenir", "olasilik": 0.70},
-      {"adim": 4, "olay": "Sosyal baskı ve siyasi tepki", "etki": "Hükümetler ihracat kısıtlaması veya sübvansiyon uygulayabilir", "olasilik": 0.55},
-      {"adim": 5, "olay": "Tarım teknolojisi yatırımı", "etki": "Agritech, sulama, dayanıklı tohum sektörlerine sermaye akışı", "olasilik": 0.50}
+      {
+        "adim": 1,
+        "olay": "İklim anomalisi (kuraklık/sel/don)",
+        "etki": "Tarımsal üretim düşer veya hasat gecikmesi yaşanır",
+        "olasilik": 0.8
+      },
+      {
+        "adim": 2,
+        "olay": "Tarımsal arz daralması",
+        "etki": "Buğday, mısır, soya, kahve gibi emtia fiyatları yükselir",
+        "olasilik": 0.75
+      },
+      {
+        "adim": 3,
+        "olay": "Gıda enflasyonu",
+        "etki": "Tüketici fiyat endeksine yansıma; düşük gelirli haneler daha fazla etkilenir",
+        "olasilik": 0.7
+      },
+      {
+        "adim": 4,
+        "olay": "Sosyal baskı ve siyasi tepki",
+        "etki": "Hükümetler ihracat kısıtlaması veya sübvansiyon uygulayabilir",
+        "olasilik": 0.55
+      },
+      {
+        "adim": 5,
+        "olay": "Tarım teknolojisi yatırımı",
+        "etki": "Agritech, sulama, dayanıklı tohum sektörlerine sermaye akışı",
+        "olasilik": 0.5
+      }
     ],
     "net_etki": "İklim anomalileri gıda emtiasını yukarı iter, enflasyon baskısı yaratır; tarım teknolojisi uzun vadede fırsat sunar.",
-    "ilgili_modlar": ["mevsim", "hava", "dogal_afet", "sektor"]
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "dogal_afet",
+      "sektor"
+    ]
+  },
+  {
+    "id": "kis_dogalgaz_talep_artisi",
+    "baslik": "Kış Ayı Doğalgaz Talep Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Hava sıcaklığı 5°C altına düşer ve 2+ hafta kalır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Isınma talebi patlar",
+        "etki": "Konut ve ticari doğalgaz tüketimi %40-60 artar",
+        "olasilik": 0.95,
+        "tarihsel_referans": "2021 Aralık Avrupa, 2022 Ocak Türkiye"
+      },
+      {
+        "adim": 2,
+        "olay": "Spot gaz fiyatları yükselir",
+        "etki": "TTF ve spot LNG fiyatları %20-50 premium yapar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2021-2022 Avrupa enerji krizi"
+      },
+      {
+        "adim": 3,
+        "olay": "Enerji hisseleri yükselir",
+        "etki": "SNGAZ, AKSEN, AKENR gibi hisseler %15-30 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BIST Enerji endeksi 2021 Q4"
+      },
+      {
+        "adim": 4,
+        "olay": "Elektrik üretim maliyeti artar",
+        "etki": "Elektrik fiyatları %10-25 yükselir",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2022 Ocak Türkiye"
+      },
+      {
+        "adim": 5,
+        "olay": "Enflasyon baskısı",
+        "etki": "Enerji enflasyonu genel TÜFE'yi %0.5-1.5 puan iter",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2022 Şubat TÜFE"
+      }
+    ],
+    "anti_tez": "Sıcak kış senaryosu: Sıcaklık 10°C üzerinde kalırsa talep düşer, fiyatlar baskıda",
+    "net_etki": "Kış aylarında enerji sektörü %15-30 outperform yapar, enflasyon riski artar",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "dogalgaz",
+      "petrol",
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.88,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "EPDK verileri",
+      "BIST tarihsel",
+      "IEA raporları"
+    ]
+  },
+  {
+    "id": "kis_isinma_ekipmani_satislari",
+    "baslik": "Kış Soğuğu → Isınma Ekipmanı Satış Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Mevsim normallerinin 3°C altında kış dönemi başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kombi ve ısıtıcı talebi patlar",
+        "etki": "Beyaz eşya ve ısıtma ekipmanı satışları %30-50 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "2022 Kasım Türkiye"
+      },
+      {
+        "adim": 2,
+        "olay": "Beyaz eşya hisseleri yükselir",
+        "etki": "ARCLK, VESBE %8-15 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "BIST 2021 Q4 beyaz eşya performansı"
+      },
+      {
+        "adim": 3,
+        "olay": "Elektrik/gaz dağıtım şirketleri değer kazanır",
+        "etki": "GAZBF, enerji dağıtım hisseleri %5-12 yükselir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2021 Kış sezonu BIST"
+      },
+      {
+        "adim": 4,
+        "olay": "İthalat artışı döviz baskısı yaratır",
+        "etki": "Enerji ithalatı yükselir, cari açık genişler",
+        "olasilik": 0.55,
+        "tarihsel_referans": "2022 Türkiye cari açık artışı"
+      }
+    ],
+    "anti_tez": "Ilık kış veya enerji fiyat tavanı uygulaması talep büyümesini frenler",
+    "net_etki": "Soğuk kış beyaz eşya ve enerji hisselerini %8-20 yukarı iter",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "enerji_hisseleri",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TURKSTAT verisi",
+      "BIST tarihsel",
+      "Sektör raporları"
+    ]
+  },
+  {
+    "id": "kis_turizm_kayak_artisi",
+    "baslik": "Kış Turizmi ve Kayak Sezonu Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Karla örtülü kış mevsimi, kayak merkezlerinde tam sezon",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kayak ve kış turizmi rezervasyonları artar",
+        "etki": "Uludağ, Kartalkaya gibi destinasyonlarda doluluk %85-95'e çıkar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2019-2020 Türkiye kış turizmi rekoru"
+      },
+      {
+        "adim": 2,
+        "olay": "Havayolu iç hat talep artar",
+        "etki": "THYAO iç hat gelirleri %10-20 artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "THYAO 2019 kış sezonu"
+      },
+      {
+        "adim": 3,
+        "olay": "Konaklama ve turizm hisseleri yükselir",
+        "etki": "Turizm hisseleri %8-18 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST turizm sektörü 2018-2019"
+      },
+      {
+        "adim": 4,
+        "olay": "Spor ekipmanı satışları artar",
+        "etki": "Kayak ekipmanı satan şirketler %15-25 satış artışı yapar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Decathlon Türkiye kış satışları 2022"
+      }
+    ],
+    "anti_tez": "Kar yetersizliği veya salgın durumunda turizm durur",
+    "net_etki": "Karlı kış mevsimi turizm ve havayolu hisselerini %8-18 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Kültür Bakanlığı turizm istatistikleri",
+      "THYAO yıllık raporları"
+    ]
+  },
+  {
+    "id": "kis_lojistik_maliyet_artisi",
+    "baslik": "Kış Koşulları → Lojistik Maliyet Artışı",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Kar ve buz yolları kapatır, taşımacılık zorlaşır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kara yolu lojistiği yavaşlar",
+        "etki": "Teslimat süreleri %20-40 uzar, tır yakıt tüketimi artar",
+        "olasilik": 0.88,
+        "tarihsel_referans": "2022 Şubat Türkiye kar fırtınası"
+      },
+      {
+        "adim": 2,
+        "olay": "Lojistik şirketler maliyetlerini artırır",
+        "etki": "Nakliye ücretleri %10-25 artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 Q1 Avrupa lojistik maliyetleri"
+      },
+      {
+        "adim": 3,
+        "olay": "Tedarik zincirleri gecikmesi",
+        "etki": "Sanayi üretimi %2-5 yavaşlar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2021 Avrupa lojistik krizi"
+      },
+      {
+        "adim": 4,
+        "olay": "Tüketici fiyatları yükselir",
+        "etki": "Gıda ve tüketim malı fiyatları %1-3 artar",
+        "olasilik": 0.5,
+        "tarihsel_referans": "2022 TÜFE verileri"
+      }
+    ],
+    "anti_tez": "Hafif kış veya alternatif rota kullanımı lojistik etkiyi minimize eder",
+    "net_etki": "Şiddetli kış lojistik maliyetleri artırır, enflasyon riskini hafif yükseltir",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "petrol"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Taşımacılık sektörü raporları",
+      "TÜFE verileri"
+    ]
+  },
+  {
+    "id": "kis_eticaret_artisi",
+    "baslik": "Kış Ayları E-Ticaret Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Soğuk hava ve uzun gecelerin etkisiyle tüketiciler online alışveriş yapar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Online alışveriş talebi patlar",
+        "etki": "E-ticaret platformlarının işlem hacmi %30-50 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Trendyol, Hepsiburada 2021 Kasım-Ocak"
+      },
+      {
+        "adim": 2,
+        "olay": "Kargo ve teslimat hizmetleri yoğunlaşır",
+        "etki": "Kargo şirketleri %20-40 paket artışı yaşar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Aras, MNG Kargo 2021 Q4"
+      },
+      {
+        "adim": 3,
+        "olay": "E-ticaret hisseleri performans gösterir",
+        "etki": "Trendyol yatırımcıları ve ilgili hisseler %10-25 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Amazon, Alibaba kış sezonu 2021"
+      },
+      {
+        "adim": 4,
+        "olay": "Fiziksel perakende baskıda",
+        "etki": "AVM ziyaretçi sayısı %5-15 düşer",
+        "olasilik": 0.55,
+        "tarihsel_referans": "2020-2022 perakende dönüşümü"
+      }
+    ],
+    "anti_tez": "Ekonomik daralma döneminde tüketici harcamaları düşer, e-ticaret büyümesi yavaşlar",
+    "net_etki": "Kış sezonu e-ticaret hacmini %30-50 artırır, lojistik sektörünü destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Trendyol yıllık raporu",
+      "E-ticaret sektörü verileri"
+    ]
+  },
+  {
+    "id": "kis_saglik_harcamalari_artisi",
+    "baslik": "Kış Grip Sezonu → Sağlık Harcamaları Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Grip ve soğuk algınlığı sezonu Ekim-Mart başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Hasta başvuruları artar",
+        "etki": "Hastane ve poliklinik başvuruları %40-70 artar",
+        "olasilik": 0.92,
+        "tarihsel_referans": "SGK verileri 2021-2022 kış"
+      },
+      {
+        "adim": 2,
+        "olay": "İlaç satışları yükselir",
+        "etki": "Grip ilaçları ve vitamin satışları %50-100 artar",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Eczane satış verileri 2022 Q1"
+      },
+      {
+        "adim": 3,
+        "olay": "Sağlık hisseleri güçlenir",
+        "etki": "ECZYT, HLGYO gibi hisseler %5-15 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST sağlık sektörü kış performansı"
+      },
+      {
+        "adim": 4,
+        "olay": "İşgücü verimliliği düşer",
+        "etki": "Hastalık izinleri %20-30 artar, sanayi üretimi %1-3 yavaşlar",
+        "olasilik": 0.55,
+        "tarihsel_referans": "OECD iş gücü verileri"
+      }
+    ],
+    "anti_tez": "Grip aşı oranı yüksek ise hastalık yayılımı ve sağlık harcamaları düşük kalır",
+    "net_etki": "Grip sezonu ilaç ve sağlık hisselerini destekler, ekonomik verimlilik düşer",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.85,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "SGK sağlık istatistikleri",
+      "IMS Health verileri"
+    ]
+  },
+  {
+    "id": "kis_gida_stoklama",
+    "baslik": "Kış Öncesi Gıda Stoklaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Kasım-Aralık döneminde kış hazırlığı alışverişleri başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kışlık gıda alımları artar",
+        "etki": "Un, kuru baklagil, konserve satışları %20-40 artar",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Türkiye market verileri Kasım 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Tarım emtia fiyatları baskılanır",
+        "etki": "Hasat döneminden sonra fiyatlar %5-15 düşer",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Hasat sonrası buğday fiyatları 2021"
+      },
+      {
+        "adim": 3,
+        "olay": "Perakende satışlar artar",
+        "etki": "Büyük market zincirlerinin cirosu %8-15 büyür",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BİM, A101 satış verileri 2021 Q4"
+      },
+      {
+        "adim": 4,
+        "olay": "Ambalaj sektörü hızlanır",
+        "etki": "Ambalaj talebi %10-20 artar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Packaging Industry Türkiye 2021"
+      }
+    ],
+    "anti_tez": "Ekonomik sıkışma veya yüksek enflasyon stoklamayı kısıtlar",
+    "net_etki": "Kış hazırlığı gıda perakendecileri ve ambalaj sektörünü %8-15 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Türkiye perakende verileri",
+      "TARİM sektörü istatistikleri"
+    ]
+  },
+  {
+    "id": "kis_emlak_durgunlugu",
+    "baslik": "Kış Mevsimi Emlak Piyasası Durgunluğu",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Kasım-Şubat döneminde hava koşullarının emlak aktivitesini yavaşlatması",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Ev ziyaretleri ve satışlar azalır",
+        "etki": "Konut satışları %15-30 düşer, fiyatlar yatay seyreder",
+        "olasilik": 0.85,
+        "tarihsel_referans": "TÜİK Konut Satış İstatistikleri 2021-2022"
+      },
+      {
+        "adim": 2,
+        "olay": "GYO hisseleri baskıda kalır",
+        "etki": "GYO endeksi %3-8 geride kalır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST GYO endeksi mevsimsel performans"
+      },
+      {
+        "adim": 3,
+        "olay": "İnşaat sektörü yavaşlar",
+        "etki": "Yeni proje başlangıçları %20-35 azalır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Türkiye İnşaat istatistikleri Q1 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Bahar dönemine hazırlık başlar",
+        "etki": "Gayrimenkul danışmanları ilkbahar kampanyaları hazırlar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Türkiye emlak sektörü mevsimsel döngü"
+      }
+    ],
+    "anti_tez": "Yüksek enflasyon döneminde yatırımcılar kışın da alım yapar, durgunluk yaşanmaz",
+    "net_etki": "Kış ayları emlak sektöründe işlem hacmini %15-30 düşürür, fiyatları yataya çeker",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TÜİK konut istatistikleri",
+      "GYODER raporları"
+    ]
+  },
+  {
+    "id": "kis_komur_talep_artisi",
+    "baslik": "Kış Ayı Kömür Talebi Artışı",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Enerji fiyatları yüksek iken kömür ısınmada alternatif olur",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Gaz fiyatları yüksek kalır, kömüre kayış başlar",
+        "etki": "Konut ısınmasında kömür kullanımı %15-25 artar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2022 Türkiye enerji krizi"
+      },
+      {
+        "adim": 2,
+        "olay": "Kömür fiyatları yükselir",
+        "etki": "Thermal coal fiyatı %10-30 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 küresel kömür fiyat artışı"
+      },
+      {
+        "adim": 3,
+        "olay": "Kömür madenciliği hisseleri değer kazanır",
+        "etki": "ZONGAK ve kömür üreticileri %15-25 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST maden hisseleri 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Hava kalitesi bozulur",
+        "etki": "Şehir merkezlerinde PM2.5 artışı",
+        "olasilik": 0.7,
+        "tarihsel_referans": "İstanbul hava kalitesi 2022 kış"
+      }
+    ],
+    "anti_tez": "Gaz fiyatları düşerse veya ısınma desteği gelirse kömüre kayış azalır",
+    "net_etki": "Yüksek gaz fiyatı ortamında kış kömür sektörünü %15-25 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "enerji_hisseleri",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA kömür verileri",
+      "BIST enerji sektörü"
+    ]
+  },
+  {
+    "id": "kis_elektrik_talep_artisi",
+    "baslik": "Kış Soğuğu → Elektrik Talebi Artışı",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Isıtma elektriğe kayınca tüketim patlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Elektrik tüketimi artar",
+        "etki": "Ülke geneli elektrik tüketimi %20-35 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "TEDAŞ verileri 2022 Ocak"
+      },
+      {
+        "adim": 2,
+        "olay": "Spot elektrik fiyatları yükselir",
+        "etki": "EPIAS spot fiyat %30-60 premium yapar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "EPIAS tarihsel veriler 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Elektrik üretim şirketleri kar eder",
+        "etki": "AKSEN, AKENR gibi hisseler %20-35 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BIST enerji endeksi 2022 Q1"
+      },
+      {
+        "adim": 4,
+        "olay": "Sürdürülebilir enerji çözümlerine ilgi artar",
+        "etki": "Güneş paneli ve batarya satışları %10-20 artar",
+        "olasilik": 0.55,
+        "tarihsel_referans": "Türkiye yenilenebilir enerji 2022 büyümesi"
+      }
+    ],
+    "anti_tez": "Hükümet elektrik fiyatlarına tavan uygularsa şirket karlılığı sınırlanır",
+    "net_etki": "Kış elektrik talebi enerji üretim şirketlerini %20-35 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "EPIAS verileri",
+      "TEDAŞ istatistikleri"
+    ]
+  },
+  {
+    "id": "yaz_klima_elektrik_talebi",
+    "baslik": "Yaz Sıcakları → Klima Talebi ve Elektrik Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Yaz sıcaklıkları 35°C üzerine çıkar ve 2+ hafta kalır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Klima talebi patlar",
+        "etki": "Klima satışları %60-100 artar, stoklar tükenir",
+        "olasilik": 0.92,
+        "tarihsel_referans": "Türkiye yaz 2021, 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Elektrik tüketimi zirve yapar",
+        "etki": "Temmuz-Ağustos elektrik tüketimi yıllık en yüksek seviyede, %30-45 artış",
+        "olasilik": 0.9,
+        "tarihsel_referans": "TEDAŞ yaz tüketim verileri 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Elektrik fiyatları yükselir",
+        "etki": "EPIAS spot fiyatları %25-50 artış yapar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "EPIAS 2021-2022 yaz dönemi"
+      },
+      {
+        "adim": 4,
+        "olay": "Beyaz eşya satışları patlar",
+        "etki": "Klima başta olmak üzere soğutma ekipmanları satışı %50-80 artar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "ARCLK, VESBE yaz satışları 2022"
+      },
+      {
+        "adim": 5,
+        "olay": "Enerji hisseleri outperform yapar",
+        "etki": "AKSEN, AKENR %15-30 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "BIST enerji endeksi 2022 Temmuz"
+      }
+    ],
+    "anti_tez": "Elektrik fiyatlarına tavan uygulaması şirket karlılığını sınırlar",
+    "net_etki": "Sıcak yaz dalgası enerji ve beyaz eşya sektörlerini %15-30 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "enerji_hisseleri",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.85,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TEDAŞ yaz verileri",
+      "EPIAS tarihsel",
+      "ARCLK yıllık rapor"
+    ]
+  },
+  {
+    "id": "yaz_turizm_patlamasi",
+    "baslik": "Yaz Turizmi Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Mayıs-Eylül arasında tatil sezonu açılır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Turist sayısı patlar",
+        "etki": "Türkiye'ye yıllık 50-60 milyon turist, %80'i yaz döneminde",
+        "olasilik": 0.92,
+        "tarihsel_referans": "Türkiye 2023 turizm rekoru"
+      },
+      {
+        "adim": 2,
+        "olay": "Döviz girişi artar",
+        "etki": "Turizm gelirleri 50-60 milyar dolar, döviz girişi güçlü",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Kültür Bakanlığı 2023 turizm geliri"
+      },
+      {
+        "adim": 3,
+        "olay": "TL baskısı hafifler",
+        "etki": "Cari açık kapanır, TL %3-8 güçlenir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Türkiye yaz sezonu döviz etkisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Turizm hisseleri güçlü performans",
+        "etki": "THYAO, MPARK, MAALT %10-25 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "BIST turizm sektörü 2023"
+      },
+      {
+        "adim": 5,
+        "olay": "Gıda, içecek ve eğlence sektörü büyür",
+        "etki": "Restoran, eğlence, tekstil sektörü %10-20 gelir artışı sağlar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Sektörel verimlilik analizi 2022"
+      }
+    ],
+    "anti_tez": "Salgın, terör olayı veya döviz krizi turist akışını durdurabilir",
+    "net_etki": "Yaz turizmi Türkiye ekonomisini ve TL'yi destekler, turizm hisselerini %10-25 kaldırır",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.83,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Kültür Bakanlığı turizm istatistikleri",
+      "THYAO yıllık raporu",
+      "TCMB döviz verileri"
+    ]
+  },
+  {
+    "id": "yaz_tarim_hasati",
+    "baslik": "Yaz Hasadı → Tarım Emtia Fiyat Düşüşü",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Haziran-Ağustos buğday ve tahıl hasadı başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Büyük hasat gerçekleşir",
+        "etki": "Tahıl arzı %15-25 artar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Türkiye buğday hasadı 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Tahıl fiyatları baskılanır",
+        "etki": "Buğday fiyatı %10-20 düşer (arz fazlası)",
+        "olasilik": 0.75,
+        "tarihsel_referans": "CBOT buğday fiyatı Ağustos 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Un ve ekmek fiyatları hafif düşer",
+        "etki": "Tüketici gıda fiyatları %2-5 aşağı baskılanır",
+        "olasilik": 0.55,
+        "tarihsel_referans": "Türkiye gıda enflasyonu hasat sonrası"
+      },
+      {
+        "adim": 4,
+        "olay": "Tarım sigorta talebi düşer",
+        "etki": "İyi hasat sigorta hasarlarını azaltır, sigorta şirketleri karlı",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Tarım sigortası verileri 2022"
+      }
+    ],
+    "anti_tez": "Kuraklık veya aşırı yağış hasat miktarını düşürür, fiyatlar tersine döner",
+    "net_etki": "İyi hasat yıllarında tahıl fiyatları %10-20 geri çekilir, gıda enflasyonu hafifler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Türkiye tarım istatistikleri",
+      "CBOT tarihsel veriler"
+    ]
+  },
+  {
+    "id": "yaz_insaat_hizlanmasi",
+    "baslik": "Yaz Dönemi İnşaat Sektörü Hızlanması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Nisan-Eylül inşaat sezonunun açılması",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "İnşaat faaliyetleri hızlanır",
+        "etki": "Konut ve altyapı inşaatları %30-50 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Türkiye inşaat istatistikleri 2021-2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Demir-çelik ve çimento talebi patlar",
+        "etki": "İnşaat malzemesi satışları %20-35 artar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "EREGL, CIMSA satış verileri"
+      },
+      {
+        "adim": 3,
+        "olay": "İnşaat hisseleri değer kazanır",
+        "etki": "EREGL, CIMSA, AKCNS %15-25 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BIST inşaat sektörü 2021 yaz"
+      },
+      {
+        "adim": 4,
+        "olay": "İstihdam artar",
+        "etki": "İnşaat sektöründe mevsimsel istihdam %20-30 yükselir",
+        "olasilik": 0.8,
+        "tarihsel_referans": "TÜİK istihdam verileri yaz dönemi"
+      },
+      {
+        "adim": 5,
+        "olay": "GYO hisseleri outperform",
+        "etki": "Konut arzı ve satışları artar, GYO endeksi %8-15 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST GYO endeksi yaz performansı"
+      }
+    ],
+    "anti_tez": "Faiz artışı veya kredi sıkılaşması inşaat talebini yavaşlatır",
+    "net_etki": "Yaz dönemi inşaat sektörünü %15-25 büyütür, malzeme ve GYO hisselerini destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TÜİK inşaat istatistikleri",
+      "EREGL yıllık raporu"
+    ]
+  },
+  {
+    "id": "yaz_havayolu_trafik_artisi",
+    "baslik": "Yaz Tatili → Havayolu Trafiği Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Yaz tatili sezonu Haziran-Ağustos yoğun dönem",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Uçuş rezervasyonları patlar",
+        "etki": "THYAO yolcu sayısı %40-60 artar, doluluk %90'ı geçer",
+        "olasilik": 0.92,
+        "tarihsel_referans": "THYAO 2022-2023 yaz sezonu"
+      },
+      {
+        "adim": 2,
+        "olay": "Bilet fiyatları yükselir",
+        "etki": "İç hat biletler %20-40, dış hat %15-30 premium yapar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "THYAO dinamik fiyatlama 2023"
+      },
+      {
+        "adim": 3,
+        "olay": "THYAO hissesi güçlü performans",
+        "etki": "THYAO %15-30 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BIST THYAO yaz dönemi 2021-2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Havalimanı işletmecileri de kazanır",
+        "etki": "TAV, havalimanı hizmet şirketleri %10-20 artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "TAV 2022 yaz operasyonel verileri"
+      }
+    ],
+    "anti_tez": "Yakıt fiyatlarının aşırı yükselmesi veya ekonomik durgunluk yolcuları azaltır",
+    "net_etki": "Yaz sezonu havayolu hisselerini %15-30 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "petrol"
+    ],
+    "gerceklesme_orani": 0.85,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "THYAO yıllık raporları",
+      "IATA veriler",
+      "TAV faaliyet raporları"
+    ]
+  },
+  {
+    "id": "yaz_tatil_harcamalari",
+    "baslik": "Yaz Tatili Harcamalarının Ekonomik Etkisi",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Okul tatili ve yaz tatili sezonu tüketici harcamalarını artırır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Tatil harcamaları patlar",
+        "etki": "Otel, restoran ve eğlence harcamaları %50-80 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Türkiye tüketim verileri yaz 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Kredi kartı harcamaları artar",
+        "etki": "BKM verileri yaz döneminde %25-40 harcama artışı gösterir",
+        "olasilik": 0.85,
+        "tarihsel_referans": "BKM yaz sezonu istatistikleri"
+      },
+      {
+        "adim": 3,
+        "olay": "Perakende ve hizmet sektörü büyür",
+        "etki": "MGROS, BIMAS ve servis şirketleri %10-15 gelir artışı",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Perakende sektör verileri 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "İstihdam mevsimsel artış",
+        "etki": "Turizm ve hizmet sektöründe 200-400 bin mevsimlik istihdam",
+        "olasilik": 0.8,
+        "tarihsel_referans": "TÜİK istihdam yaz dönemi"
+      }
+    ],
+    "anti_tez": "Yüksek enflasyon veya işsizlik tatil harcamalarını kısıtlar",
+    "net_etki": "Yaz tatili tüketim harcamalarını %25-40 artırır, perakende ve turizm hisselerini destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "BKM istatistikleri",
+      "TÜİK tüketim verileri"
+    ]
+  },
+  {
+    "id": "yaz_icecek_dondurmasi_satislari",
+    "baslik": "Yaz Sıcakları → İçecek ve Dondurma Satış Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Hava sıcaklığı 30°C üzerinde seyreder",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Soğuk içecek ve dondurma satışları patlar",
+        "etki": "Yaz aylarında içecek satışları %60-100 artar",
+        "olasilik": 0.92,
+        "tarihsel_referans": "Coca-Cola Türkiye, Algida yaz satışları 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "FMCG şirketleri güçlü kazanır",
+        "etki": "ULKER, CCOLA hisseleri %8-15 outperform yapar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "BIST FMCG sektörü yaz 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Soğuk zincir lojistik talebi artar",
+        "etki": "Soğuk depolama ve dağıtım maliyetleri %10-20 artar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Lojistik sektörü yaz 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Ambalaj ve plastik talebi büyür",
+        "etki": "Plastik ambalaj talebi %15-25 artar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "BRISA, plastik sektörü verileri"
+      }
+    ],
+    "anti_tez": "Ekonomik daralma döneminde tüketici premium ürünlerden uzaklaşır",
+    "net_etki": "Sıcak yaz FMCG ve içecek hisselerini %8-15 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "ULKER, CCOLA yıllık raporları",
+      "Sektör analizleri"
+    ]
+  },
+  {
+    "id": "ilkbahar_otomotiv_satislari",
+    "baslik": "İlkbahar Dönemi Otomotiv Satışları",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Mart-Mayıs'ta hava ısınması ve Yılbaşı indirimlerinin bitmesi sonrası otomotiv talebi",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Araç satışları mevsimsel artış",
+        "etki": "Otomotiv satışları yılın en yüksek çeyreği %25-40 büyür",
+        "olasilik": 0.85,
+        "tarihsel_referans": "OSD verileri Q2 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Otomotiv hisseleri güçlenir",
+        "etki": "TOASO, FROTO %8-18 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "BIST otomotiv sektörü Nisan 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Yakıt talebi artar",
+        "etki": "Benzin ve dizel tüketimi %10-15 yükselir",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Enerji Bakanlığı yakıt verileri 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Sigorta ve finansman hizmetleri büyür",
+        "etki": "Araç sigortası başvuruları %15-25 artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Sigorta sektörü verileri 2022"
+      }
+    ],
+    "anti_tez": "Araba fiyatlarının aşırı yükselmesi veya kredi faizlerinin artması satışları frenler",
+    "net_etki": "İlkbahar otomotiv hisselerini %8-18 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "petrol"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "OSD aylık satış verileri",
+      "TOASO, FROTO yıllık raporları"
+    ]
+  },
+  {
+    "id": "ilkbahar_tarim_ekimi",
+    "baslik": "İlkbahar Tarım Ekimi → Gübre ve Zirai İlaç Talebi",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Nisan-Mayıs ekim sezonu başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Çiftçiler gübre alımlarını hızlandırır",
+        "etki": "Gübre satışları %40-60 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Türkiye gübre tüketimi Q2 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Gübre fiyatları sezonal prim yapar",
+        "etki": "Azot gübre fiyatı %10-20 yükselir",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Global gübre fiyatları 2022 bahar"
+      },
+      {
+        "adim": 3,
+        "olay": "Tarım ekipmanı satışları artar",
+        "etki": "Traktör ve tarım makinesi satışı %20-35 büyür",
+        "olasilik": 0.78,
+        "tarihsel_referans": "OSD tarım makinesi istatistikleri 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Tarımsal kredi talebi artar",
+        "etki": "Ziraat Bankası tarım kredisi kullanımı %15-25 artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Ziraat Bankası faaliyet raporu 2022"
+      }
+    ],
+    "anti_tez": "Ekonomik daralma veya yüksek input maliyetleri ekim alanını daraltır",
+    "net_etki": "Ekim sezonu gübre ve tarım ekipmanı talebini %20-35 kaldırır",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Türkiye tarım bakanlığı verileri",
+      "TÜİK tarım istatistikleri"
+    ]
+  },
+  {
+    "id": "ilkbahar_moda_sezonu",
+    "baslik": "İlkbahar-Yaz Moda Sezonu",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Mart-Nisan yeni sezon koleksiyonlarının mağazalara girmesi",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Tekstil ve giyim satışları artar",
+        "etki": "Hazır giyim perakendesi %25-40 büyür",
+        "olasilik": 0.85,
+        "tarihsel_referans": "LC Waikiki, Mavi Jeans Q2 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "İhracat hazır giyim artar",
+        "etki": "Türkiye tekstil ihracatı bahar sezonunda %15-25 büyür",
+        "olasilik": 0.72,
+        "tarihsel_referans": "TÜİK dış ticaret Q2 verileri"
+      },
+      {
+        "adim": 3,
+        "olay": "MAVI, LCWAIKIKI hisseleri güçlenir",
+        "etki": "Tekstil hisseleri %8-15 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST tekstil sektörü bahar dönemi"
+      },
+      {
+        "adim": 4,
+        "olay": "AVM trafiği artar",
+        "etki": "Nisan-Mayıs AVM ziyaretleri %20-30 büyür",
+        "olasilik": 0.7,
+        "tarihsel_referans": "AVM endüstrisi verileri 2022"
+      }
+    ],
+    "anti_tez": "Online alışveriş veya ekonomik durgunluk mağaza satışlarını baskılar",
+    "net_etki": "İlkbahar sezonu tekstil ve perakende hisselerini %8-15 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.74,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "MAVI yıllık raporu",
+      "Tekstil ihracat verileri"
+    ]
+  },
+  {
+    "id": "ilkbahar_emlak_hareketi",
+    "baslik": "İlkbahar Emlak Canlanması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Mart-Haziran döneminde hava ısınması ve yeni çocuk yılının planlanması",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Ev satışları ve kiralamalar patlar",
+        "etki": "Konut satışları kış dönemine göre %40-60 artar",
+        "olasilik": 0.88,
+        "tarihsel_referans": "TÜİK konut satışı bahar istatistikleri"
+      },
+      {
+        "adim": 2,
+        "olay": "Gayrimenkul fiyatları yükselir",
+        "etki": "Ortalama konut fiyatı %5-15 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "REIDIN Türkiye gayrimenkul endeksi"
+      },
+      {
+        "adim": 3,
+        "olay": "GYO hisseleri outperform",
+        "etki": "ISGYO, EKGYO %8-15 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST GYO bahar performansı"
+      },
+      {
+        "adim": 4,
+        "olay": "Banka mortgage başvuruları artar",
+        "etki": "Konut kredisi başvuruları %30-50 büyür",
+        "olasilik": 0.75,
+        "tarihsel_referans": "TCMB kredi verileri 2021 Q2"
+      }
+    ],
+    "anti_tez": "Faiz artışı veya yüksek konut fiyatları talebi baskılar",
+    "net_etki": "İlkbahar emisyonu gayrimenkul hisselerini %8-15 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TÜİK konut istatistikleri",
+      "GYODER raporları"
+    ]
+  },
+  {
+    "id": "sonbahar_okul_harcamalari",
+    "baslik": "Okul Dönemi Başlangıcı → Eğitim Harcamaları",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Ağustos-Eylül okul kayıt ve hazırlık döneminin başlaması",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kırtasiye ve okul malzemesi talebi patlar",
+        "etki": "Kırtasiye satışları %200-300 artar",
+        "olasilik": 0.95,
+        "tarihsel_referans": "Türkiye kırtasiye sektörü 2022 Eylül"
+      },
+      {
+        "adim": 2,
+        "olay": "Giyim satışları artar",
+        "etki": "Okul kıyafeti ve ayakkabı satışları %50-80 büyür",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Perakende satışları Eylül 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Teknoloji ürünleri talebi yükselir",
+        "etki": "Tablet, dizüstü bilgisayar satışları %30-50 artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "IDC Türkiye PC pazar verileri 2022 Q3"
+      },
+      {
+        "adim": 4,
+        "olay": "Özel okul ve dershane kayıtları tamamlanır",
+        "etki": "Eğitim sektörü cirosu Q3'te %20-30 büyür",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Eğitim sektörü verileri 2022"
+      }
+    ],
+    "anti_tez": "Ekonomik daralma ile ailelerin harcama bütçesi kısılırsa düşük kaliteli ürünlere kayış olur",
+    "net_etki": "Okul sezonu başlangıcı perakende ve teknoloji satışlarını %30-50 artırır",
+    "ilgili_modlar": [
+      "mevsim",
+      "ozel_gun",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.9,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TÜİK perakende verileri",
+      "IDC Türkiye pazar verileri"
+    ]
+  },
+  {
+    "id": "sonbahar_hasat_emtia",
+    "baslik": "Sonbahar Hasadı → Emtia Fiyat Düzeltmesi",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Eylül-Kasım tahıl, mısır ve zeytin hasatları",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Hasat bolluğu piyasaya girer",
+        "etki": "Tarım emtiası arzı ani %15-30 artar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Küresel hasat döngüsü 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Emtia fiyatları geri çekilir",
+        "etki": "Buğday, mısır, soya fiyatları %8-15 düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "CBOT emtia hasat döngüsü 2022"
+      },
+      {
+        "adim": 3,
+        "olay": "Gıda enflasyonu hafifler",
+        "etki": "Gıda TÜFE %1-3 puan düşer",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Küresel gıda enflasyonu Q4 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Çiftçi gelirleri hasat döneminde yüksek",
+        "etki": "Tarım kredileri ve satın alımları %10-20 büyür",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Tarım sektörü verileri 2022"
+      }
+    ],
+    "anti_tez": "Kötü hasat yılı veya ihracat yasağı fiyatlar üzerindeki baskıyı ortadan kaldırır",
+    "net_etki": "İyi hasat yılında tarım emtia fiyatları %8-15 düşer, gıda enflasyonu hafifler",
+    "ilgili_modlar": [
+      "mevsim",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "CBOT emtia verileri",
+      "Türkiye tarım istatistikleri"
+    ]
+  },
+  {
+    "id": "sonbahar_kis_hazirlik_stoklama",
+    "baslik": "Sonbahar Kış Hazırlığı Stoklaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Ekim-Kasım kış yakıt ve gıda stoklama sezonu",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Yakıt depo dolumu gerçekleşir",
+        "etki": "Doğalgaz depoları Ekim'de %80-90 doluluk oranına erişir",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Avrupa gaz depolama 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Kış yakıt fiyatları Ekim'de yüksek",
+        "etki": "Mazot, fuel-oil Ekim'de %5-15 prim yapar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Petrol fiyat mevsimselliği"
+      },
+      {
+        "adim": 3,
+        "olay": "Kömür ve odun alımları artar",
+        "etki": "Kırsal kesimde yakıt alımları %30-50 artış gösterir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Türkiye kömür tüketimi 2022 Q4"
+      },
+      {
+        "adim": 4,
+        "olay": "Enerji hisseleri Ekim'de güçlü",
+        "etki": "Enerji sektörü %8-18 sezonsal prim yapar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "BIST enerji endeksi mevsimsel analiz"
+      }
+    ],
+    "anti_tez": "Sıcak sonbahar veya düşük gaz fiyatları stoklama hevesini kırar",
+    "net_etki": "Sonbahar kış hazırlığı enerji fiyatlarını ve hisselerini %8-18 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "dogalgaz",
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA enerji verileri",
+      "Avrupa depolama istatistikleri"
+    ]
+  },
+  {
+    "id": "sonbahar_teknoloji_urun_sezonu",
+    "baslik": "Sonbahar Teknoloji Ürün Lansmanları",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Eylül-Kasım Apple, Samsung ve diğerleri yeni ürün lansmanları",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "iPhone ve Samsung yeni model çıkar",
+        "etki": "Akıllı telefon satışları Q4'te %30-50 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Apple iPhone lansman döngüsü 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Apple hissesi prim yapar",
+        "etki": "AAPL lansman öncesi %5-15 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Apple lansman geçmiş performansı"
+      },
+      {
+        "adim": 3,
+        "olay": "Yarı iletken talebi artar",
+        "etki": "TSMC, Qualcomm satışları %10-20 büyür",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Yarı iletken sektörü Q4 döngüsü"
+      },
+      {
+        "adim": 4,
+        "olay": "Telekomünikasyon hisseleri güçlenir",
+        "etki": "Türkcell, Turkcell ve benzerleri yeni abone kazanır",
+        "olasilik": 0.6,
+        "tarihsel_referans": "TCELL müşteri artışı"
+      }
+    ],
+    "anti_tez": "Ürün hayal kırıklığı veya ekonomik durgunluk satışları baskılar",
+    "net_etki": "Sonbahar teknoloji lansmanları teknoloji hisselerini %5-15 güçlendirir",
+    "ilgili_modlar": [
+      "mevsim",
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Apple yıllık raporu",
+      "IDC küresel akıllı telefon verileri"
+    ]
+  },
+  {
+    "id": "altin_enflasyon_faiz_iliskisi",
+    "baslik": "Altın: Enflasyon-Faiz Dengesi",
+    "kategori": "emtia",
+    "tetikleyici": "Enflasyon %5+ ama reel faiz negatif",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Yüksek enflasyon açıklanır",
+        "etki": "Satın alma gücü erozyonu korkusu",
+        "olasilik": 0.9,
+        "tarihsel_referans": "2021-2022 küresel enflasyon dalgası"
+      },
+      {
+        "adim": 2,
+        "olay": "Merkez bankası faiz artırımı yetersiz",
+        "etki": "Reel faiz negatif kalır (nominal faiz < enflasyon)",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Fed 2021 geç kaldı"
+      },
+      {
+        "adim": 3,
+        "olay": "Altına talep artar",
+        "etki": "Altın fiyatı %10-30 yükselir",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2020-2021 altın rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Dolar zayıflar",
+        "etki": "Altın daha da güçlenir (ters korelasyon)",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2020 dolar zayıflığı"
+      }
+    ],
+    "anti_tez": "Agresif faiz artırımı: Reel faiz pozitife döner, altın baskılanır",
+    "net_etki": "Negatif reel faiz ortamında altın %15-40 kazandırır",
+    "ilgili_modlar": [
+      "mevsim",
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "altin",
+      "gumus",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Fed verileri",
+      "Altın tarihsel fiyat",
+      "Akademik çalışmalar"
+    ]
+  },
+  {
+    "id": "altin_jeopolitik_guvenceli_liman",
+    "baslik": "Jeopolitik Kriz → Altına Güvenli Liman Talebi",
+    "kategori": "emtia",
+    "tetikleyici": "Büyük jeopolitik çatışma veya savaş riski baş gösterir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Jeopolitik belirsizlik artar",
+        "etki": "Yatırımcılar risk varlıklarından çıkar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2022 Şubat Ukrayna işgali"
+      },
+      {
+        "adim": 2,
+        "olay": "Altın talebi patlar",
+        "etki": "Altın ETF alımları %50-100 artar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2022 Mart altın zirve"
+      },
+      {
+        "adim": 3,
+        "olay": "Altın fiyatı yükselir",
+        "etki": "Ons altın %8-20 kazanır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Altın 2022 Mart 2070 dolar zirvesi"
+      },
+      {
+        "adim": 4,
+        "olay": "Gümüş de değer kazanır",
+        "etki": "Gümüş %5-15 yükselir (altını takip eder)",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2022 gümüş performansı"
+      }
+    ],
+    "anti_tez": "Hızlı barış anlaşması veya çatışmanın kontrol altına alınması kısıtlar",
+    "net_etki": "Jeopolitik kriz altını %8-20 yukarı iter, gümüş ve tahvil de güçlenir",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "altin",
+      "gumus",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Altın tarihsel fiyat",
+      "WGC verileri",
+      "Jeopolitik analiz"
+    ]
+  },
+  {
+    "id": "altin_merkez_bankasi_alimlari",
+    "baslik": "Merkez Bankası Altın Alımları",
+    "kategori": "emtia",
+    "tetikleyici": "Gelişmekte olan ülke merkez bankaları rezervlerini dolardan altına çevirir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Merkez bankaları rekor altın alımı yapar",
+        "etki": "Yıllık 1000+ ton alım gerçekleşir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022-2023 WGC merkez bankası verileri"
+      },
+      {
+        "adim": 2,
+        "olay": "Fiziksel arz daralır",
+        "etki": "Altın arzı talebe yetişemez, fiyat yükselir",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2023 altın fiyat artışı"
+      },
+      {
+        "adim": 3,
+        "olay": "Altın fiyatı strukturel yükseliş",
+        "etki": "Yıllık bazda %15-30 artış",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2023-2024 altın rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Dolar hegemonyasına meydan okunur",
+        "etki": "De-dolarizasyon tartışması güçlenir",
+        "olasilik": 0.55,
+        "tarihsel_referans": "BRICS ülkeleri 2023 zirve kararları"
+      }
+    ],
+    "anti_tez": "Reel faizlerin yükselmesi veya dolar güçlenmesi merkez bankası alımlarını frenlerse fiyat baskılanır",
+    "net_etki": "Merkez bankası alımları altın için uzun vadeli taban oluşturur",
+    "ilgili_modlar": [
+      "makro",
+      "jeopolitik"
+    ],
+    "ilgili_varliklar": [
+      "altin",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "WGC verileri",
+      "TCMB altın rezervleri",
+      "BRICS raporları"
+    ]
+  },
+  {
+    "id": "petrol_opec_kesinti",
+    "baslik": "OPEC Üretim Kısıntısı → Petrol Fiyat Artışı",
+    "kategori": "emtia",
+    "tetikleyici": "OPEC+ toplantısında günlük üretim kısıntısı kararı alınır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "OPEC günlük kısıntı açıklar",
+        "etki": "Global arz 1-2 milyon varil/gün azalır",
+        "olasilik": 0.88,
+        "tarihsel_referans": "OPEC+ kısıntı kararları 2022-2023"
+      },
+      {
+        "adim": 2,
+        "olay": "Brent petrol fiyatı yükselir",
+        "etki": "Brent 1 haftada %5-15 prim yapar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Brent tarihsel OPEC reaksiyonu"
+      },
+      {
+        "adim": 3,
+        "olay": "Enerji hisseleri güçlenir",
+        "etki": "XLE, BP, Shell, SHELL hisseleri %8-20 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Enerji sektörü OPEC reaksiyonu 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Enflasyon baskısı oluşur",
+        "etki": "Yakıt fiyatları artınca küresel enflasyon %0.3-0.8 puan yükselir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2022 enerji enflasyonu"
+      },
+      {
+        "adim": 5,
+        "olay": "ABD stratejik stok serbest bırakır",
+        "etki": "SPR açılımı fiyat artışını kısmen sınırlar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "ABD 2022 SPR açılımı"
+      }
+    ],
+    "anti_tez": "Küresel resesyon korkusu talep düşürürse kısıntı etkisiz kalır",
+    "net_etki": "OPEC kısıntısı petrolü %5-15 yukarı iter, enerji hisseleri güçlenir",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.83,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "OPEC toplantı kararları",
+      "IEA petrol verileri",
+      "EIA haftalık raporlar"
+    ]
+  },
+  {
+    "id": "petrol_dolar_kuru_iliskisi",
+    "baslik": "Dolar Güçlenme → Petrol Fiyat Baskısı",
+    "kategori": "emtia",
+    "tetikleyici": "DXY endeksi 3+ ay boyunca %5+ yükselir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Dolar güçlenir",
+        "etki": "DXY endeksi %5-10 yükselir",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2022 Fed faiz artırımı döngüsü"
+      },
+      {
+        "adim": 2,
+        "olay": "Dolar cinsinden petrol pahalılaşır",
+        "etki": "Gelişmekte olan ülkeler için petrol %8-15 daha maliyetli",
+        "olasilik": 0.82,
+        "tarihsel_referans": "2022 DXY-petrol korelasyonu"
+      },
+      {
+        "adim": 3,
+        "olay": "Petrol talebi azalır",
+        "etki": "EM talep düşer, Brent %5-12 aşağı baskılanır",
+        "olasilik": 0.68,
+        "tarihsel_referans": "2022 Ekim petrol düşüşü"
+      },
+      {
+        "adim": 4,
+        "olay": "Petrol şirketi karları daralır",
+        "etki": "Enerji şirketleri gelir tahminlerini revize eder",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Enerji şirketi Q4 2022 raporları"
+      }
+    ],
+    "anti_tez": "OPEC kısıntısı petrol fiyatını desteklerse dolar etkisi nötralize edilir",
+    "net_etki": "Güçlü dolar petrolü %5-12 baskılar",
+    "ilgili_modlar": [
+      "makro",
+      "jeopolitik"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "DXY-petrol korelasyon analizi",
+      "IEA verileri"
+    ]
+  },
+  {
+    "id": "bugday_kuraklik_fiyat_artisi",
+    "baslik": "Kuraklık → Buğday Fiyat Artışı",
+    "kategori": "emtia",
+    "tetikleyici": "Önemli üretici ülkelerde (ABD, AB, Avustralya) kuraklık başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Önemli bölgede kuraklık ilan edilir",
+        "etki": "Buğday verimi %15-30 düşer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2021 ABD Büyük Ovalar kuraklığı"
+      },
+      {
+        "adim": 2,
+        "olay": "CBOT buğday fiyatı yükselir",
+        "etki": "Buğday fiyatı %15-35 artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "CBOT buğday 2021 Haziran-Temmuz"
+      },
+      {
+        "adim": 3,
+        "olay": "Gıda enflasyonu yükselir",
+        "etki": "Un ve ekmek fiyatları %5-15 artar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Küresel gıda enflasyonu 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Tarım ülkeleri ihracat kısıtlar",
+        "etki": "Hindistan, Endonezya gibi ülkeler ihracat yasağı koyar",
+        "olasilik": 0.55,
+        "tarihsel_referans": "2022 Hindistan buğday ihracat yasağı"
+      },
+      {
+        "adim": 5,
+        "olay": "Sosyal istikrarsızlık riski",
+        "etki": "Gıda ithalatçısı ülkelerde sosyal gerilim artar",
+        "olasilik": 0.45,
+        "tarihsel_referans": "Arap Baharı 2011 gıda fiyatları"
+      }
+    ],
+    "anti_tez": "Bolca hasatlı diğer üretici bölgeler arzı dengeler",
+    "net_etki": "Kuraklık buğday fiyatını %15-35 yukarı çeker, gıda enflasyonu artar",
+    "ilgili_modlar": [
+      "hava",
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "sorce": "uzun_vade",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "CBOT tarihsel veriler",
+      "USDA tahıl raporları"
+    ]
+  },
+  {
+    "id": "ukrayna_bugday_arz_krizi",
+    "baslik": "Ukrayna Krizi → Küresel Buğday Arz Şoku",
+    "kategori": "emtia",
+    "tetikleyici": "Ukrayna'da askeri çatışma veya ihracat koridoru kapanır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Karadeniz tahıl koridoru kapanır",
+        "etki": "Küresel buğday arzının %10-15'i risk altına girer",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 Ukrayna işgali sonrası"
+      },
+      {
+        "adim": 2,
+        "olay": "Buğday fiyatı patlıyor",
+        "etki": "CBOT buğday %30-60 kazanır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2022 Mart CBOT buğday rekoru"
+      },
+      {
+        "adim": 3,
+        "olay": "Yemek yağı fiyatları yükselir",
+        "etki": "Ayçiçek yağı %50-100 artar (Ukrayna dünya 1. ihracatçısı)",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2022 ayçiçek yağı krizi"
+      },
+      {
+        "adim": 4,
+        "olay": "MENA ülkeleri gıda tehdidiyle karşılaşır",
+        "etki": "Mısır, Lübnan, Suriye ithalat sıkıntısı yaşar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2022 küresel gıda krizi"
+      }
+    ],
+    "anti_tez": "Anlaşma ve koridorun yeniden açılması arzı normalize eder",
+    "net_etki": "Ukrayna krizi buğdayı %30-60 yukarı iter, gıda güvensizliği artar",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "UN gıda güvenliği raporları",
+      "CBOT tarihsel",
+      "Reuters haber analizi"
+    ]
+  },
+  {
+    "id": "kahve_brezilya_don_olaylari",
+    "baslik": "Brezilya Donları → Kahve Fiyat Şoku",
+    "kategori": "emtia",
+    "tetikleyici": "Brezilya'nın Minas Gerais bölgesinde don olayı gerçekleşir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Brezilya kahve plantasyonları zarar görür",
+        "etki": "Robusta ve arabica verimi %20-40 düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2021 Brezilya don olayı"
+      },
+      {
+        "adim": 2,
+        "olay": "ICE arabica kahve fiyatı patlar",
+        "etki": "Kahve fiyatı %30-60 yükselir",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2021 Temmuz-Ağustos kahve rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Kahve şirketleri zam yapar",
+        "etki": "Nescafe, Starbucks fiyatları %10-20 artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Nestle 2022 fiyat artışları"
+      },
+      {
+        "adim": 4,
+        "olay": "Kahve üreticilerin hisseleri dalgalanır",
+        "etki": "Brezilya kahve üreticileri %15-25 kayıp yaşar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Brezilya agri-hisse verileri 2021"
+      }
+    ],
+    "anti_tez": "Vietnam ve diğer üreticiler arzı tamamlarsa fiyat artışı sınırlı kalır",
+    "net_etki": "Brezilya don olayı kahve fiyatını %30-60 kaldırır",
+    "ilgili_modlar": [
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "ICE arabica tarihsel veriler",
+      "USDA kahve raporları"
+    ]
+  },
+  {
+    "id": "bakir_kuresel_buyume_gostergesi",
+    "baslik": "Bakır: Küresel Büyüme Barometresi",
+    "kategori": "emtia",
+    "tetikleyici": "Küresel PMI verileri 50 üzerinde ve Çin büyüme hızlanır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Çin sanayi üretimi hızlanır",
+        "etki": "Bakır talebi %8-15 artar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Çin 2021 sanayi canlanması"
+      },
+      {
+        "adim": 2,
+        "olay": "Bakır fiyatı yükselir",
+        "etki": "LME bakır %10-25 kazanır (Dr. Copper indikatörü)",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Bakır 2021 Mayıs zirvesi"
+      },
+      {
+        "adim": 3,
+        "olay": "Madencilik şirketleri güçlenir",
+        "etki": "Freeport, Vale ve benzerleri %15-30 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Madencilik sektörü 2021 performansı"
+      },
+      {
+        "adim": 4,
+        "olay": "EV ve yeşil enerji talebi ekler",
+        "etki": "Bakır uzun vadeli talebi destekler",
+        "olasilik": 0.75,
+        "tarihsel_referans": "EV bakır yoğunluğu verileri 2022-2023"
+      }
+    ],
+    "anti_tez": "Çin yavaşlaması veya küresel resesyon bakır talebini çökerter",
+    "net_etki": "Küresel büyüme dönemlerinde bakır %10-25 kazanır",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "LME tarihsel veriler",
+      "IMF büyüme projeksiyonları"
+    ]
+  },
+  {
+    "id": "lityum_ev_talep_patlamasi",
+    "baslik": "EV Patlaması → Lityum Talebi",
+    "kategori": "emtia",
+    "tetikleyici": "Elektrikli araç satışları yıllık bazda %30+ büyür",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "EV satışları hızlanır",
+        "etki": "Küresel EV satışları 10 milyon/yıl aşar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2023 küresel EV pazarı"
+      },
+      {
+        "adim": 2,
+        "olay": "Lityum talebi patlar",
+        "etki": "Lityum talebi %30-50 artar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Lityum 2021-2022 fiyat rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Lityum fiyatı zirve yapar",
+        "etki": "Lityum karbonat fiyatı 70-80 bin dolar/ton seviyesine ulaşır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 lityum zirve fiyatı"
+      },
+      {
+        "adim": 4,
+        "olay": "Madencilik şirketleri değer kazanır",
+        "etki": "Albemarle, Livent %50-100 kazanır",
+        "olasilik": 0.68,
+        "tarihsel_referans": "Lityum madenciliği 2021-2022"
+      },
+      {
+        "adim": 5,
+        "olay": "Aşırı yatırım ve kapasite artışı gelir",
+        "etki": "2-3 yıl içinde arz fazlası oluşur, fiyat düzeltilir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Lityum 2023 fiyat çöküşü"
+      }
+    ],
+    "anti_tez": "EV benimsemesi yavaş kalırsa veya batarya teknolojisi değişirse lityum talebi hayal kırıklığı yaratır",
+    "net_etki": "EV patlaması lityum fiyatını kısa vadede %50-100 kaldırır, sonra düzelme gelir",
+    "ilgili_modlar": [
+      "sektor",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA EV görünümü",
+      "Benchmark Mineral Intelligence"
+    ]
+  },
+  {
+    "id": "bitcoin_halving_dongusu",
+    "baslik": "Bitcoin Halving Döngüsü",
+    "kategori": "kripto",
+    "tetikleyici": "Bitcoin halving olayı (her 4 yılda bir)",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Halving gerçekleşir",
+        "etki": "Madenci ödülü yarıya iner, arz şoku",
+        "olasilik": 1.0,
+        "tarihsel_referans": "2012, 2016, 2020, 2024 halving'leri"
+      },
+      {
+        "adim": 2,
+        "olay": "Arz daralması algısı",
+        "etki": "Yatırımcılar stoklamaya başlar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2020 halving öncesi birikim"
+      },
+      {
+        "adim": 3,
+        "olay": "Fiyat yükselişi (6-18 ay sonra)",
+        "etki": "Bitcoin %200-500 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2013, 2017, 2021 bull run'ları"
+      },
+      {
+        "adim": 4,
+        "olay": "Altcoin sezonu",
+        "etki": "Bitcoin dominansı düşer, altcoinler patlar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2017 Q4, 2021 Q1"
+      },
+      {
+        "adim": 5,
+        "olay": "Zirve ve düzeltme",
+        "etki": "Halving sonrası 12-18 ayda zirve, sonra %50-80 düşüş",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2018, 2022 bear market'leri"
+      }
+    ],
+    "anti_tez": "Makro kriz: Halving olsa da risk iştahı yoksa fiyat yükselmez",
+    "net_etki": "Halving sonrası 12-18 ayda Bitcoin tarihi zirve yapar, sonra düzeltme",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Bitcoin tarihsel fiyat",
+      "Glassnode verileri"
+    ]
+  },
+  {
+    "id": "bitcoin_etf_onay_rallisi",
+    "baslik": "Bitcoin ETF Onayı → Kurumsal Benimseme Rallisi",
+    "kategori": "kripto",
+    "tetikleyici": "SEC veya büyük düzenleyici kurum Bitcoin spot ETF onaylar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "ETF onayı açıklanır",
+        "etki": "Kurumsal yatırımcılar Bitcoin'e erişim kazanır",
+        "olasilik": 0.9,
+        "tarihsel_referans": "ABD Bitcoin spot ETF onayı Ocak 2024"
+      },
+      {
+        "adim": 2,
+        "olay": "Kurumsal para girişi başlar",
+        "etki": "İlk aylarda 10-20 milyar dolar giriş gerçekleşir",
+        "olasilik": 0.8,
+        "tarihsel_referans": "BlackRock IBIT 2024 ilk çeyrek verileri"
+      },
+      {
+        "adim": 3,
+        "olay": "Bitcoin fiyatı yükselir",
+        "etki": "Bitcoin %50-150 kazanır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Bitcoin 2024 Q1 rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Diğer kripto varlıklar da yükselir",
+        "etki": "Ethereum, Solana %80-200 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2024 kripto rallisi"
+      },
+      {
+        "adim": 5,
+        "olay": "Perakende yatırımcı heyecanı artar",
+        "etki": "Borsa uygulamaları kripto bölümü indirmeleri patlar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2024 kripto borsa kayıtları"
+      }
+    ],
+    "anti_tez": "Makroekonomik baskı veya regülasyon sıkılaşması ETF etkisini azaltır",
+    "net_etki": "ETF onayı Bitcoin'i %50-150 yukarı iter, kripto piyasasına kurumsal para girer",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "SEC ETF verileri",
+      "Glassnode",
+      "BlackRock IBIT raporları"
+    ]
+  },
+  {
+    "id": "bitcoin_makro_risk_ortami",
+    "baslik": "Risk-Off Ortamı → Bitcoin Düşüşü",
+    "kategori": "kripto",
+    "tetikleyici": "Fed faiz artırımı, resesyon korkusu veya büyük kredi olayı",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Risk iştahı azalır",
+        "etki": "Yatırımcılar spekülatif varlıklardan çıkar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2022 Fed döngüsü"
+      },
+      {
+        "adim": 2,
+        "olay": "Bitcoin sert düşer",
+        "etki": "Bitcoin %30-60 kayıp yaşar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Bitcoin 2022 %75 düşüş"
+      },
+      {
+        "adim": 3,
+        "olay": "Kaldıraçlı pozisyonlar tasfiye edilir",
+        "etki": "Likidasyonlar dalga etkisi yaratır, %5-15 ek düşüş",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 Mayıs ve Kasım bitcoin çöküşleri"
+      },
+      {
+        "adim": 4,
+        "olay": "Kripto şirketleri iflasları dalgası",
+        "etki": "FTX, Celsius benzeri yapılar batar",
+        "olasilik": 0.45,
+        "tarihsel_referans": "2022 kripto iflasları"
+      }
+    ],
+    "anti_tez": "Fed pivot veya kurumsal alım taban oluşturursa düşüş sınırlı kalır",
+    "net_etki": "Risk-off ortamı Bitcoin'i %30-60 aşağı iter",
+    "ilgili_modlar": [
+      "makro",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Bitcoin tarihsel fiyat",
+      "Glassnode verileri",
+      "Fed faiz kararları"
+    ]
+  },
+  {
+    "id": "bitcoin_regulasyon_yasak",
+    "baslik": "Ülke Kripto Yasağı → Bitcoin Sert Düşüş",
+    "kategori": "kripto",
+    "tetikleyici": "Büyük ülke kripto alımını veya madenciliğini yasaklar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Büyük ülke yasak ilan eder",
+        "etki": "Yatırımcı güveni sarsılır, panik satışı başlar",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Çin kripto yasağı Mayıs 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Bitcoin sert düşer",
+        "etki": "%20-40 tek günde veya haftada kayıp",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Bitcoin Mayıs 2021 %50 düşüş"
+      },
+      {
+        "adim": 3,
+        "olay": "Madenci göçü başlar",
+        "etki": "Çıkarılan Bitcoin'in hash rate'i başka ülkeye kayar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2021 Çin yasağı sonrası ABD madenci göçü"
+      },
+      {
+        "adim": 4,
+        "olay": "Adaptasyon ve toparlanma",
+        "etki": "3-6 ay içinde Bitcoin yeniden yükselir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Bitcoin 2021 Ağustos toparlanması"
+      }
+    ],
+    "anti_tez": "Yasağın uygulanamaz olması veya alternatif ülkelerde onay verilmesi etkiyi sınırlar",
+    "net_etki": "Büyük ülke yasağı Bitcoin'i kısa vadede %20-40 düşürür, uzun vadede adapt olur",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Bitcoin tarihsel",
+      "Çin kripto yasağı analizi",
+      "Cambridge blockchain araştırması"
+    ]
+  },
+  {
+    "id": "ethereum_merge_etkisi",
+    "baslik": "Ethereum Proof-of-Stake Geçişi Etkisi",
+    "kategori": "kripto",
+    "tetikleyici": "Büyük Ethereum ağ güncellemesi (Merge gibi)",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Ethereum PoS'a geçer",
+        "etki": "Enerji kullanımı %99.9 düşer, ESG anlatısı güçlenir",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Ethereum The Merge Eylül 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "ETH ihraç hızı düşer",
+        "etki": "Deflasyoner baskı oluşur, arz azalır",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Ethereum post-merge veri"
+      },
+      {
+        "adim": 3,
+        "olay": "Kurumsal ilgi artar",
+        "etki": "Çevreci yatırımcılar ETH alır, talep yükselir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "ETH 2022-2023 kurumsal ilgi"
+      },
+      {
+        "adim": 4,
+        "olay": "ETH fiyatı güçlenir",
+        "etki": "ETH %50-150 kazanır (uzun vadede)",
+        "olasilik": 0.68,
+        "tarihsel_referans": "ETH 2023 yükselişi"
+      }
+    ],
+    "anti_tez": "Makro baskı veya teknik sorun güven kırar",
+    "net_etki": "Büyük Ethereum güncellemesi uzun vadede %50-150 potansiyel sunar",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "ethereum",
+      "bitcoin",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Ethereum Foundation",
+      "Glassnode veriler"
+    ]
+  },
+  {
+    "id": "kripto_stablecoin_krizi",
+    "baslik": "Stablecoin Çöküşü → Kripto Piyasası Paniği",
+    "kategori": "kripto",
+    "tetikleyici": "Büyük stablecoin'in pegged değeri kırılır (de-peg olayı)",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Stablecoin 1 doların altına düşer",
+        "etki": "Piyasada panik satışı başlar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "LUNA/UST çöküşü Mayıs 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Kripto piyasası geneli çöker",
+        "etki": "Bitcoin %20-40, Ethereum %30-50 düşer",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Mayıs 2022 kripto çöküşü"
+      },
+      {
+        "adim": 3,
+        "olay": "Likidite krizi yayılır",
+        "etki": "DeFi protokolleri stres altında, kaldıraçlar tasfiye edilir",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2022 Haziran likidite krizi"
+      },
+      {
+        "adim": 4,
+        "olay": "Büyük aktörler iflası",
+        "etki": "Celsius, 3AC gibi kurumlar çöker",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2022 Haziran-Temmuz kripto iflasları"
+      }
+    ],
+    "anti_tez": "Destekli stablecoin'lerin (USDC, USDT) sağlam kalması paniği sınırlar",
+    "net_etki": "Stablecoin krizleri kripto piyasasını %30-50 aşağı iter",
+    "ilgili_modlar": [
+      "trendler",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "LUNA/UST analizi",
+      "Kripto piyasa verileri 2022"
+    ]
+  },
+  {
+    "id": "bitcoin_kurumsal_benimseme",
+    "baslik": "Kurumsal Bitcoin Benimsemesi",
+    "kategori": "kripto",
+    "tetikleyici": "S&P 500 şirketi veya büyük ülke Bitcoin rezerve alır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Fortune 500 şirketi Bitcoin satın alır",
+        "etki": "Piyasada güven artar, meşruiyet kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "MicroStrategy 2020, Tesla 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Diğer kurumlar da alım yapar",
+        "etki": "Domino etkisiyle kurumsal alım dalgası başlar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2020-2021 kurumsal Bitcoin alım süreci"
+      },
+      {
+        "adim": 3,
+        "olay": "Bitcoin fiyatı güçlü yükselir",
+        "etki": "Bitcoin %50-200 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Bitcoin 2020-2021 kurumsal rally"
+      },
+      {
+        "adim": 4,
+        "olay": "Mainstream medyada kapsamlı haber",
+        "etki": "Perakende yatırımcı benimsemesi hızlanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2021 Bitcoin mainstream medya"
+      }
+    ],
+    "anti_tez": "Düzenleyici baskı veya şirketin satış kararı güveni çökertir",
+    "net_etki": "Kurumsal benimseme Bitcoin'i uzun vadede %50-200 kaldırır",
+    "ilgili_modlar": [
+      "trendler",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "MicroStrategy raporları",
+      "Bitcoin tarihsel kurumsal veri"
+    ]
+  },
+  {
+    "id": "defi_tvl_buyumesi",
+    "baslik": "DeFi TVL Büyümesi → Ethereum Değer Artışı",
+    "kategori": "kripto",
+    "tetikleyici": "DeFi protokolleri toplamda kilitli değer (TVL) 50 milyar dolar aşar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "DeFi kullanımı patlar",
+        "etki": "TVL 50-100 milyar dolar aşar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "DeFi Summer 2020, 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Ethereum gas ücretleri yükselir",
+        "etki": "ETH burn mekanizması deflasyoner etkiyi güçlendirir",
+        "olasilik": 0.78,
+        "tarihsel_referans": "EIP-1559 2021 Ağustos"
+      },
+      {
+        "adim": 3,
+        "olay": "ETH fiyatı yükselir",
+        "etki": "ETH %50-150 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "ETH 2021 rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Layer 2 çözümleri değer kazanır",
+        "etki": "Arbitrum, Optimism gibi token'lar %100-300 kazanır",
+        "olasilik": 0.6,
+        "tarihsel_referans": "L2 token fiyatları 2023"
+      }
+    ],
+    "anti_tez": "Büyük DeFi hack'i veya regülasyon baskısı TVL'yi çökertir",
+    "net_etki": "DeFi büyümesi Ethereum ve L2 ekosistemini %50-150 kaldırır",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.65,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "DeFiLlama verileri",
+      "Ethereum tarihsel fiyat"
+    ]
+  },
+  {
+    "id": "kripto_fed_korelasyonu",
+    "baslik": "Fed Faiz Kararı → Kripto Korelasyonu",
+    "kategori": "kripto",
+    "tetikleyici": "Fed toplantısı ve faiz kararı açıklanır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Fed faiz artırır",
+        "etki": "Risk iştahı azalır, likidite daralır",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Fed 2022-2023 faiz artırımı"
+      },
+      {
+        "adim": 2,
+        "olay": "Bitcoin teknoloji hisseleriyle düşer",
+        "etki": "BTC-NASDAQ korelasyonu 0.7+ olur",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 BTC-Nasdaq korelasyonu"
+      },
+      {
+        "adim": 3,
+        "olay": "Altcoinler daha sert düşer",
+        "etki": "Altcoinler Bitcoin'den %20-40 daha fazla kayıp yaşar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2022 altcoin performansı"
+      },
+      {
+        "adim": 4,
+        "olay": "Staking getirisi cazip hale gelir",
+        "etki": "DeFi yerine TradFi ürünleri tercih edilir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2023 USD faiz vs DeFi karşılaştırması"
+      }
+    ],
+    "anti_tez": "Fed pivot veya duraklatma kripto rallisini tetikler",
+    "net_etki": "Fed sıkılaşması kripto'yu %20-50 baskılar, Nasdaq korelasyonu güçlenir",
+    "ilgili_modlar": [
+      "makro",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Fed kararları",
+      "BTC-NASDAQ korelasyon verileri"
+    ]
+  },
+  {
+    "id": "orta_dogu_gerilim_petrol",
+    "baslik": "Orta Doğu Gerilimi → Petrol Fiyat Şoku",
+    "kategori": "jeopolitik",
+    "tetikleyici": "İran-İsrail veya Suudi Arabistan bölgesinde askeri gerilim",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Gerilim tırmanır",
+        "etki": "Risk algısı artar, güvenli liman talebi",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2020 Ocak Süleymani suikastı"
+      },
+      {
+        "adim": 2,
+        "olay": "Petrol arz riski",
+        "etki": "Hormuz Boğazı veya boru hatları risk altında",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2019 Suudi Aramco saldırısı"
+      },
+      {
+        "adim": 3,
+        "olay": "Petrol fiyatı patlar",
+        "etki": "Brent %15-40 yükselir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2019 Eylül +%15 tek günde"
+      },
+      {
+        "adim": 4,
+        "olay": "Enerji hisseleri yükselir",
+        "etki": "XLE, enerji ETF'leri %10-25 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2022 Ukrayna sonrası"
+      },
+      {
+        "adim": 5,
+        "olay": "Enflasyon baskısı",
+        "etki": "Küresel enflasyon %0.5-1.5 puan artar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2022 enerji enflasyonu"
+      }
+    ],
+    "anti_tez": "Hızlı diplomasi: Gerilim 1-2 hafta içinde çözülürse fiyatlar normale döner",
+    "net_etki": "Orta Doğu gerilimi petrol ve enerji hisselerini %15-40 yukarı iter",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "dogalgaz",
+      "enerji_hisseleri",
+      "altin"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "EIA verileri",
+      "Tarihsel petrol fiyat",
+      "Jeopolitik analiz"
+    ]
+  },
+  {
+    "id": "tayvan_yaricletken_krizi",
+    "baslik": "Tayvan Gerilimi → Yarı İletken Krizi",
+    "kategori": "jeopolitik",
+    "tetikleyici": "Çin-Tayvan arasında askeri gerilim tırmanır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Askeri tatbikat veya blokaj",
+        "etki": "Tayvan boğazı riski, TSMC tedarik endişesi",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 Pelosi ziyareti tatbikatları"
+      },
+      {
+        "adim": 2,
+        "olay": "Yarı iletken hisseleri çöker",
+        "etki": "TSMC, NVIDIA, AMD %15-30 kayıp yaşar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 semikon sektörü"
+      },
+      {
+        "adim": 3,
+        "olay": "Teknoloji hisseleri genel baskı",
+        "etki": "Nasdaq %10-20 düşer",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2022 Ağustos semikon satışı"
+      },
+      {
+        "adim": 4,
+        "olay": "ABD çiplerini alternatif üretimde destekler",
+        "etki": "CHIPS Act hızlanır, Intel, Micron yatırımları artar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "CHIPS Act 2022"
+      },
+      {
+        "adim": 5,
+        "olay": "Tedarik zinciri yeniden yapılanır",
+        "etki": "Nearshoring ve alternatif kaynak arayışı güçlenir",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Küresel chip fabrikası yatırımları 2023"
+      }
+    ],
+    "anti_tez": "Çin-ABD diplomatik görüşme veya Tayvan'ın statükosu korunursa risk azalır",
+    "net_etki": "Tayvan krizinde yarı iletkenler %15-30 düşer, teknoloji tedariki tehdit altına girer",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TSMC yıllık rapor",
+      "SIA chip verileri",
+      "Tayvan jeopolitik analiz"
+    ]
+  },
+  {
+    "id": "rusya_enerji_yaptirimlari",
+    "baslik": "Rusya Enerji Yaptırımları → Avrupa Enerji Krizi",
+    "kategori": "jeopolitik",
+    "tetikleyici": "Batı, Rusya'ya enerji yaptırımı uygular veya Rusya ihracatı keser",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Rusya gaz ihracatını kısar",
+        "etki": "Avrupa'nın doğalgaz arzının %30-40'ı risk altına girer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2022 Kuzey Akım sabotajı"
+      },
+      {
+        "adim": 2,
+        "olay": "Avrupa spot gaz fiyatları patlar",
+        "etki": "TTF spot fiyatı 200-300 EUR/MWh aşar",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2022 Ağustos Avrupa gaz zirvesi"
+      },
+      {
+        "adim": 3,
+        "olay": "Avrupa enerji krizi derinleşir",
+        "etki": "Sanayi üretimi %5-10 düşer, enflasyon %5-10 puan artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 Avrupa enerji krizi"
+      },
+      {
+        "adim": 4,
+        "olay": "LNG fiyatları küresel olarak yükselir",
+        "etki": "ABD ve Katar LNG ihracatı patlar, fiyatlar %50-100 artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 küresel LNG fiyatları"
+      },
+      {
+        "adim": 5,
+        "olay": "Avrupa sanayii baskıda, Asya'da rekabet",
+        "etki": "Euro zayıflar, Alman sanayii %3-8 küçülür",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2022-2023 Avrupa rekabet kaybı"
+      }
+    ],
+    "anti_tez": "Hızlı diplomatik çözüm veya enerji alternatifleri bulunursa etki azalır",
+    "net_etki": "Rusya enerji yaptırımları Avrupa'yı enerji krizine götürür, gaz fiyatları patlar",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "dogalgaz",
+      "petrol",
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA enerji verileri",
+      "TTF tarihsel fiyat",
+      "Avrupa Komisyonu enerji raporları"
+    ]
+  },
+  {
+    "id": "abd_cin_ticaret_savasi",
+    "baslik": "ABD-Çin Ticaret Savaşı Tırmanması",
+    "kategori": "jeopolitik",
+    "tetikleyici": "ABD Çin mallarına yüksek gümrük tarifeleri uygular veya teknoloji ihracat kısıtlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "ABD Çin'e tarife veya kısıtlama uygular",
+        "etki": "İkili ticaret %20-40 daralır",
+        "olasilik": 0.8,
+        "tarihsel_referans": "ABD-Çin ticaret savaşı 2018-2019"
+      },
+      {
+        "adim": 2,
+        "olay": "Çin misilleme yapar",
+        "etki": "ABD tarım mallarına (soya, mısır) kısıtlama gelir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Çin 2018 misilleme tarifeleri"
+      },
+      {
+        "adim": 3,
+        "olay": "Küresel tedarik zincirleri çözülür",
+        "etki": "Şirketler üretimi çeşitlendirir, Vietnam, Hindistan kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2019-2021 Çin'den göç"
+      },
+      {
+        "adim": 4,
+        "olay": "Teknoloji sektörü baskıda",
+        "etki": "Apple, NVIDIA Çin geliri %10-25 düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "ABD chip kısıtlamaları 2022-2023"
+      },
+      {
+        "adim": 5,
+        "olay": "Enflasyon artışı",
+        "etki": "Ucuz Çin malları azalınca tüketici fiyatları %1-3 artar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2021-2022 enflasyon artışı"
+      }
+    ],
+    "anti_tez": "Anlaşma arayışı veya diplomasi tansiyonu düşürür",
+    "net_etki": "Ticaret savaşı teknoloji hisselerini %10-25 baskılar, enflasyonu artırır",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "WTO ticaret verileri",
+      "ABD-Çin ticaret istatistikleri",
+      "Akademik analiz"
+    ]
+  },
+  {
+    "id": "abd_baskanlık_secimi",
+    "baslik": "ABD Başkanlık Seçimi Belirsizliği",
+    "kategori": "jeopolitik",
+    "tetikleyici": "ABD'de başkanlık seçimi yaklaşır, iki parti arasındaki politika farklılığı belirginleşir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Seçim kampanyaları hızlanır",
+        "etki": "Piyasalar politika belirsizliğini fiyatlar",
+        "olasilik": 0.88,
+        "tarihsel_referans": "2020 ABD seçimi piyasa volatilitesi"
+      },
+      {
+        "adim": 2,
+        "olay": "Vergi politikası belirsizliği",
+        "etki": "Kurumsal kar tahminleri geniş aralıkta tahmin edilir",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2020 vergi belirsizliği"
+      },
+      {
+        "adim": 3,
+        "olay": "Savunma ve enerji politikası farklılaşır",
+        "etki": "Seçim sonucuna göre savunma/yenilenebilir enerji hisseleri hareket eder",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2020 yeşil enerji/fosil yakıt ayrışması"
+      },
+      {
+        "adim": 4,
+        "olay": "Seçim sonucu netleşir",
+        "etki": "Belirsizlik azalınca piyasalar ralli yapar (%5-15)",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2020 Kasım seçim sonrası ralli"
+      }
+    ],
+    "anti_tez": "Seçim sonucu itiraz süreci piyasa volatilitesini uzatır",
+    "net_etki": "Seçim belirsizliği volatiliteyi artırır, netleşince %5-15 ralli gelir",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "dolar",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Piyasa volatilite tarihi",
+      "Seçim döngüsü analizi"
+    ]
+  },
+  {
+    "id": "iran_petrol_ambargo",
+    "baslik": "İran Petrol Ambargosu Güçlendirilmesi",
+    "kategori": "jeopolitik",
+    "tetikleyici": "ABD veya AB İran'a yeni enerji yaptırımları uygular",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Ambargo sıkılaştırılır",
+        "etki": "İran petrol ihracatı günlük 1-2 milyon varil azalır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "İran yaptırımları 2018 genişlemesi"
+      },
+      {
+        "adim": 2,
+        "olay": "Brent petrol yükselir",
+        "etki": "Brent %8-20 artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2018 İran ambargo petrol etkisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Suudi Arabistan arzı artırmayabilir",
+        "etki": "OPEC arz tepkisi belirsiz, fiyat kalıcı yükselir",
+        "olasilik": 0.55,
+        "tarihsel_referans": "OPEC tepki gecikmesi 2018"
+      },
+      {
+        "adim": 4,
+        "olay": "Nükleer anlaşma çabaları hızlanır",
+        "etki": "Diplomatik çözüm arayışı piyasalara eklenir",
+        "olasilik": 0.6,
+        "tarihsel_referans": "JCPOA müzakereleri"
+      }
+    ],
+    "anti_tez": "Nükleer anlaşma İran petrolünü serbest bırakırsa arz artar, fiyat düşer",
+    "net_etki": "İran ambargosu petrolü %8-20 kaldırır",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "enerji_hisseleri",
+      "altin"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "EIA İran petrol verileri",
+      "OPEC yıllık raporu"
+    ]
+  },
+  {
+    "id": "fed_faiz_artirimi_hisse_baski",
+    "baslik": "Fed Faiz Artırımı → Hisse Baskısı",
+    "kategori": "makro",
+    "tetikleyici": "Fed 0.50%+ faiz artırımı açıklar veya sinyali verir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Faiz artırımı açıklanır",
+        "etki": "Tahvil getirileri yükselir",
+        "olasilik": 0.95,
+        "tarihsel_referans": "2022-2023 Fed döngüsü"
+      },
+      {
+        "adim": 2,
+        "olay": "Hisse değerlemeleri baskılanır",
+        "etki": "P/E oranları düşer, özellikle büyüme hisseleri",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2022 teknoloji hisse düşüşü"
+      },
+      {
+        "adim": 3,
+        "olay": "Dolar güçlenir",
+        "etki": "DXY endeksi %2-5 yükselir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 dolar rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Gelişmekte olan piyasalar baskıda",
+        "etki": "EM hisseleri ve dövizleri %5-15 düşer",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2022 EM düşüşü"
+      },
+      {
+        "adim": 5,
+        "olay": "Resesyon riski artar",
+        "etki": "Savunmacı sektörler (sağlık, gıda) outperform yapar",
+        "olasilik": 0.55,
+        "tarihsel_referans": "2023 Q1 banka krizi"
+      }
+    ],
+    "anti_tez": "Soft landing: Enflasyon hızla düşer, Fed duraklar, hisseler toparlanır",
+    "net_etki": "Faiz artırımı döngüsünde hisseler %10-30 düşer, tahvil ve dolar güçlenir",
+    "ilgili_modlar": [
+      "mevsim",
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "tahvil",
+      "dolar",
+      "altin"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Fed verileri",
+      "S&P 500 tarihsel",
+      "Akademik çalışmalar"
+    ]
+  },
+  {
+    "id": "fed_pivot_risk_rallisi",
+    "baslik": "Fed Pivot → Risk Varlıkları Rallisi",
+    "kategori": "makro",
+    "tetikleyici": "Fed faiz artışlarına ara verir veya faiz indirim sinyali verir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Fed faiz indirim sinyali verir",
+        "etki": "Piyasalar faiz indirimini fiyatlar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Fed pivot beklentisi 2023"
+      },
+      {
+        "adim": 2,
+        "olay": "Tahvil fiyatları yükselir",
+        "etki": "10-yıl ABD tahvili getirisi %0.5-1.0 puan düşer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "2023 tahvil rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Hisse piyasaları ralli yapar",
+        "etki": "S&P 500 %10-25 kazanır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2023 Q4 hisse rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Kripto ve büyüme hisseleri patlar",
+        "etki": "Bitcoin %30-60, teknoloji hisseleri %20-40 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2023 kripto toparlanması"
+      },
+      {
+        "adim": 5,
+        "olay": "Dolar zayıflar",
+        "etki": "DXY %3-8 düşer, EM varlıkları güçlenir",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Dolar 2023 Kasım-Aralık"
+      }
+    ],
+    "anti_tez": "Enflasyonun yeniden alevlenmesi Fed'i faiz artırmaya zorlarsa ralli tersine döner",
+    "net_etki": "Fed pivot hisseler %10-25, kripto %30-60 yukarı iter",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "tahvil",
+      "bitcoin",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Fed açıklamaları",
+      "S&P 500 tarihsel",
+      "CME FedWatch"
+    ]
+  },
+  {
+    "id": "ters_yield_curve_resesyon",
+    "baslik": "Ters Getiri Eğrisi → Resesyon Sinyali",
+    "kategori": "makro",
+    "tetikleyici": "2 yıl-10 yıl ABD tahvili spreadı negatife döner ve 6+ ay kalır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Getiri eğrisi tersine döner",
+        "etki": "2Y-10Y spread negatif, resesyon endişesi artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "2022-2023 ABD getiri eğrisi inversiyon"
+      },
+      {
+        "adim": 2,
+        "olay": "Bankacılık sektörü baskıda",
+        "etki": "Net faiz marjları düşer, banka hisseleri %10-20 geride kalır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2023 ABD banka krizi"
+      },
+      {
+        "adim": 3,
+        "olay": "Kredi daralması başlar",
+        "etki": "Kredi standartları sıkılaşır, ekonomi yavaşlar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2023 kredi daralması"
+      },
+      {
+        "adim": 4,
+        "olay": "Savunmacı sektörler outperform",
+        "etki": "Sağlık, gıda, kamu hizmetleri %5-15 kazanır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Resesyon öncesi sektör rotasyonu"
+      },
+      {
+        "adim": 5,
+        "olay": "Resesyon gerçekleşir (6-18 ay sonra)",
+        "etki": "GDP negatife döner, hisseler %15-35 düşer",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2001, 2008 öncesi inversiyon"
+      }
+    ],
+    "anti_tez": "Soft landing: Resesyonsuz enflasyon düşüşü getiri eğrisini normalize eder",
+    "net_etki": "Ters getiri eğrisi 6-18 ay içinde resesyon riski sinyali verir",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "tahvil",
+      "hisse",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Fed verisi",
+      "Yield curve analizi",
+      "NBER resesyon tarihleri"
+    ]
+  },
+  {
+    "id": "yuksek_enflasyon_emtia_donus",
+    "baslik": "Yüksek Enflasyon → Emtia ve Reel Varlık Dönüşü",
+    "kategori": "makro",
+    "tetikleyici": "Enflasyon %7+ seviyesine ulaşır ve yapısal kalıcılık gösterir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Enflasyon %7+ açıklanır",
+        "etki": "Reel varlık talebi artar, nominal varlıktan kaçış",
+        "olasilik": 0.88,
+        "tarihsel_referans": "2022 ABD CPI %8.5 zirvesi"
+      },
+      {
+        "adim": 2,
+        "olay": "Emtia varlıkları güçlenir",
+        "etki": "Altın, petrol, tarım emtiaları %15-30 kazanır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2022 emtia rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "TÜFE bağlı tahviller (TIPS) rağbet görür",
+        "etki": "TIPS getirileri düşer, fiyatlar yükselir",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 TIPS performansı"
+      },
+      {
+        "adim": 4,
+        "olay": "Gayrimenkul değerlenir",
+        "etki": "Enflasyona karşı korunma aracı olarak konut talebi artar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2021-2022 konut fiyat patlaması"
+      },
+      {
+        "adim": 5,
+        "olay": "Borçlu şirketler avantajlı",
+        "etki": "Gerçek borç yükü eriyince kaldıraçlı şirketler görece iyi",
+        "olasilik": 0.55,
+        "tarihsel_referans": "Enflasyon döneminde borç erozyon etkisi"
+      }
+    ],
+    "anti_tez": "Agresif merkez bankası faiz artışı enflasyonu hızla bastırır",
+    "net_etki": "Yüksek enflasyon döneminde emtia ve reel varlıklar finansal varlıkları yener",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "altin",
+      "petrol",
+      "hisse",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "BLS CPI verileri",
+      "TIPS performans tarihi",
+      "Emtia endeksi"
+    ]
+  },
+  {
+    "id": "kuresel_resesyon_tahvil_rallisi",
+    "baslik": "Küresel Resesyon → Tahvil Rallisi ve Savunmacı Sektörler",
+    "kategori": "makro",
+    "tetikleyici": "İki veya daha fazla büyük ekonomi ardı ardına negatif büyüme açıklar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Resesyon ilan edilir",
+        "etki": "Risk iştahı çöker, güvenli liman talebi patlar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2020, 2008 resesyonları"
+      },
+      {
+        "adim": 2,
+        "olay": "Devlet tahvilleri patlar",
+        "etki": "ABD 10Y getirisi %1-2 düşer, tahvil fiyatları %15-30 kazanır",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2020 Mart tahvil rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Hisse piyasaları çöker",
+        "etki": "S&P 500 %20-40 düşer",
+        "olasilik": 0.82,
+        "tarihsel_referans": "2008, 2020 hisse çöküşleri"
+      },
+      {
+        "adim": 4,
+        "olay": "Merkez bankaları gevşer",
+        "etki": "Faiz indirir ve QE uygular",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Fed 2020 ve 2008 tepkisi"
+      },
+      {
+        "adim": 5,
+        "olay": "Savunmacı sektörler outperform",
+        "etki": "Sağlık, kamu hizmetleri, gıda %5-15 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2020 resesyon sektör rotasyonu"
+      }
+    ],
+    "anti_tez": "Politika tepkisi çok hızlı ve güçlü gelirse V şeklinde toparlanma yaşanır",
+    "net_etki": "Resesyonda tahvil rallisi yaşanır, hisseler %20-40 kayıp verir",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "tahvil",
+      "hisse",
+      "dolar",
+      "altin"
+    ],
+    "gerceklesme_orani": 0.82,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "NBER resesyon tarihleri",
+      "S&P 500 tarihsel",
+      "Fed politika verileri"
+    ]
+  },
+  {
+    "id": "dolar_guclenme_em_baski",
+    "baslik": "Güçlü Dolar → Gelişmekte Olan Piyasa Baskısı",
+    "kategori": "makro",
+    "tetikleyici": "DXY endeksi %5+ yükselir ve birkaç ay yüksek seyreder",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Dolar güçlenir",
+        "etki": "DXY endeksi %5-10 yükselir",
+        "olasilik": 0.88,
+        "tarihsel_referans": "2022 dolar rallisi, DXY 115 seviyesi"
+      },
+      {
+        "adim": 2,
+        "olay": "EM dövizleri değer kaybeder",
+        "etki": "TRY, BRL, INR gibi para birimleri %5-15 zayıflar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "2022 EM döviz düşüşleri"
+      },
+      {
+        "adim": 3,
+        "olay": "EM tahvil getirileri yükselir",
+        "etki": "Dolar cinsinden borç geri ödeme maliyeti artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "EM tahvil 2022 spreads"
+      },
+      {
+        "adim": 4,
+        "olay": "EM hisseleri baskılanır",
+        "etki": "MSCI EM endeksi %10-25 düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2022 MSCI EM"
+      },
+      {
+        "adim": 5,
+        "olay": "Emtia baskılanır",
+        "etki": "Dolar fiyatlı emtialar %5-15 düşer",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2022 emtia düzeltmesi"
+      }
+    ],
+    "anti_tez": "Fed pivot ve ABD büyüme yavaşlaması doları geri getirir",
+    "net_etki": "Güçlü dolar EM piyasaları %10-25 baskılar, emtia ve borç maliyeti artar",
+    "ilgili_modlar": [
+      "makro",
+      "jeopolitik"
+    ],
+    "ilgili_varliklar": [
+      "dolar",
+      "hisse",
+      "tahvil",
+      "altin"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "DXY tarihsel",
+      "MSCI EM verileri",
+      "IMF EM analizi"
+    ]
+  },
+  {
+    "id": "tcmb_faiz_kararı_tl",
+    "baslik": "TCMB Faiz Kararı → TL ve BIST Etkisi",
+    "kategori": "makro",
+    "tetikleyici": "Türkiye Merkez Bankası faiz oranını önemli ölçüde değiştirir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "TCMB faiz artırır (ortodoks politika)",
+        "etki": "TL değer kazanır, yabancı yatırımcı ilgisi artar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "TCMB 2023 faiz artırım döngüsü"
+      },
+      {
+        "adim": 2,
+        "olay": "Enflasyon baskısı hafifler",
+        "etki": "TÜFE Türkiye'de düşüş trendine girer",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Türkiye 2023 yılsonu dezenflasyon"
+      },
+      {
+        "adim": 3,
+        "olay": "Yabancı portföy girişi",
+        "etki": "Yabancı yatırımcılar BIST ve tahvile geri döner",
+        "olasilik": 0.6,
+        "tarihsel_referans": "BIST yabancı yatırımcı akışları 2023"
+      },
+      {
+        "adim": 4,
+        "olay": "BIST güçlü performans",
+        "etki": "BIST 100 TL bazında %20-40 kazanır",
+        "olasilik": 0.68,
+        "tarihsel_referans": "BIST 2023 performansı"
+      }
+    ],
+    "anti_tez": "Faiz indirimi senaryosunda TL zayıflar, enflasyon artar, BIST nominal yükselir ama reel düşer",
+    "net_etki": "Ortodoks para politikası TL'yi güçlendirir, BIST'i cazip kılar",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "tahvil",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TCMB faiz kararları",
+      "BIST tarihsel veriler",
+      "TCMB enflasyon hedefi"
+    ]
+  },
+  {
+    "id": "ai_patlama_teknoloji_rallisi",
+    "baslik": "Yapay Zeka Patlaması → Teknoloji Sektörü Rallisi",
+    "kategori": "sektor",
+    "tetikleyici": "Büyük AI modeli lansmanı veya kurumsal AI benimsemesi hızlanır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "AI modeli piyasayı şaşırtır",
+        "etki": "Yatırımcılar AI potansiyelini fiyatlamaya başlar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "ChatGPT lansmanı Kasım 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Büyük teknoloji hisseleri ralli yapar",
+        "etki": "Microsoft, Google, NVIDIA %30-100 kazanır",
+        "olasilik": 0.82,
+        "tarihsel_referans": "AI ralli 2023"
+      },
+      {
+        "adim": 3,
+        "olay": "Yarı iletken talebi patlar",
+        "etki": "NVIDIA GPU satışları %50-150 büyür",
+        "olasilik": 0.85,
+        "tarihsel_referans": "NVIDIA 2023 gelir patlaması"
+      },
+      {
+        "adim": 4,
+        "olay": "Cloud harcamaları artar",
+        "etki": "AWS, Azure, GCP geliri %15-30 büyür",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Cloud büyümesi 2023 Q2-Q3"
+      },
+      {
+        "adim": 5,
+        "olay": "AI değerleme balonu riski",
+        "etki": "Aşırı değerleme düzeltme riskini artırır",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Dotcom balonu 2000 benzer"
+      }
+    ],
+    "anti_tez": "AI'dan beklenen gelir gelmezse hisse fiyatları çöker",
+    "net_etki": "AI dalgası teknoloji hisselerini %30-100 kaldırır, yarı iletken sektörü en çok kazanır",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.8,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Gartner AI verileri",
+      "NVIDIA yıllık raporu",
+      "IDC cloud raporları"
+    ]
+  },
+  {
+    "id": "yaricletken_dongusü_toparlanma",
+    "baslik": "Yarı İletken Döngüsü Toparlanması",
+    "kategori": "sektor",
+    "tetikleyici": "Chip stok fazlası eriyip talep geri gelir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Chip stok fazlası erimeye başlar",
+        "etki": "DRAM ve NAND fiyatları %10-20 yükselir",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Yarı iletken döngüsü 2023 dip"
+      },
+      {
+        "adim": 2,
+        "olay": "Chip üreticileri yeni siparişler alır",
+        "etki": "Samsung, Micron, SK Hynix sipariş artışı %20-30",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Yarı iletken toparlanma 2024"
+      },
+      {
+        "adim": 3,
+        "olay": "Yarı iletken hisseleri yükselir",
+        "etki": "SOX endeksi %30-60 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "SOX döngüsel toparlanma 2019, 2023"
+      },
+      {
+        "adim": 4,
+        "olay": "AI ve EV talebi güçlendirir",
+        "etki": "Yapısal talep faktörleri döngüsel toparlanmayı büyütür",
+        "olasilik": 0.7,
+        "tarihsel_referans": "NVIDIA, AMD AI chip talebi 2023"
+      }
+    ],
+    "anti_tez": "Küresel resesyon veya talep çöküşü toparlanmayı geciktirir",
+    "net_etki": "Yarı iletken döngüsü toparlanma evresinde SOX %30-60 kazanır",
+    "ilgili_modlar": [
+      "sektor",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.75,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "SIA verileri",
+      "SOX endeks tarihi",
+      "DRAM Exchange fiyatları"
+    ]
+  },
+  {
+    "id": "yesil_enerji_gecisi",
+    "baslik": "Yeşil Enerji Geçişi → Yenilenebilir Sektör Kazanımı",
+    "kategori": "sektor",
+    "tetikleyici": "Büyük ülke veya AB karbon nötr hedef açıklar, yeşil yatırım teşviki verir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Yeşil enerji politikaları güçlenir",
+        "etki": "Sübvansiyon ve teşvikler solar, wind sektörünü destekler",
+        "olasilik": 0.85,
+        "tarihsel_referans": "ABD IRA 2022, AB Yeşil Anlaşma"
+      },
+      {
+        "adim": 2,
+        "olay": "Solar ve rüzgar yatırımları hızlanır",
+        "etki": "Yeni kapasite kurulumu yılda %20-30 büyür",
+        "olasilik": 0.8,
+        "tarihsel_referans": "IEA yenilenebilir enerji büyüme 2022-2023"
+      },
+      {
+        "adim": 3,
+        "olay": "Temiz enerji hisseleri yükselir",
+        "etki": "First Solar, Vestas, Ørsted %20-50 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Temiz enerji ETF performansı 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Fosil yakıt talep uzun vadede azalır",
+        "etki": "Petrol şirketleri enerji geçiş planı yapar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "BP, Shell enerji geçiş açıklamaları"
+      }
+    ],
+    "anti_tez": "Enerji güvenlik endişeleri fosil yakıt yatırımlarını uzatır",
+    "net_etki": "Yeşil politika destekli dönemde yenilenebilir enerji sektörü %20-50 kazandırır",
+    "ilgili_modlar": [
+      "sektor",
+      "jeopolitik",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "enerji_hisseleri",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA yenilenebilir enerji raporu",
+      "BloombergNEF verileri"
+    ]
+  },
+  {
+    "id": "nükleer_enerji_ronesans",
+    "baslik": "Nükleer Enerji Rönesansı",
+    "kategori": "sektor",
+    "tetikleyici": "Enerji güvenliği endişesi ve karbon hedefleri nükleer enerjiyi yeniden ön plana çıkarır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Hükümetler nükleer enerji planlarını açıklar",
+        "etki": "Japonya, Fransa, Güney Kore nükleer yatırımları artırır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2022 sonrası nükleer rönesans açıklamaları"
+      },
+      {
+        "adim": 2,
+        "olay": "Uranyum fiyatı yükselir",
+        "etki": "Uranyum spot fiyatı %30-60 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Cameco uranyum fiyat rallisi 2023"
+      },
+      {
+        "adim": 3,
+        "olay": "Nükleer şirketler değer kazanır",
+        "etki": "Cameco, Uranium Energy %50-100 kazanır",
+        "olasilik": 0.68,
+        "tarihsel_referans": "Uranyum madenciliği hisseleri 2023"
+      },
+      {
+        "adim": 4,
+        "olay": "Small Modular Reactor (SMR) yatırımları artar",
+        "etki": "NuScale, Rolls-Royce SMR projeleri değer kazanır",
+        "olasilik": 0.55,
+        "tarihsel_referans": "SMR yatırım haberleri 2022-2023"
+      }
+    ],
+    "anti_tez": "Nükleer kaza veya maliyet aşımı projeleri durdurur",
+    "net_etki": "Nükleer rönesans uranyum fiyatını %30-60 kaldırır",
+    "ilgili_modlar": [
+      "sektor",
+      "jeopolitik"
+    ],
+    "ilgili_varliklar": [
+      "enerji_hisseleri",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "WNA nükleer verileri",
+      "Cameco yıllık raporu",
+      "IEA nükleer raporu"
+    ]
+  },
+  {
+    "id": "yaslilik_saglik_harcama",
+    "baslik": "Yaşlanan Nüfus → Sağlık Sektörü Büyümesi",
+    "kategori": "sektor",
+    "tetikleyici": "Baby boomer nesli emeklilik çağına girer, sağlık harcamaları yapısal olarak artar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "65+ yaş nüfus artışı hızlanır",
+        "etki": "Kişi başı sağlık harcamaları %3-5 yıllık büyür",
+        "olasilik": 0.95,
+        "tarihsel_referans": "OECD demografik trendler"
+      },
+      {
+        "adim": 2,
+        "olay": "İlaç ve medikal cihaz talebi artar",
+        "etki": "Yaşlılığa özgü ilaç pazarı %8-12 büyür",
+        "olasilik": 0.88,
+        "tarihsel_referans": "Pharma sektörü büyüme trendleri"
+      },
+      {
+        "adim": 3,
+        "olay": "Sağlık sigortası harcamaları büyür",
+        "etki": "Özel sağlık sigorta şirketleri %10-15 gelir büyür",
+        "olasilik": 0.8,
+        "tarihsel_referans": "UnitedHealth, Aetna büyüme"
+      },
+      {
+        "adim": 4,
+        "olay": "Biyoteknoloji yatırımları artar",
+        "etki": "Yaşlılık hastalıkları (Alzheimer, kanser) ar-ge patlar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Biotech yatırımları 2021-2023"
+      }
+    ],
+    "anti_tez": "Sağlık sistemi reformu veya fiyat kontrolü sektör karlılığını kısıtlar",
+    "net_etki": "Demografik trend sağlık sektörünü her yıl %8-12 büyütür",
+    "ilgili_modlar": [
+      "sektor",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.88,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "OECD demografik veriler",
+      "WHO sağlık harcama raporu"
+    ]
+  },
+  {
+    "id": "fintech_banka_rekabeti",
+    "baslik": "Fintech Büyümesi → Geleneksel Bankacılığa Baskı",
+    "kategori": "sektor",
+    "tetikleyici": "Dijital bankacılık kullanımı geleneksel bankacılığı geçer",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Dijital banka kullanıcıları artar",
+        "etki": "Fintech şirketleri 100+ milyon kullanıcıya ulaşır",
+        "olasilik": 0.85,
+        "tarihsel_referans": "Revolut, Wise 2021-2023 büyüme"
+      },
+      {
+        "adim": 2,
+        "olay": "Geleneksel bankalar müşteri kaybeder",
+        "etki": "Banka müşteri sayısı %5-10 azalır, mevduat payı düşer",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Avrupa bankacılık sektörü digital kaybı"
+      },
+      {
+        "adim": 3,
+        "olay": "Banka hisseleri baskıda",
+        "etki": "Geleneksel bankalar %5-15 geride kalır",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Avrupa banka P/B oranları 2022"
+      },
+      {
+        "adim": 4,
+        "olay": "Fintech şirketleri değerleme patlar",
+        "etki": "Stripe, Revolut gibi şirketler milyar dolarlık değerlemeler alır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Fintech unicorn büyümesi 2021"
+      }
+    ],
+    "anti_tez": "Regülasyon sıkılaşması fintech büyümesini frenlerse bankalar avantaj kazanır",
+    "net_etki": "Fintech büyümesi geleneksel bankaları zorlar, dijital finans şirketleri değer kazanır",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "CB Insights fintech verileri",
+      "EBA bankacılık raporu"
+    ]
+  },
+  {
+    "id": "deprem_insaat_sigorta",
+    "baslik": "Büyük Deprem → İnşaat ve Sigorta Sektörü",
+    "kategori": "afet",
+    "tetikleyici": "7.0+ büyüklüğünde deprem önemli nüfus merkezini etkiler",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Büyük deprem gerçekleşir",
+        "etki": "Hasar değerlendirmesi başlar, can ve mal kayıpları",
+        "olasilik": 0.88,
+        "tarihsel_referans": "2023 Kahramanmaraş depremi"
+      },
+      {
+        "adim": 2,
+        "olay": "Sigorta şirketleri hasar öder",
+        "etki": "Deprem sigortası kısıtlı ise DASK öder, şirketler zarar yazar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "DASK 2023 depremi ödemeleri"
+      },
+      {
+        "adim": 3,
+        "olay": "Yeniden yapılanma talep patlar",
+        "etki": "Çimento, demir, cam inşaat malzemesi talebi %30-60 artar",
+        "olasilik": 0.85,
+        "tarihsel_referans": "2023 sonrası Türkiye yapılanma"
+      },
+      {
+        "adim": 4,
+        "olay": "İnşaat hisseleri değer kazanır",
+        "etki": "EREGL, CIMSA, ANACM %15-30 kazanır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "BIST inşaat sektörü deprem sonrası"
+      },
+      {
+        "adim": 5,
+        "olay": "Konut boşalması fiyat baskısı",
+        "etki": "Deprem bölgesinde konut fiyatları düşer, güvenli bölgede artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Deprem sonrası konut piyasası 2023"
+      }
+    ],
+    "anti_tez": "Sigorta penetrasyonu düşük ise ekonomik kayıp sınırlı tutulabilir, ancak insani maliyet yüksek",
+    "net_etki": "Büyük deprem inşaat sektörünü %15-30 destekler, sigorta zarar yazar",
+    "ilgili_modlar": [
+      "dogal_afet",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "AFAD verileri",
+      "DASK ödeme istatistikleri",
+      "İnşaat sektörü analizi"
+    ]
+  },
+  {
+    "id": "sel_kasirga_tarim_hasari",
+    "baslik": "Sel ve Kasırga → Tarım ve Sigorta Hasarı",
+    "kategori": "afet",
+    "tetikleyici": "Cat 4+ kasırga veya büyük sel tarım bölgelerini etkiler",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kasırga tarım bölgesini vurur",
+        "etki": "Tarım arazisi ve ürün hasarı %20-50",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Kasırga Ian 2022 Florida"
+      },
+      {
+        "adim": 2,
+        "olay": "Tarım emtia fiyatları yükselir",
+        "etki": "Hasar gören ürünler %10-25 değer kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Kasırga sonrası şeker, mısır fiyatları"
+      },
+      {
+        "adim": 3,
+        "olay": "Sigorta şirketleri büyük hasar öder",
+        "etki": "Tarım ve konut sigortası şirketleri %5-15 değer kaybeder",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Munich Re, Swiss Re hasar raporları"
+      },
+      {
+        "adim": 4,
+        "olay": "Yeniden yapılanma talebi",
+        "etki": "İnşaat malzemesi ve ekipman talebi %20-40 artar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Kasırga Harvey 2017 sonrası yeniden yapılanma"
+      }
+    ],
+    "anti_tez": "Hızlı yardım ve az hasar bölgesiyle etki sınırlı kalabilir",
+    "net_etki": "Büyük sel/kasırga sigorta zararlarını artırır, inşaat ve tarım emtia sektörünü etkiler",
+    "ilgili_modlar": [
+      "dogal_afet",
+      "hawa",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "NOAA kasırga verileri",
+      "Munich Re afet raporu"
+    ]
+  },
+  {
+    "id": "kuraklik_tarim_su_krizi",
+    "baslik": "Kuraklık → Tarım Emtia ve Su Teknolojileri",
+    "kategori": "afet",
+    "tetikleyici": "Önemli tarım bölgelerinde kuraklık ilan edilir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kuraklık ilan edilir",
+        "etki": "Tarım sulama yasakları ve kısıtlamaları gelir",
+        "olasilik": 0.8,
+        "tarihsel_referans": "ABD Orta-Batı kuraklığı 2012, 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Tarım emtia fiyatları yükselir",
+        "etki": "Buğday, soya, mısır %15-30 değer kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2012 kuraklık CBOT etkisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Su teknolojileri şirketleri değer kazanır",
+        "etki": "Xylem, Veolia, Suez %10-25 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Su sektörü 2021 kuraklık performansı"
+      },
+      {
+        "adim": 4,
+        "olay": "Enerji üretimi etkilenir",
+        "etki": "Hidroelektrik üretimi düşer, elektrik fiyatları artar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Brezilya 2021 su krizi elektrik fiyatları"
+      },
+      {
+        "adim": 5,
+        "olay": "Gıda enflasyonu artar",
+        "etki": "Tarım girdi azalınca gıda TÜFE %2-5 puan yükselir",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2022 küresel gıda enflasyonu"
+      }
+    ],
+    "anti_tez": "Yağış normalüstünde gelirse kuraklık etkisi hızla silinir",
+    "net_etki": "Kuraklık tarım emtia fiyatlarını %15-30 kaldırır, su teknolojisi ilgisini artırır",
+    "ilgili_modlar": [
+      "dogal_afet",
+      "hawa",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "USDA kuraklık verileri",
+      "CBOT tarihsel",
+      "UN su kaynakları raporu"
+    ]
+  },
+  {
+    "id": "buyuk_sel_altyapi_hasari",
+    "baslik": "Büyük Sel Olayı → Altyapı Hasarı ve Yeniden Yapılanma",
+    "kategori": "afet",
+    "tetikleyici": "100 yılda bir büyüklüğünde sel şehirleri etkiler",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kentsel sel altyapıyı çökerter",
+        "etki": "Yol, köprü, elektrik altyapısı %30-50 hasar alır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "2021 Batı Almanya seli"
+      },
+      {
+        "adim": 2,
+        "olay": "Altyapı yeniden yapılanma başlar",
+        "etki": "Hükümet altyapı yatırımı 10-50 milyar euro açıklar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Almanya sel sonrası yeniden yapılanma 2021"
+      },
+      {
+        "adim": 3,
+        "olay": "İnşaat ve altyapı hisseleri güçlenir",
+        "etki": "İnşaat şirketleri %10-25 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "İnşaat hisseleri afet sonrası"
+      },
+      {
+        "adim": 4,
+        "olay": "Bölge ekonomisi yavaşlar",
+        "etki": "Etkilenen bölge GDP'si %2-5 geçici düşüş yaşar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Almanya 2021 GDP sel etkisi"
+      }
+    ],
+    "anti_tez": "Sınırlı nüfus bölgesi etkilenirse ekonomik maliyet düşük kalır",
+    "net_etki": "Büyük sel altyapı hisselerini %10-25 destekler, bölge ekonomisini kısa vadede zayıflatır",
+    "ilgili_modlar": [
+      "dogal_afet",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Munich Re afet verileri",
+      "Sel ekonomik etki analizi"
+    ]
+  },
+  {
+    "id": "deprem_japonya_ekonomi",
+    "baslik": "Japonya Depremi → Ekonomik Etki ve Borsası",
+    "kategori": "afet",
+    "tetikleyici": "Tokyo veya büyük şehir yakınında 7.5+ deprem olur",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Büyük deprem gerçekleşir",
+        "etki": "Ekonomik hasar 50-200 milyar dolar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "2011 Tohoku depremi"
+      },
+      {
+        "adim": 2,
+        "olay": "Nikkei 225 düşer",
+        "etki": "Japon borsası %5-15 değer kaybeder",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2011 Nikkei sonrası"
+      },
+      {
+        "adim": 3,
+        "olay": "Yen güçlenir (Japon sigortacılar geri çeker)",
+        "etki": "USD/JPY %3-8 düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2011 deprem sonrası yen yükselişi"
+      },
+      {
+        "adim": 4,
+        "olay": "Yeniden yapılanma talebi gelir",
+        "etki": "İnşaat ve malzeme şirketleri %15-30 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Japonya yeniden yapılanma süreci 2011-2013"
+      }
+    ],
+    "anti_tez": "Hasarın sınırlı kalması ve hızlı yardımın gelmesi etkiyi minimize eder",
+    "net_etki": "Japonya büyük depremi Nikkei'yi düşürür, yen güçlenir, inşaat hisseleri kazanır",
+    "ilgili_modlar": [
+      "dogal_afet",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Japonya GSMİA verileri",
+      "Nikkei 225 tarihsel"
+    ]
+  },
+  {
+    "id": "boykot_hareketi_marka",
+    "baslik": "Viral Boykot Hareketi → Marka ve Hisse Değer Kaybı",
+    "kategori": "sosyal",
+    "tetikleyici": "Bir marka sosyal medyada büyük boykot hedefi olur",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Sosyal medyada #boykot trendi başlar",
+        "etki": "Marka algısı kısa sürede bozulur, sosyal baskı artar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Bud Light LGBT boykot 2023"
+      },
+      {
+        "adim": 2,
+        "olay": "Satışlar düşer",
+        "etki": "Etkilenen ürün satışları %10-30 azalır",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Bud Light 2023 satış düşüşü"
+      },
+      {
+        "adim": 3,
+        "olay": "Hisse fiyatı düşer",
+        "etki": "Ana şirket hissesi %5-15 değer kaybeder",
+        "olasilik": 0.65,
+        "tarihsel_referans": "AB-InBev hisse Bud Light boykotu"
+      },
+      {
+        "adim": 4,
+        "olay": "Rakipler pazar payı kazanır",
+        "etki": "Rakip marka satışları %5-15 artar",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Coors Light, Miller 2023 kazanımı"
+      }
+    ],
+    "anti_tez": "Boykot hızla söner veya sadık müşteri tabanı güçlü ise etki kısa sürer",
+    "net_etki": "Viral boykot şirket hissesini %5-15 baskılar, rakipleri destekler",
+    "ilgili_modlar": [
+      "magazin",
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.65,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Brandwatch sosyal medya analizi",
+      "AB-InBev yatırımcı sunumu"
+    ]
+  },
+  {
+    "id": "viral_urun_trend",
+    "baslik": "Viral Ürün Trendi → Hızlı Satış Patlaması",
+    "kategori": "sosyal",
+    "tetikleyici": "TikTok veya Instagram'da ürün viral olur",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Ürün sosyal medyada viral olur",
+        "etki": "Milyarlarca görüntüleme, global ilgi patlar",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Stanley cup, Crocs trendleri 2023"
+      },
+      {
+        "adim": 2,
+        "olay": "Online satışlar patlar",
+        "etki": "Stok tükenir, satışlar %200-500 artar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Stanley tumbler 2023 satış patlaması"
+      },
+      {
+        "adim": 3,
+        "olay": "Üretici/marka hissesi yükselir",
+        "etki": "Halka açık şirket hissesi %10-30 kazanır",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Crocs hisse 2021 viral dönemde"
+      },
+      {
+        "adim": 4,
+        "olay": "Taklit ürünler piyasaya girer",
+        "etki": "Orijinal ürün pazar payı 6-12 ay içinde kısmen erozyona uğrar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Viral ürün döngüsü"
+      }
+    ],
+    "anti_tez": "Trend çok kısa sürer, stok birikimi satış fazlasına yol açar",
+    "net_etki": "Viral ürün ilgili şirket hissesini %10-30 kaldırır ama sürdürülebilirlik belirsiz",
+    "ilgili_modlar": [
+      "magazin",
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.62,
+    "guven_seviyesi": "dusuk",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "TikTok trend verileri",
+      "Crocs yıllık raporu"
+    ]
+  },
+  {
+    "id": "unlu_kripto_tweet",
+    "baslik": "Ünlü Kişi Tweet → Kripto/Hisse Dalgası",
+    "kategori": "sosyal",
+    "tetikleyici": "Büyük sosyal medya takipçisi olan ünlü kripto veya hisse hakkında tweet atar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Ünlü kişi kripto/hisse destekler",
+        "etki": "Tweet milyonlarca kez görüntülenir, ilgi patlar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Musk Dogecoin tweet 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Fiyat ani yükseliş yaşar",
+        "etki": "İlgili varlık %20-100 tek günde kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Dogecoin Musk tweet etkisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Perakende yatırımcı akını",
+        "etki": "Platform kayıtları ve işlem hacmi %200-500 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Robinhood 2021 kayıt patlaması"
+      },
+      {
+        "adim": 4,
+        "olay": "Hızlı geri çekilme",
+        "etki": "Yükselişin %50-70'i birkaç gün içinde geri verilir",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Dogecoin tweet sonrası düzeltme"
+      }
+    ],
+    "anti_tez": "Ünlünün etkisi sınırlı ise veya regülatörler müdahale ederse etki azalır",
+    "net_etki": "Ünlü tweet varlık fiyatını kısa vadede %20-100 yukarı iter, ama geri çekilme büyük olur",
+    "ilgili_modlar": [
+      "magazin",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "altcoin",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.65,
+    "guven_seviyesi": "dusuk",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Dogecoin tweet analizi",
+      "Musk sosyal medya etki çalışmaları"
+    ]
+  },
+  {
+    "id": "unlu_markalasma_etki",
+    "baslik": "Ünlü Marka Ortaklığı → Hisse Değer Artışı",
+    "kategori": "sosyal",
+    "tetikleyici": "Mega ünlü bir şirketle büyük reklam veya ortaklık anlaşması yapar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Büyük reklam ortaklığı açıklanır",
+        "etki": "Marka algısı ve bilinirliği artar",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Nike-Jordan ortaklığı, Travis Scott McDonald's"
+      },
+      {
+        "adim": 2,
+        "olay": "Satışlar artar",
+        "etki": "İlgili ürünler %20-50 satış artışı yaşar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Travis Scott McDonald's 2020"
+      },
+      {
+        "adim": 3,
+        "olay": "Hisse fiyatı olumlu hareket eder",
+        "etki": "Şirket hissesi %5-15 kazanır",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Dövmeli ünlü-marka hisse etki analizi"
+      },
+      {
+        "adim": 4,
+        "olay": "Takipçi ve müşteri tabanı genişler",
+        "etki": "Sosyal medya takipçileri %10-30 büyür",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Ünlü marka pazarlama araştırmaları"
+      }
+    ],
+    "anti_tez": "Ünlünün skandal çıkarması ortaklığı bozar, marka hasarı oluşur",
+    "net_etki": "Mega ünlü ortaklığı şirket hissesini %5-15 destekler",
+    "ilgili_modlar": [
+      "magazin",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.62,
+    "guven_seviyesi": "dusuk",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Marka değerleme araştırmaları",
+      "Nike yıllık raporu"
+    ]
+  },
+  {
+    "id": "memestok_kisa_satici_sikistirma",
+    "baslik": "Meme Stock Kısa Satıcı Sıkıştırması",
+    "kategori": "sosyal",
+    "tetikleyici": "Reddit ve sosyal medyada koordineli alım kampanyası başlar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Sosyal medyada koordineli alım başlar",
+        "etki": "WallStreetBets veya benzeri gruplar düşük fiyatlı hisseyi hedefler",
+        "olasilik": 0.7,
+        "tarihsel_referans": "GameStop Ocak 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Kısa satıcılar sıkışır",
+        "etki": "Short squeeze: Hisse %100-2000 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "GME 2021 %2000+ yükseliş"
+      },
+      {
+        "adim": 3,
+        "olay": "Hedge fund'lar büyük zarar yazar",
+        "etki": "Kısa satıcılar milyar dolar kayıp yaşar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Melvin Capital 2021 zararı"
+      },
+      {
+        "adim": 4,
+        "olay": "Regülasyon tepkisi gelir",
+        "etki": "SEC ve düzenleyiciler kısıtlama tartışır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "SEC GameStop soruşturması 2021"
+      }
+    ],
+    "anti_tez": "Borsa işlemlerini donduran platformlar (Robinhood gibi) hareketi keser",
+    "net_etki": "Meme stock hareketi hisseyi kısa vadede %100-2000 kaldırır ama sürdürülemez",
+    "ilgili_modlar": [
+      "magazin",
+      "trendler"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.55,
+    "guven_seviyesi": "dusuk",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "GameStop analizi",
+      "SEC soruşturması raporu 2021"
+    ]
+  },
+  {
+    "id": "noel_tuketime_etkisi",
+    "baslik": "Noel Alışveriş Sezonu → Perakende Patlaması",
+    "kategori": "mevsimsel",
+    "tetikleyici": "Kasım-Ocak Black Friday, Noel ve Yılbaşı alışveriş sezonu",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Black Friday ve Noel satışları patlar",
+        "etki": "Perakende satışları yılın %20-25'ini bu dönemde yapar",
+        "olasilik": 0.95,
+        "tarihsel_referans": "NRF Noel satış verileri 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "E-ticaret ve mağaza satışları büyür",
+        "etki": "Online satışlar %30-50, mağaza %10-20 artar",
+        "olasilik": 0.9,
+        "tarihsel_referans": "Amazon, Walmart 2022 Q4"
+      },
+      {
+        "adim": 3,
+        "olay": "Lojistik sektörü yoğunlaşır",
+        "etki": "Kargo şirketleri ek kapasite kirar, gecikmeler yaşanır",
+        "olasilik": 0.85,
+        "tarihsel_referans": "UPS, FedEx Q4 operasyonları"
+      },
+      {
+        "adim": 4,
+        "olay": "Perakende hisseleri outperform",
+        "etki": "Amazon, Target, Walmart %8-15 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "S&P perakende sektörü Q4 performansı"
+      }
+    ],
+    "anti_tez": "Ekonomik daralma tüketici güvenini kırar, harcamalar düşer",
+    "net_etki": "Noel sezonu perakende sektörünü %10-20 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "ozel_gun",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.9,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "NRF verileri",
+      "Amazon yıllık raporu"
+    ]
+  },
+  {
+    "id": "banka_kripto_entegrasyon",
+    "baslik": "Büyük Banka Kripto Hizmeti → Kripto Benimseme Artışı",
+    "kategori": "kripto",
+    "tetikleyici": "JPMorgan, Goldman Sachs veya büyük banka kripto saklama/ticaret hizmeti açıklar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Büyük banka kripto hizmeti açıklar",
+        "etki": "Kurumsal güven artar, meşruiyet güçlenir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BNY Mellon kripto saklama 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "Kurumsal kripto talebi artar",
+        "etki": "Büyük fonlar kripto portföy yapar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Hedge fund kripto pozisyonları 2021"
+      },
+      {
+        "adim": 3,
+        "olay": "Bitcoin ve Ethereum yükselir",
+        "etki": "BTC %20-50 kazanır",
+        "olasilik": 0.68,
+        "tarihsel_referans": "BTC 2021 kurumsal benimseme rally"
+      },
+      {
+        "adim": 4,
+        "olay": "Banka hisseleri kripto iş yüzünden değer kazanır",
+        "etki": "Kripto hizmeti açıklayan banka hissesi %5-10 prim yapar",
+        "olasilik": 0.55,
+        "tarihsel_referans": "Coinbase IPO etkisi"
+      }
+    ],
+    "anti_tez": "Regülasyon baskısı bankanın kripto hizmetini ertelemesine neden olur",
+    "net_etki": "Büyük banka entegrasyonu Bitcoin'i %20-50 destekler",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "bitcoin",
+      "ethereum",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "BNY Mellon açıklaması",
+      "Kripto kurumsal veri 2021-2022"
+    ]
+  },
+  {
+    "id": "petrol_suudi_uretim_artisi",
+    "baslik": "Suudi Arabistan Petrol Üretim Artışı → Fiyat Düşüşü",
+    "kategori": "emtia",
+    "tetikleyici": "Suudi Arabistan OPEC toplantısı dışında üretim artışı açıklar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Suudi üretimi günlük 500K-1M varil artırır",
+        "etki": "Küresel arz fazlası oluşur",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Suudi-Rusya fiyat savaşı 2020 Mart"
+      },
+      {
+        "adim": 2,
+        "olay": "Brent petrol sert düşer",
+        "etki": "Brent %15-30 değer kaybeder",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Brent Mart 2020 %30 tek günde düşüş"
+      },
+      {
+        "adim": 3,
+        "olay": "Enerji şirketleri değer kaybeder",
+        "etki": "XLE, BP, Shell %15-25 düşer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Enerji sektörü Mart 2020"
+      },
+      {
+        "adim": 4,
+        "olay": "Tüketici için yakıt ucuzlar",
+        "etki": "Benzin fiyatları %10-25 düşer, tüketici faydası",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2020 benzin fiyatları"
+      }
+    ],
+    "anti_tez": "OPEC müzakeresi ve hızlı üretim kesintisi fiyatı stabilize eder",
+    "net_etki": "Suudi arz artışı petrolü %15-30 düşürür, enerji şirketlerini zayıflatır",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA petrol verileri",
+      "OPEC toplantı tutanakları"
+    ]
+  },
+  {
+    "id": "genis_kapsamli_salgın",
+    "baslik": "Yeni Salgın Riski → Piyasa Çöküşü ve Sağlık Hisseleri",
+    "kategori": "jeopolitik",
+    "tetikleyici": "DSÖ yeni pandemik hastalık tehdidi ilan eder",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Yeni hastalık tehdidi ilan edilir",
+        "etki": "Panik satışı, risk iştahı çöker",
+        "olasilik": 0.75,
+        "tarihsel_referans": "COVID-19 Şubat-Mart 2020"
+      },
+      {
+        "adim": 2,
+        "olay": "Küresel hisse piyasaları çöker",
+        "etki": "S&P 500 %20-35 düşer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "COVID-19 Mart 2020 piyasa çöküşü"
+      },
+      {
+        "adim": 3,
+        "olay": "Seyahat ve turizm sıfırlanır",
+        "etki": "Havayolu, otel hisseleri %40-70 düşer",
+        "olasilik": 0.85,
+        "tarihsel_referans": "THYAO, Airbnb 2020 düşüşü"
+      },
+      {
+        "adim": 4,
+        "olay": "Sağlık ve ilaç hisseleri yükselir",
+        "etki": "Aşı şirketleri, medikal ekipman %30-100 kazanır",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Pfizer, Moderna 2021 rallisi"
+      },
+      {
+        "adim": 5,
+        "olay": "Merkez bankaları likidite pompalar",
+        "etki": "QE ve sıfır faiz piyasaları kurtarır, toparlanma hızlı",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Fed 2020 QE"
+      }
+    ],
+    "anti_tez": "Hızlı aşı veya hastalığın hafif seyretmesi piyasaları sakinleştirir",
+    "net_etki": "Yeni salgın hisseleri %20-35 çökertir, sağlık sektörü outperform yapar",
+    "ilgili_modlar": [
+      "sektor",
+      "makro",
+      "jeopolitik"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "altin",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "COVID-19 piyasa analizi",
+      "WHO pandemi verileri"
+    ]
+  },
+  {
+    "id": "cin_yavaslama_emtia_etkisi",
+    "baslik": "Çin Ekonomisi Yavaşlama → Emtia ve EM Baskısı",
+    "kategori": "makro",
+    "tetikleyici": "Çin GDP büyümesi %5 altına düşer, inşaat sektörü krizi derinleşir",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Çin büyümesi beklenenden düşük gelir",
+        "etki": "Emtia talebi beklentileri aşağı revize edilir",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Çin 2022-2023 yavaşlama"
+      },
+      {
+        "adim": 2,
+        "olay": "Bakır, demir, çelik düşer",
+        "etki": "Endüstriyel metal fiyatları %10-25 düşer",
+        "olasilik": 0.78,
+        "tarihsel_referans": "LME bakır 2022 Çin etkisi"
+      },
+      {
+        "adim": 3,
+        "olay": "Emtia ihracatçısı ülkeler baskıda",
+        "etki": "Avustralya, Şili, Brezilya ekonomileri yavaşlar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2015-2016 Çin yavaşlama etkisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Küresel büyüme revize edilir",
+        "etki": "IMF küresel GDP tahmini 0.5-1.0 puan düşürür",
+        "olasilik": 0.65,
+        "tarihsel_referans": "IMF 2023 Çin revizyon etkisi"
+      }
+    ],
+    "anti_tez": "Çin'in teşvik paketi açıklaması talep beklentilerini olumlu çevirir",
+    "net_etki": "Çin yavaşlaması endüstriyel emtiaları %10-25 baskılar",
+    "ilgili_modlar": [
+      "makro",
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "petrol",
+      "altin"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "NBS Çin büyüme verileri",
+      "LME tarihsel",
+      "IMF Çin raporu"
+    ]
+  },
+  {
+    "id": "abdce_bankalama_krizi",
+    "baslik": "ABD Bölgesel Banka Krizi → Kredi Daralması",
+    "kategori": "makro",
+    "tetikleyici": "Birden fazla bölgesel banka batar veya likidite krizi yaşar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Bölgesel banka haber çıkar",
+        "etki": "Mevduat çekişleri başlar, bankaların piyasa değeri düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "SVB iflası Mart 2023"
+      },
+      {
+        "adim": 2,
+        "olay": "Finansal kriz bulaşma riski",
+        "etki": "Banka sektörü %15-30 düşer",
+        "olasilik": 0.7,
+        "tarihsel_referans": "ABD banka hisseleri Mart 2023"
+      },
+      {
+        "adim": 3,
+        "olay": "Kredi standartları sıkılaşır",
+        "etki": "Küçük işletme ve konut kredisi daralır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Fed kıdemli kredi yetkilisi anketi 2023"
+      },
+      {
+        "adim": 4,
+        "olay": "Fed müdahalesi",
+        "etki": "Fed BTFP gibi likidite programı açar, kriz kontrol altına alınır",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Fed BTFP Mart 2023"
+      }
+    ],
+    "anti_tez": "Güçlü büyük bankalar sistemin istikrarını korur",
+    "net_etki": "Bölgesel banka krizi finans sektörünü %15-30 aşağı iter, kredi daralır",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "tahvil",
+      "dolar"
+    ],
+    "gerceklesme_orani": 0.65,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "SVB iflas analizi",
+      "Fed BTFP verileri",
+      "FDIC bankacilik verileri"
+    ]
+  },
+  {
+    "id": "dolar_zayiflamasi_em_rallisi",
+    "baslik": "Dolar Zayıflaması → Gelişmekte Olan Piyasa Rallisi",
+    "kategori": "makro",
+    "tetikleyici": "DXY endeksi %5+ gerilemesiyle dolar zayıflar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Dolar zayıflar",
+        "etki": "DXY %5-10 düşer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Fed pivot 2019, 2023"
+      },
+      {
+        "adim": 2,
+        "olay": "EM dövizleri değer kazanır",
+        "etki": "BRL, MXN, ZAR, INR %3-8 güçlenir",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2019 EM döviz rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "EM hisseleri yükselir",
+        "etki": "MSCI EM %10-20 kazanır",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2019 EM rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Emtia fiyatları yükselir",
+        "etki": "Dolar cinsinden emtialar daha ucuzlar, talep artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2019 altın, petrol rallisi"
+      }
+    ],
+    "anti_tez": "EM ülkelerinde iç sorunlar rallinin sürmesini engeller",
+    "net_etki": "Dolar zayıflaması EM hisselerini %10-20, emtiaları %5-15 kaldırır",
+    "ilgili_modlar": [
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "dolar",
+      "hisse",
+      "altin",
+      "petrol"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "DXY tarihsel",
+      "MSCI EM performans verileri"
+    ]
+  },
+  {
+    "id": "petrol_tukenmez_enerji",
+    "baslik": "Petrol Arzında Uzun Dönem Kısıtlılık",
+    "kategori": "emtia",
+    "tetikleyici": "Petrol şirketleri yatırım yapmaz, arz-talep dengesi bozulur",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Upstream yatırım düşüyor",
+        "etki": "Yeni rezerv keşif ve geliştirme yatırımları %20-30 azalır",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2020 sonrası capex düşüşü"
+      },
+      {
+        "adim": 2,
+        "olay": "Talep toparlanması arzı geçer",
+        "etki": "Global petrol stoklarında düşüş başlar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "2022-2023 petrol piyasası"
+      },
+      {
+        "adim": 3,
+        "olay": "Brent yapısal olarak yükselir",
+        "etki": "Petrol 90-130 dolar bandında kalıcı olur",
+        "olasilik": 0.65,
+        "tarihsel_referans": "Brent 2022 taban fiyatı"
+      },
+      {
+        "adim": 4,
+        "olay": "Enerji şirketleri güçlü karlılık",
+        "etki": "Major enerji şirketleri rekor temettü ve geri alım yapar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Exxon, Shell 2022-2023 kar rekorları"
+      }
+    ],
+    "anti_tez": "EV geçişi petrol talebini aşarsa fiyatlar uzun vadede düşer",
+    "net_etki": "Düşük upstream yatırım petrolün yüksek seyretmesine zemin hazırlar",
+    "ilgili_modlar": [
+      "sektor",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "enerji_hisseleri"
+    ],
+    "gerceklesme_orani": 0.7,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "uzun_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "IEA yatırım raporu",
+      "BP enerji görünümü"
+    ]
+  },
+  {
+    "id": "kakao_fildisikıyisi_uretim",
+    "baslik": "Fildişi Sahili Kuraklığı → Kakao Fiyat Şoku",
+    "kategori": "emtia",
+    "tetikleyici": "Batı Afrika'da kakao üretim bölgelerinde El Niño kaynaklı kuraklık",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Kakao hasadı zarar görür",
+        "etki": "Küresel arzın %40-50'sini sağlayan Batı Afrika üretimi %20-35 düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "El Niño 2023-2024 kakao krizi"
+      },
+      {
+        "adim": 2,
+        "olay": "Kakao fiyatı tarihi zirveye çıkar",
+        "etki": "Kakao ton başına fiyat 3-10 bin dolar arası yükselir",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2024 kakao fiyat rekoru 10,000 dolar"
+      },
+      {
+        "adim": 3,
+        "olay": "Çikolata şirketleri maliyet artışıyla karşılaşır",
+        "etki": "Nestle, Mars, Mondelez marj baskısı yaşar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "Nestle 2024 kakao maliyet etkisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Çikolata fiyatları yükselir",
+        "etki": "Son tüketici fiyatları %10-25 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "2024 çikolata zamları"
+      }
+    ],
+    "anti_tez": "Yeterli yağış veya alternatif kakao üreticilerinin devreye girmesi fiyatı stabilize eder",
+    "net_etki": "Batı Afrika kuraklığı kakao fiyatını tarihi seviyelere çıkarır",
+    "ilgili_modlar": [
+      "hava",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.68,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "ICE kakao verileri",
+      "FAO kakao raporu",
+      "El Niño NOAA"
+    ]
+  },
+  {
+    "id": "seker_brezilya_hindistan_arz",
+    "baslik": "Şeker: Brezilya ve Hindistan Üretimi",
+    "kategori": "emtia",
+    "tetikleyici": "Brezilya veya Hindistan'da şeker kamışı hasadında sorun yaşanır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Brezilya'da kuraklık şeker kamışını etkiler",
+        "etki": "Küresel şeker arzının %20-25'i risk altına girer",
+        "olasilik": 0.65,
+        "tarihsel_referans": "2021 Brezilya şeker kuraklığı"
+      },
+      {
+        "adim": 2,
+        "olay": "ICE şeker fiyatı yükselir",
+        "etki": "Ham şeker %20-40 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "ICE şeker fiyat tarihi"
+      },
+      {
+        "adim": 3,
+        "olay": "Gıda şirketleri ve içecek üreticileri maliyet baskısıyla karşılaşır",
+        "etki": "Coca-Cola, Pepsi input maliyeti artar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Şeker fiyat geçiş etkisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Etanol fiyatı artar (Brezilya şeker kamışı etanolu)",
+        "etki": "Brezilya yakıt fiyatları %5-10 yükselir",
+        "olasilik": 0.6,
+        "tarihsel_referans": "Brezilya flex-fuel ekonomisi"
+      }
+    ],
+    "anti_tez": "Hindistan ihracat artırırsa veya yağış iyileşirse fiyatlar normal döner",
+    "net_etki": "Brezilya/Hindistan arz sorunu şekeri %20-40 yukarı iter",
+    "ilgili_modlar": [
+      "hawa",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.65,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "ICE şeker tarihsel",
+      "USDA şeker raporu"
+    ]
+  },
+  {
+    "id": "altin_takı_hindistan_cin_talebi",
+    "baslik": "Hindistan ve Çin Takı Talebi → Altın Desteği",
+    "kategori": "emtia",
+    "tetikleyici": "Hindistan ve Çin'de düğün ve festival sezonu (Diwali, Çin Yeni Yılı)",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Hindistan festivallerinde altın talebi patlar",
+        "etki": "Hindistan Q4 altın alımı yıllık %30-50 büyür",
+        "olasilik": 0.88,
+        "tarihsel_referans": "WGC Hindistan Q4 talep verileri"
+      },
+      {
+        "adim": 2,
+        "olay": "Çin Yeni Yılı öncesi altın hediyeliği artar",
+        "etki": "Çin Q1 altın takı talebi %20-35 artar",
+        "olasilik": 0.82,
+        "tarihsel_referans": "WGC Çin Q1 tüketim"
+      },
+      {
+        "adim": 3,
+        "olay": "Küresel altın talebi güçlü",
+        "etki": "Altın fiyatı %5-15 destek bulur",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Mevsimsel altın taleplerı"
+      },
+      {
+        "adim": 4,
+        "olay": "Mücevher şirketleri ve madenciler kazanır",
+        "etki": "Altın madencileri %8-15 outperform yapar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "GDX ETF mevsimsel performans"
+      }
+    ],
+    "anti_tez": "Ekonomik yavaşlama veya altın ithalat vergisi talebi kısar",
+    "net_etki": "Hindistan-Çin mevsimsel talebi altını %5-15 destekler",
+    "ilgili_modlar": [
+      "mevsim",
+      "ozel_gun",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "altin"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "WGC talep verileri",
+      "Hindistan ithalat istatistikleri"
+    ]
+  },
+  {
+    "id": "kripto_nft_patlamasi",
+    "baslik": "NFT Patlaması → Ethereum Değer Artışı",
+    "kategori": "kripto",
+    "tetikleyici": "Büyük sanatçı veya marka NFT lansmanı viral olur",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "NFT satışları patlar",
+        "etki": "Günlük NFT hacmi 100 milyon dolar aşar",
+        "olasilik": 0.65,
+        "tarihsel_referans": "NFT yaz 2021"
+      },
+      {
+        "adim": 2,
+        "olay": "Ethereum gas ücretleri fırlar",
+        "etki": "ETH gas 50-200 gwei arasında seyir eder",
+        "olasilik": 0.72,
+        "tarihsel_referans": "ETH 2021 gas seviyeleri"
+      },
+      {
+        "adim": 3,
+        "olay": "ETH fiyatı yükselir",
+        "etki": "ETH %30-100 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "ETH 2021 NFT döneminde rallisi"
+      },
+      {
+        "adim": 4,
+        "olay": "NFT projesi token değerleri patlar",
+        "etki": "BAYC, CryptoPunks gibi koleksiyonlar %200-1000 kazanır",
+        "olasilik": 0.55,
+        "tarihsel_referans": "NFT 2021 değer artışları"
+      }
+    ],
+    "anti_tez": "NFT pazarı hızla soğuyabilir, likidite kurur",
+    "net_etki": "NFT patlaması ETH değerini %30-100 kaldırır, NFT projeleri çok daha sert yükselir",
+    "ilgili_modlar": [
+      "trendler",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "ethereum",
+      "altcoin"
+    ],
+    "gerceklesme_orani": 0.58,
+    "guven_seviyesi": "dusuk",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "OpenSea hacim verileri",
+      "ETH tarihsel fiyat"
+    ]
+  },
+  {
+    "id": "misir_abd_etanol_talep",
+    "baslik": "ABD Biyoyakıt Politikası → Mısır Fiyatı",
+    "kategori": "emtia",
+    "tetikleyici": "ABD etanol karışım yükümlülüğü artışı veya biyoyakıt politika değişikliği",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "EPA etanol yükümlülüğünü artırır",
+        "etki": "Mısırdan üretilen etanol talebi %10-15 büyür",
+        "olasilik": 0.72,
+        "tarihsel_referans": "RFS değişiklikleri tarihi"
+      },
+      {
+        "adim": 2,
+        "olay": "Mısır talebi artar",
+        "etki": "Gıda ve yakıt mısır rekabeti artar",
+        "olasilik": 0.78,
+        "tarihsel_referans": "2007-2008 gıda-yakıt rekabeti"
+      },
+      {
+        "adim": 3,
+        "olay": "CBOT mısır fiyatı yükselir",
+        "etki": "Mısır %10-20 prim yapar",
+        "olasilik": 0.68,
+        "tarihsel_referans": "Biyoyakıt talebi mısır etkisi"
+      },
+      {
+        "adim": 4,
+        "olay": "Gıda enflasyonu artar",
+        "etki": "Tahıl tüketiminde baskı oluşur",
+        "olasilik": 0.55,
+        "tarihsel_referans": "2008 gıda enflasyonu biyoyakıt bağlantısı"
+      }
+    ],
+    "anti_tez": "Yüksek hasat biyoyakıt talebini karşılar, fiyat artışı olmaz",
+    "net_etki": "Biyoyakıt talebi artışı mısır fiyatını %10-20 destekler",
+    "ilgili_modlar": [
+      "sektor",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "petrol",
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.65,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "EPA RFS verileri",
+      "CBOT mısır tarihi"
+    ]
+  },
+  {
+    "id": "borsistanbul_yabanci_cikis",
+    "baslik": "Türkiye'den Yabancı Yatırımcı Çıkışı → BIST Baskısı",
+    "kategori": "makro",
+    "tetikleyici": "Risk iştahı azalınca yabancılar Türkiye'den çıkış yapar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Yabancı portföy çıkışı başlar",
+        "etki": "BIST'te yabancı payı %10'un altına düşer",
+        "olasilik": 0.78,
+        "tarihsel_referans": "BIST yabancı takas verileri 2022"
+      },
+      {
+        "adim": 2,
+        "olay": "TL baskıya girer",
+        "etki": "USD/TRY %5-15 yükselir",
+        "olasilik": 0.82,
+        "tarihsel_referans": "TL çıkış dönemleri 2021-2022"
+      },
+      {
+        "adim": 3,
+        "olay": "BIST dolar bazında düşer",
+        "etki": "BIST USD değeri %15-25 gerilir",
+        "olasilik": 0.75,
+        "tarihsel_referans": "BIST USD endeksi tarihsel"
+      },
+      {
+        "adim": 4,
+        "olay": "Enflasyon baskısı artar",
+        "etki": "Dövize bağlı maliyetler TÜFEye ek %1-3 puan baskı yapar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Türkiye döviz-enflasyon geçişi"
+      }
+    ],
+    "anti_tez": "Yüksek faiz veya ekonomik reform programı yabancıları geri çeker",
+    "net_etki": "Yabancı çıkışı TL'yi %5-15 zayıflatır, BIST USD bazında %15-25 düşer",
+    "ilgili_modlar": [
+      "makro",
+      "jeopolitik"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "dolar",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "kisa_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "BIST takas verileri",
+      "TCMB döviz verileri"
+    ]
+  },
+  {
+    "id": "soya_cin_talepı",
+    "baslik": "Çin Soya Talebi → ABD İhracat Artışı",
+    "kategori": "emtia",
+    "tetikleyici": "Çin domuz sektörü toparlanır, soya talebini artırır",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Çin soya ithalatı artar",
+        "etki": "Küresel soya talebinin %60'ını oluşturan Çin ek alım yapar",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Çin soya ithalatı 2020-2021 rekor"
+      },
+      {
+        "adim": 2,
+        "olay": "CBOT soya fiyatı yükselir",
+        "etki": "Soya fasulyesi %15-30 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "CBOT soya 2021 fiyat rallisi"
+      },
+      {
+        "adim": 3,
+        "olay": "ABD tarım ihracatı büyür",
+        "etki": "Soya fasulyesi ihracatı 20-25 milyar dolar aşar",
+        "olasilik": 0.7,
+        "tarihsel_referans": "USDA ihracat verileri 2021"
+      },
+      {
+        "adim": 4,
+        "olay": "Tarım makinesi ve gübre talebi büyür",
+        "etki": "John Deere, Mosaic hisseleri %15-25 kazanır",
+        "olasilik": 0.65,
+        "tarihsel_referans": "John Deere yıllık raporu 2021"
+      }
+    ],
+    "anti_tez": "ABD-Çin ticaret savaşı soya ihracatını Brezilya'ya kaptırır",
+    "net_etki": "Çin talebi soya fiyatını %15-30 kaldırır, ABD tarım ihracatını destekler",
+    "ilgili_modlar": [
+      "jeopolitik",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "USDA soya verileri",
+      "CBOT tarihsel fiyatlar"
+    ]
+  },
+  {
+    "id": "konut_kredisi_faiz_dusus",
+    "baslik": "Mortgage Faiz Düşüşü → Konut Sektörü Canlanması",
+    "kategori": "makro",
+    "tetikleyici": "Fed faiz indirimi veya mortgage faizleri 2+ puan düşer",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Mortgage faizleri düşer",
+        "etki": "30-yıl sabit ABD mortgage faizi %1-2 düşer",
+        "olasilik": 0.8,
+        "tarihsel_referans": "Fed faiz indirimi 2019, 2020"
+      },
+      {
+        "adim": 2,
+        "olay": "Konut talebi canlanır",
+        "etki": "Ev satışları %15-30 artar",
+        "olasilik": 0.78,
+        "tarihsel_referans": "ABD konut satışları 2020-2021 patlaması"
+      },
+      {
+        "adim": 3,
+        "olay": "Konut fiyatları yükselir",
+        "etki": "Ortalama konut fiyatı %8-20 artar",
+        "olasilik": 0.72,
+        "tarihsel_referans": "S&P Case-Shiller 2020-2022"
+      },
+      {
+        "adim": 4,
+        "olay": "İnşaat sektörü ve GYO güçlenir",
+        "etki": "D.R. Horton, Toll Brothers, GYO hisseleri %20-40 kazanır",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Homebuilder hisseleri 2020-2021"
+      }
+    ],
+    "anti_tez": "Ekonomik belirsizlik veya düşük arz talebi karşılamazsa fayda sınırlı",
+    "net_etki": "Mortgage faiz düşüşü konut sektörünü %15-30 canlandırır",
+    "ilgili_modlar": [
+      "makro",
+      "sektor"
+    ],
+    "ilgili_varliklar": [
+      "hisse",
+      "tahvil"
+    ],
+    "gerceklesme_orani": 0.78,
+    "guven_seviyesi": "yuksek",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "Freddie Mac mortgage verileri",
+      "S&P Case-Shiller"
+    ]
+  },
+  {
+    "id": "teknoloji_buyume_hisse_baskı",
+    "baslik": "Teknoloji Şirketleri Büyüme Yavaşlaması → Değerleme Baskısı",
+    "kategori": "sektor",
+    "tetikleyici": "Büyük teknoloji şirketleri büyüme beklentilerinin altında sonuç açıklar",
+    "zincir": [
+      {
+        "adim": 1,
+        "olay": "Meta, Google, Amazon büyüme yavaşlar",
+        "etki": "Gelir büyümesi %20+ beklentiden %5-10'a düşer",
+        "olasilik": 0.72,
+        "tarihsel_referans": "Big Tech 2022 kazanç hayal kırıklıkları"
+      },
+      {
+        "adim": 2,
+        "olay": "Teknoloji değerlemeleri baskılanır",
+        "etki": "Nasdaq %15-30 düşer",
+        "olasilik": 0.78,
+        "tarihsel_referans": "Nasdaq 2022 düşüşü"
+      },
+      {
+        "adim": 3,
+        "olay": "Personel kesintileri başlar",
+        "etki": "Büyük teknoloji şirketleri işten çıkarma açıklar",
+        "olasilik": 0.75,
+        "tarihsel_referans": "Big Tech 2022-2023 işten çıkarmalar"
+      },
+      {
+        "adim": 4,
+        "olay": "Reklam gelirleri daralır",
+        "etki": "Dijital reklam pazarı %10-20 küçülür",
+        "olasilik": 0.7,
+        "tarihsel_referans": "Meta, Google reklam düşüşü 2022"
+      }
+    ],
+    "anti_tez": "AI büyümesi geleneksel sektörlerin düşüşünü telafi eder",
+    "net_etki": "Teknoloji büyüme yavaşlaması Nasdaq'ı %15-30 baskılar",
+    "ilgili_modlar": [
+      "sektor",
+      "makro"
+    ],
+    "ilgili_varliklar": [
+      "hisse"
+    ],
+    "gerceklesme_orani": 0.72,
+    "guven_seviyesi": "orta",
+    "zaman_ufku": "orta_vade",
+    "son_guncelleme": "2026-04-20",
+    "kaynaklar": [
+      "FAANG kazanç raporları",
+      "Nasdaq tarihsel"
+    ]
   }
 ]
