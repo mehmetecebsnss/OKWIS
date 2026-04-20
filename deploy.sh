@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/bash22
 # ============================================================
 # Okwis AI — İlk Kurulum Scripti (Raspberry Pi)
 # Kullanım: bash deploy.sh
