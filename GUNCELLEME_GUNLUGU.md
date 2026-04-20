@@ -1,4 +1,4 @@
-# Makro Lens — Güncelleme günlüğü
+# Makro Lens — Güncelleme günlüğü 22
 
 Kod veya davranış değişikliklerinin kısa kaydı. Ayrıntılı parça listesi: [SURUM_VE_YOL_HARITASI.md](SURUM_VE_YOL_HARITASI.md).
 
