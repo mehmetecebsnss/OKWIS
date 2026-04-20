@@ -47,9 +47,8 @@ ACILIYET_BILGI = 5     # 5: Bilgi
 
 # Alarm RSS kaynakları — jeopolitik + ekonomik odaklı
 _ALARM_RSS_LISTESI = [
-    "https://feeds.reuters.com/reuters/worldNews",
     "https://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://feeds.reuters.com/reuters/businessNews",
+    "https://feeds.bbci.co.uk/news/business/rss.xml",
 ]
 _RSS_TIMEOUT = 10.0
 

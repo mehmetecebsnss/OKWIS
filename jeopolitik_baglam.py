@@ -14,8 +14,8 @@ from web_arama import topla_mod_aramalari
 
 logger = logging.getLogger(__name__)
 
-_DEFAULT_RSS = "https://feeds.reuters.com/reuters/worldNews"
-_BBC_RSS = "https://feeds.bbci.co.uk/news/world/rss.xml"
+_DEFAULT_RSS = "https://feeds.bbci.co.uk/news/world/rss.xml"
+_BBC_RSS = "https://feeds.bbci.co.uk/news/rss.xml"
 _RSS_TIMEOUT = 10.0
 
 # Jeopolitik moduna özgü filtre anahtar kelimeleri

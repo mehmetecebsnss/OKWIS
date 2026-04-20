@@ -18,8 +18,8 @@ logger = logging.getLogger(__name__)
 
 _DATA_PATH = Path(__file__).resolve().parent / "data" / "ozel_gunler.json"
 _DEFAULT_RSS_LIST = [
-    "https://feeds.reuters.com/reuters/businessNews",
     "https://feeds.bbci.co.uk/news/business/rss.xml",
+    "https://feeds.bbci.co.uk/news/rss.xml",
 ]
 _RSS_TIMEOUT = 8.0
 

@@ -1,5 +1,5 @@
 """
-Sektör Trendleri modu bağlamı: Reuters business / BBC business / Technology RSS + Tavily.
+Sektör Trendleri modu bağlamı: BBC business / Technology RSS + Tavily.
 Yükselen/düşen sektörlerin öncü sinyalleri, uzun vadeli büyüme temaları.
 """
 
@@ -16,9 +16,7 @@ from web_arama import topla_mod_aramalari
 logger = logging.getLogger(__name__)
 
 _DEFAULT_RSS_LIST = [
-    "https://feeds.reuters.com/reuters/businessNews",
     "https://feeds.bbci.co.uk/news/business/rss.xml",
-    "https://feeds.reuters.com/reuters/technologyNews",
     "https://feeds.bbci.co.uk/news/technology/rss.xml",
 ]
 _RSS_TIMEOUT = 10.0

@@ -1,5 +1,5 @@
 """
-Dünya Trendleri modu bağlamı: BBC / Reuters / NYT RSS + Tavily.
+Dünya Trendleri modu bağlamı: BBC / NYT RSS + Tavily.
 Viral olaylar, sosyal medya trendleri ve dünya gündeminin piyasa yansıması.
 """
 
@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 _DEFAULT_RSS_LIST = [
     "https://feeds.bbci.co.uk/news/rss.xml",
     "https://feeds.bbci.co.uk/news/world/rss.xml",
-    "https://feeds.reuters.com/reuters/topNews",
     "https://rss.nytimes.com/services/xml/rss/nyt/World.xml",
 ]
 _RSS_TIMEOUT = 10.0

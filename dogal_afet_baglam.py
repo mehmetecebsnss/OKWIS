@@ -1,5 +1,5 @@
 """
-Doğal Afet modu bağlamı: USGS deprem API (ücretsiz) + Reuters/BBC RSS + Tavily.
+Doğal Afet modu bağlamı: USGS deprem API (ücretsiz) + BBC RSS + Tavily.
 Deprem, sel, kasırga sonrası yeniden yapılanma ekonomisi ve acil ihtiyaçlar.
 """
 
@@ -17,8 +17,8 @@ logger = logging.getLogger(__name__)
 
 _USGS_URL = "https://earthquake.usgs.gov/fdsnws/event/1/query"
 _DEFAULT_RSS_LIST = [
-    "https://feeds.reuters.com/reuters/worldNews",
     "https://feeds.bbci.co.uk/news/world/rss.xml",
+    "https://feeds.bbci.co.uk/news/rss.xml",
 ]
 _TIMEOUT = 10.0
 

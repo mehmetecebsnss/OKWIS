@@ -19,8 +19,8 @@ from web_arama import topla_mod_aramalari
 logger = logging.getLogger(__name__)
 
 _DATA_PATH = Path(__file__).resolve().parent / "data" / "ulke_mevsim.json"
-_DEFAULT_RSS = "https://feeds.reuters.com/reuters/businessNews"
-_BBC_BUSINESS_RSS = "https://feeds.bbci.co.uk/news/business/rss.xml"
+_DEFAULT_RSS = "https://feeds.bbci.co.uk/news/business/rss.xml"
+_BBC_BUSINESS_RSS = "https://feeds.bbci.co.uk/news/rss.xml"
 _RSS_TIMEOUT = 8.0
 _WEATHER_TIMEOUT = 6.0
 
@@ -93,8 +93,8 @@ def _rss_basliklari_ozet(url_overrides: list[str] | None, limit: int = 5) -> str
     """
     Çoklu fallback:
     1) .env MACRO_RSS_URL (varsa)
-    2) Reuters business (default)
-    3) BBC business
+    2) BBC business (default)
+    3) BBC top news
     """
     urls: list[str] = []
     if url_overrides:

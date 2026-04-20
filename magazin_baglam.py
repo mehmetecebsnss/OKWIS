@@ -18,7 +18,6 @@ logger = logging.getLogger(__name__)
 _DEFAULT_RSS_LIST = [
     "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
     "https://feeds.bbci.co.uk/news/technology/rss.xml",
-    "https://feeds.reuters.com/reuters/entertainment",
     "https://feeds.bbci.co.uk/news/rss.xml",
 ]
 _RSS_TIMEOUT = 10.0

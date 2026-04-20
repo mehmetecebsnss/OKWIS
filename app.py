@@ -46,14 +46,14 @@ from gorsel_olusturucu import gorsel_olusturucu_al
 
 # ─── Kaynak Etiketleri (mod → kullanılan kaynaklar) ──────────────────────────
 _MOD_KAYNAKLARI: dict[str, list[str]] = {
-    "mevsim":     ["Reuters Business RSS", "BBC Business RSS", "OpenWeatherMap API (başkent)", "data/ulke_mevsim.json"],
+    "mevsim":     ["BBC Business RSS", "OpenWeatherMap API (başkent)", "data/ulke_mevsim.json"],
     "hava":       ["OpenWeatherMap API (anlık + 5 günlük tahmin)", "data/ulke_mevsim.json"],
-    "jeopolitik": ["Reuters World News RSS", "BBC World News RSS", "data/ulke_mevsim.json"],
-    "sektor":     ["Reuters Business RSS", "BBC Business RSS", "Reuters Technology RSS", "BBC Technology RSS"],
-    "trendler":   ["BBC News RSS", "Reuters World RSS", "BBC Technology RSS"],
-    "magazin":    ["BBC Entertainment RSS", "Reuters Entertainment RSS"],
-    "ozel_gun":   ["data/ozel_gunler.json", "Reuters Business RSS"],
-    "dogal_afet": ["USGS Earthquake API (M5+, son 7 gün)", "Reuters World News RSS", "BBC World News RSS"],
+    "jeopolitik": ["BBC World News RSS", "data/ulke_mevsim.json"],
+    "sektor":     ["BBC Business RSS", "BBC Technology RSS"],
+    "trendler":   ["BBC News RSS", "BBC World RSS", "BBC Technology RSS"],
+    "magazin":    ["BBC Entertainment RSS", "BBC Technology RSS"],
+    "ozel_gun":   ["data/ozel_gunler.json", "BBC Business RSS"],
+    "dogal_afet": ["USGS Earthquake API (M5+, son 7 gün)", "BBC World News RSS"],
     "okwis":      ["8 mod paralel (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)"],
 }
 
@@ -4307,7 +4307,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             return OKWIS_DETAY_SECIMI
 
         elif mod == "mod_mevsim":
-            await bildirim("📡 Adım 1/3 — Mevsim verileri ve haber başlıkları çekiliyor…", "Reuters, BBC RSS + ulke_mevsim.json")
+            await bildirim("📡 Adım 1/3 — Mevsim verileri ve haber başlıkları çekiliyor…", "BBC Business RSS + ulke_mevsim.json")
             try:
                 baglam = await asyncio.to_thread(topla_mevsim_baglami, ulke)
             except Exception:
@@ -4346,7 +4346,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             analiz = await asyncio.to_thread(hava_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_jeopolitik":
             analiz_turu = ANALIZ_JEOPOLITIK
-            await bildirim("📡 Adım 1/3 — Jeopolitik haber başlıkları çekiliyor…", "Reuters World News, BBC World News RSS")
+            await bildirim("📡 Adım 1/3 — Jeopolitik haber başlıkları çekiliyor…", "BBC World News RSS")
             try:
                 baglam = await asyncio.to_thread(topla_jeopolitik_baglami, ulke)
             except Exception:
@@ -4363,7 +4363,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             analiz = await asyncio.to_thread(jeopolitik_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_sektor":
             analiz_turu = ANALIZ_SEKTOR
-            await bildirim("📡 Adım 1/3 — Sektör haber başlıkları çekiliyor…", "Reuters Business, BBC Business, Reuters Technology RSS")
+            await bildirim("📡 Adım 1/3 — Sektör haber başlıkları çekiliyor…", "BBC Business, BBC Technology RSS")
             try:
                 baglam = await asyncio.to_thread(topla_sektor_baglami, ulke)
             except Exception:
@@ -4378,7 +4378,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             analiz = await asyncio.to_thread(sektor_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_trendler":
             analiz_turu = ANALIZ_TRENDLER
-            await bildirim("📡 Adım 1/3 — Dünya trend haberleri çekiliyor…", "BBC News, Reuters World, BBC Technology RSS")
+            await bildirim("📡 Adım 1/3 — Dünya trend haberleri çekiliyor…", "BBC News, BBC World, BBC Technology RSS")
             try:
                 baglam = await asyncio.to_thread(topla_trendler_baglami, ulke)
             except Exception:
@@ -4393,7 +4393,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             analiz = await asyncio.to_thread(trendler_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_magazin":
             analiz_turu = ANALIZ_MAGAZIN
-            await bildirim("📡 Adım 1/3 — Magazin ve viral haber başlıkları çekiliyor…", "BBC Entertainment, Reuters Entertainment RSS")
+            await bildirim("📡 Adım 1/3 — Magazin ve viral haber başlıkları çekiliyor…", "BBC Entertainment, BBC Technology RSS")
             try:
                 baglam = await asyncio.to_thread(topla_magazin_baglami, ulke)
             except Exception:
@@ -4408,7 +4408,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             analiz = await asyncio.to_thread(magazin_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_ozel_gun":
             analiz_turu = ANALIZ_OZEL_GUN
-            await bildirim("📡 Adım 1/3 — Özel gün takvimi ve haber başlıkları çekiliyor…", "ozel_gunler.json + Reuters Business RSS")
+            await bildirim("📡 Adım 1/3 — Özel gün takvimi ve haber başlıkları çekiliyor…", "ozel_gunler.json + BBC Business RSS")
             try:
                 baglam = await asyncio.to_thread(topla_ozel_gunler_baglami, ulke)
             except Exception:
@@ -4423,7 +4423,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             analiz = await asyncio.to_thread(ozel_gun_analizi_yap, ulke, baglam, stil, varlik, user_id)
         elif mod == "mod_dogal_afet":
             analiz_turu = ANALIZ_DOGAL_AFET
-            await bildirim("📡 Adım 1/3 — Deprem ve afet verileri çekiliyor…", "USGS Earthquake API (M5+, son 7 gün) + Reuters/BBC RSS")
+            await bildirim("📡 Adım 1/3 — Deprem ve afet verileri çekiliyor…", "USGS Earthquake API (M5+, son 7 gün) + BBC World RSS")
             try:
                 baglam = await asyncio.to_thread(topla_dogal_afet_baglami, ulke)
             except Exception:
