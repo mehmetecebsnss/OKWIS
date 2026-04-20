@@ -1,4 +1,4 @@
-# Makro Lens — Güncelleme günlüğü 22afhşagıadhgşabhgdaşbgfşisdabhguısdbşgsabuş
+# Makro Lens — Güncelleme günlüğü OKWIS TANRI MODU
 
 Kod veya davranış değişikliklerinin kısa kaydı. Ayrıntılı parça listesi: [SURUM_VE_YOL_HARITASI.md](SURUM_VE_YOL_HARITASI.md).
 
