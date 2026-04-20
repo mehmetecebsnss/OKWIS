@@ -2997,6 +2997,15 @@ async def performans(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text(metin, parse_mode=ParseMode.HTML)
 
 
+async def gecmis_sil(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/gecmis_sil — sohbet geçmişini temizle"""
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id:
+        from sohbet import gecmis_temizle
+        gecmis_temizle(user_id)
+    await update.message.reply_text("◆ Sohbet geçmişi temizlendi. Yeni konuşma başlayabilirsin.")
+
+
 async def gecmis(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/gecmis [n] — son tahmin geçmişi"""
     n = 10
@@ -3778,9 +3787,116 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
 
 
 async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
-    """Beklenmeyen mesajları yönet"""
+    """
+    Yazılı mesajları yönet.
+    Pro/Claude → sohbet modu. Free → /analiz yönlendir.
+    """
+    if not update.message or not update.message.text:
+        return
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        return
+
+    # Free kullanıcı → yönlendir
+    if not _kullanici_pro_mu(user_id):
+        await update.message.reply_text(
+            "Analiz başlatmak için /analiz yaz.\n"
+            "<i>Sohbet modu Pro/Claude plana özeldir.</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    # Pro/Claude → sohbet
+    from sohbet import sohbet_cevabi_uret, gecmis_ekle
+    kullanici_mesaji = update.message.text.strip()
+    profil = _kullanici_profili_al(user_id)
+
+    gecmis_ekle(user_id, "user", kullanici_mesaji)
+
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id,
+        action="typing",
+    )
+
+    cevap = await asyncio.to_thread(
+        sohbet_cevabi_uret, kullanici_mesaji, user_id, profil
+    )
+
+    gecmis_ekle(user_id, "assistant", cevap)
+    await update.message.reply_text(cevap)
+
+
+async def sesli_mesaj_isle(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """
+    Sesli mesajları işle.
+    Pro/Claude → STT → sohbet → TTS cevap. Free → yönlendir.
+    """
+    import io as _io
+    if not update.message:
+        return
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        return
+
+    if not _kullanici_pro_mu(user_id):
+        await update.message.reply_text(
+            "Sesli sohbet modu Pro/Claude plana özeldir.\n"
+            "/analiz ile analiz başlatabilirsin.",
+        )
+        return
+
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id,
+        action="typing",
+    )
+
+    try:
+        voice = update.message.voice or update.message.audio
+        if not voice:
+            return
+        dosya = await context.bot.get_file(voice.file_id)
+        ses_verisi = bytes(await dosya.download_as_bytearray())
+    except Exception as e:
+        logger.exception("Ses dosyası indirilemedi: %s", e)
+        await update.message.reply_text("Ses dosyası alınamadı, tekrar dene.")
+        return
+
+    from sohbet import ses_metne_cevir, sohbet_cevabi_uret, gecmis_ekle, metin_sese_cevir
+
+    kullanici_metni = await asyncio.to_thread(ses_metne_cevir, ses_verisi, "ses.ogg")
+
+    if not kullanici_metni:
+        await update.message.reply_text("Sesi anlayamadım, tekrar dener misin?")
+        return
+
+    gecmis_ekle(user_id, "user", kullanici_metni)
+    profil = _kullanici_profili_al(user_id)
+
+    cevap = await asyncio.to_thread(
+        sohbet_cevabi_uret, kullanici_metni, user_id, profil
+    )
+    gecmis_ekle(user_id, "assistant", cevap)
+
+    # TTS — sesli cevap gönder
+    ses_cevap = await asyncio.to_thread(metin_sese_cevir, cevap)
+
+    if ses_cevap:
+        try:
+            await update.message.reply_voice(
+                voice=_io.BytesIO(ses_cevap),
+                caption=f"<i>{_tg_html_escape(kullanici_metni[:100])}</i>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+        except Exception as e:
+            logger.warning("Sesli cevap gönderilemedi, yazılı gönderiliyor: %s", e)
+
+    # TTS başarısız → yazılı cevap
     await update.message.reply_text(
-        "Analiz başlatmak için /analiz yaz. 👇"
+        f"<i>🎤 {_tg_html_escape(kullanici_metni)}</i>\n\n{_tg_html_escape(cevap)}",
+        parse_mode=ParseMode.HTML,
     )
 
 
@@ -3835,6 +3951,7 @@ def main():
     app.add_handler(CommandHandler("hesabim", hesabim))
     app.add_handler(CommandHandler("performans", performans))
     app.add_handler(CommandHandler("gecmis", gecmis))
+    app.add_handler(CommandHandler("gecmis_sil", gecmis_sil))
     app.add_handler(CommandHandler("bildirim", bildirim_ayar))
     app.add_handler(CommandHandler("pro_ver", pro_ver))
     app.add_handler(CommandHandler("pro_iptal", pro_iptal))
@@ -3842,6 +3959,7 @@ def main():
     app.add_handler(CommandHandler("claude_iptal", claude_iptal))
     app.add_handler(CommandHandler("odeme_kayit", odeme_kayit))
     app.add_handler(MessageHandler(filters.TEXT & ~filters.COMMAND, diger_mesajlar))
+    app.add_handler(MessageHandler(filters.VOICE | filters.AUDIO, sesli_mesaj_isle))
 
     logger.info(
         "Bot başlatıldı… AI_PROVIDER=%s AI_FALLBACK_GEMINI=%s AI_FALLBACK_DEEPSEEK=%s gemini_anahtar_sayısı=%s",
