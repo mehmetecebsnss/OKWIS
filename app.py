@@ -2639,7 +2639,17 @@ def _karsilama_mesaji_html() -> str:
         "◆ Merhaba. Ben <b>Okwis AI</b>.\n\n"
         "Mevsimler, hava olayları, jeopolitik gelişmeler gibi "
         "büyük resim faktörlerin piyasalara etkisini analiz ediyorum.\n\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>📦 Abonelik Planları</b>\n\n"
+        "🆓 <b>Ücretsiz</b> — Günde <b>3 analiz hakkı</b>\n"
+        "⚡ <b>Premium</b> — <b>$30/ay</b> · Sınırsız analiz + tüm modlar\n"
+        "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "💳 <b>Abone olmak için:</b> @hasmetyildiz\n"
+        "👥 <b>Topluluk grubumuz:</b> <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "Başlamak için <b>/analiz</b> yaz.\n"
+        "Planını görmek için <b>/hesabim</b> yaz.\n"
         "Analiz sırasında çıkmak için <b>/cancel</b> veya <b>/start</b> kullanabilirsin."
     )
 
@@ -3310,6 +3320,13 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Ücretsiz kullanım limiti: günde <b>{ANALIZ_GUNLUK_LIMIT}</b> analiz.\n"
         "Ülke seçtikten sonra varlık odağı yazabilir (altın, petrol, bitcoin vb.) veya <b>BOŞ</b> / <b>/skip</b> ile geçebilirsin.\n"
         "<b>Hava</b> modu için <code>OPENWEATHER_API_KEY</code> (.env) gerekir.\n\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "<b>📦 Abonelik Planları</b>\n"
+        "🆓 <b>Ücretsiz</b> — Günde 3 analiz hakkı\n"
+        "⚡ <b>Premium</b> — <b>$30/ay</b> · Sınırsız analiz + tüm modlar\n"
+        "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
+        "📩 Abone olmak için: @hasmetyildiz\n"
+        "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
         f"<i>Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</i>\n"
         "<i>Yatırım kararı için kendi araştırmanı yap.</i>"
     )
@@ -3675,12 +3692,35 @@ async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
     kalan = _kalan_pro_gun(pro_until) if pro_mu else 0
     gunluk = _gunluk_kullanim_oku(user_id)
 
-    plan_satiri = "Claude ◆◆" if plan.get("plan") == "claude" else ("Pro ◆" if pro_mu else "Ücretsiz")
-    pro_satiri = (
-        f"Pro bitiş: <b>{_tg_html_escape(pro_until)}</b> · kalan <b>{kalan}</b> gün"
-        if pro_mu and pro_until
-        else "Pro aktif değil."
-    )
+    aktif_plan = plan.get("plan", "free")
+    if aktif_plan == "claude":
+        plan_satiri = "🔥 Tam Güç (Claude) ◆◆"
+        pro_satiri = (
+            f"Bitiş: <b>{_tg_html_escape(pro_until)}</b> · kalan <b>{kalan}</b> gün"
+            if pro_until else "Aktif"
+        )
+        yukseltme_satiri = ""
+    elif pro_mu:
+        plan_satiri = "⚡ Premium ◆"
+        pro_satiri = (
+            f"Bitiş: <b>{_tg_html_escape(pro_until)}</b> · kalan <b>{kalan}</b> gün"
+            if pro_until else "Aktif"
+        )
+        yukseltme_satiri = (
+            "\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+            "🔥 <b>Tam Güç'e yükselt:</b> $80/ay · Claude AI + öncelikli destek\n"
+            "📩 Yükseltmek için: @hasmetyildiz"
+        )
+    else:
+        plan_satiri = "🆓 Ücretsiz"
+        pro_satiri = f"Kalan günlük hak: <b>{max(0, ANALIZ_GUNLUK_LIMIT - gunluk)}/{ANALIZ_GUNLUK_LIMIT}</b>"
+        yukseltme_satiri = (
+            "\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+            "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz + tüm modlar\n"
+            "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
+            "📩 Abone olmak için: @hasmetyildiz\n"
+            "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>"
+        )
 
     mesaj = (
         "<b>👤 Hesabım</b>\n"
@@ -3688,10 +3728,10 @@ async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"Kullanıcı ID: <code>{user_id}</code>\n"
         f"Plan: <b>{plan_satiri}</b>\n"
         f"{pro_satiri}\n"
-        f"Günlük kullanım: <b>{gunluk}/{ANALIZ_GUNLUK_LIMIT}</b>\n"
-        f"Limit durumu: <b>{'Bypass (Pro)' if pro_mu else 'Standart (Free)'}</b>"
+        f"Günlük kullanım: <b>{gunluk}/{ANALIZ_GUNLUK_LIMIT}</b>"
+        f"{yukseltme_satiri}"
     )
-    await update.message.reply_text(mesaj, parse_mode=ParseMode.HTML)
+    await update.message.reply_text(mesaj, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
 
 
 async def pro_ver(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3861,8 +3901,14 @@ async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 (
                     f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
-                    "Yarın tekrar deneyebilirsin. Manuel Pro yükseltme için admin ile iletişime geç."
-                )
+                    "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz\n"
+                    "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI\n\n"
+                    "📩 Abone olmak için: @hasmetyildiz\n"
+                    "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+                    "Yarın tekrar ücretsiz deneyebilirsin."
+                ),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
             )
             return ConversationHandler.END
 
@@ -4072,8 +4118,14 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             await query.edit_message_text(
                 (
                     f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
-                    "Yarın tekrar deneyebilirsin. Manuel Pro yükseltme için admin ile iletişime geç."
-                )
+                    "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz\n"
+                    "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI\n\n"
+                    "📩 Abone olmak için: @hasmetyildiz\n"
+                    "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+                    "Yarın tekrar ücretsiz deneyebilirsin."
+                ),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
             )
             return ConversationHandler.END
 
