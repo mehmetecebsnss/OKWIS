@@ -3204,6 +3204,80 @@ async def kalite_karti_goster(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer("✅ Kalite kartı gösterildi")
 
 
+async def okwis_gorseller_goster(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Okwis analizi için görselleri (güven skoru + olasılık zincirleri) gönder"""
+    query = update.callback_query
+    await query.answer("📈 Görseller hazırlanıyor…")
+    
+    user_id = update.effective_user.id if update.effective_user else None
+    
+    # Kaydedilmiş verileri al
+    guven_olayi_kart = context.user_data.get("okwis_guven_kart_veri")
+    ulke = context.user_data.get("okwis_gorsel_ulke", "")
+    varlik = context.user_data.get("okwis_gorsel_varlik", "")
+    
+    if not guven_olayi_kart or not ulke:
+        await query.answer("Görsel verisi bulunamadı. Yeni bir analiz yapın.", show_alert=True)
+        return
+    
+    # Güven skoru grafiği gönder
+    try:
+        gorsel = gorsel_olusturucu_al()
+        guven_grafik = await asyncio.to_thread(
+            gorsel.guven_skoru_grafigi,
+            guven_olayi_kart.get("toplam", 0),
+            guven_olayi_kart.get("vkg", 0),
+            guven_olayi_kart.get("mbs", 0),
+            ulke,
+            "Okwis"
+        )
+        if guven_grafik:
+            await context.bot.send_photo(
+                chat_id=query.message.chat_id,
+                photo=guven_grafik,
+                caption="<b>Analiz Kalite Metrikleri</b>\nGüven skoru, veri kalitesi ve mod başarısı değerlendirmesi",
+                parse_mode=ParseMode.HTML,
+            )
+            logger.info("Güven skoru grafiği gönderildi (user=%s)", user_id)
+    except Exception as e:
+        logger.warning("Güven grafiği gönderilemedi: %s", e)
+    
+    # Olasılık zincirleri infografiği (eğer varsa)
+    try:
+        zincirler = _prob_zinciri_yukle()
+        aktif_zincirler = []
+        for z in zincirler[:5]:  # İlk 5 zincir
+            # Zincirin ortalama olasılığını hesapla
+            adimlar = z.get("zincir", [])
+            if adimlar:
+                ort_olasilik = sum(a.get("olasilik", 0) for a in adimlar) / len(adimlar)
+                aktif_zincirler.append({
+                    "baslik": z.get("baslik", ""),
+                    "olasilik": ort_olasilik,
+                    "kategori": z.get("ilgili_modlar", ["genel"])[0] if z.get("ilgili_modlar") else "genel"
+                })
+        
+        if aktif_zincirler:
+            prob_infografik = await asyncio.to_thread(
+                gorsel.prob_zinciri_infografik,
+                aktif_zincirler,
+                ulke,
+                varlik
+            )
+            if prob_infografik:
+                await context.bot.send_photo(
+                    chat_id=query.message.chat_id,
+                    photo=prob_infografik,
+                    caption="<b>Aktif Olasılık Zincirleri</b>\nAnaliz edilen sosyal ihtimal senaryoları",
+                    parse_mode=ParseMode.HTML,
+                )
+                logger.info("Prob zinciri infografiği gönderildi (user=%s)", user_id)
+    except Exception as e:
+        logger.warning("Prob zinciri infografiği gönderilemedi: %s", e)
+    
+    await query.answer("✅ Görseller gönderildi", show_alert=False)
+
+
 async def okwis_pdf_olustur(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Okwis analizi için PDF rapor oluştur ve gönder (Pro özelliği)"""
     query = update.callback_query
@@ -4233,6 +4307,10 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             okwis_guven_karti = _guven_karti_html("okwis", birlestik_baglam_kart, guven_olayi_kart, user_id)
             context.user_data["son_guven_karti"] = okwis_guven_karti
             context.user_data["son_analiz_mod"] = "okwis"
+            # Görsel buton için güven verilerini sakla
+            context.user_data["okwis_guven_kart_veri"] = guven_olayi_kart
+            context.user_data["okwis_gorsel_ulke"] = ulke
+            context.user_data["okwis_gorsel_varlik"] = varlik
 
             mesaj = (
                 f"<b>◆ Okwis — Tanrının Gözü</b> · <i>Kısa Özet</i>\n"
@@ -4251,65 +4329,10 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             detay_klavye = InlineKeyboardMarkup([
                 [InlineKeyboardButton("🔍 Daha derin analiz", callback_data="okwis_detay")],
                 [InlineKeyboardButton("📊 Kalite Kartı", callback_data="show_quality_card"),
-                 InlineKeyboardButton("✕ Kapat", callback_data="okwis_kapat")],
+                 InlineKeyboardButton("📈 Görseller", callback_data="okwis_gorseller")],
+                [InlineKeyboardButton("✕ Kapat", callback_data="okwis_kapat")],
             ])
             await gonder_parcali_html(query, context, mesaj)
-            
-            # ═══ PREMIUM GÖRSEL ÇIKTILAR ═══
-            # Güven skoru grafiği gönder
-            try:
-                gorsel = gorsel_olusturucu_al()
-                guven_grafik = await asyncio.to_thread(
-                    gorsel.guven_skoru_grafigi,
-                    guven_olayi_kart.get("toplam", 0),
-                    guven_olayi_kart.get("vkg", 0),
-                    guven_olayi_kart.get("mbs", 0),
-                    ulke,
-                    "Okwis"
-                )
-                if guven_grafik:
-                    await context.bot.send_photo(
-                        chat_id=query.message.chat_id,
-                        photo=guven_grafik,
-                        caption="<b>Analiz Kalite Metrikleri</b>\nGüven skoru, veri kalitesi ve mod başarısı değerlendirmesi",
-                        parse_mode=ParseMode.HTML,
-                    )
-                    logger.info("Güven skoru grafiği gönderildi (user=%s)", user_id)
-            except Exception as e:
-                logger.warning("Güven grafiği gönderilemedi: %s", e)
-            
-            # Olasılık zincirleri infografiği (eğer varsa)
-            try:
-                zincirler = _prob_zinciri_yukle()
-                aktif_zincirler = []
-                for z in zincirler[:5]:  # İlk 5 zincir
-                    # Zincirin ortalama olasılığını hesapla
-                    adimlar = z.get("zincir", [])
-                    if adimlar:
-                        ort_olasilik = sum(a.get("olasilik", 0) for a in adimlar) / len(adimlar)
-                        aktif_zincirler.append({
-                            "baslik": z.get("baslik", ""),
-                            "olasilik": ort_olasilik,
-                            "kategori": z.get("ilgili_modlar", ["genel"])[0] if z.get("ilgili_modlar") else "genel"
-                        })
-                
-                if aktif_zincirler:
-                    prob_infografik = await asyncio.to_thread(
-                        gorsel.prob_zinciri_infografik,
-                        aktif_zincirler,
-                        ulke,
-                        varlik
-                    )
-                    if prob_infografik:
-                        await context.bot.send_photo(
-                            chat_id=query.message.chat_id,
-                            photo=prob_infografik,
-                            caption="<b>Aktif Olasılık Zincirleri</b>\nAnaliz edilen sosyal ihtimal senaryoları",
-                            parse_mode=ParseMode.HTML,
-                        )
-                        logger.info("Prob zinciri infografiği gönderildi (user=%s)", user_id)
-            except Exception as e:
-                logger.warning("Prob zinciri infografiği gönderilemedi: %s", e)
             
             # Son mesajın altına buton ekle
             try:
@@ -4772,6 +4795,9 @@ def main():
 
     # Kalite kartı butonu handler
     app.add_handler(CallbackQueryHandler(kalite_karti_goster, pattern="^show_quality_card$"))
+    
+    # Okwis görseller butonu handler
+    app.add_handler(CallbackQueryHandler(okwis_gorseller_goster, pattern="^okwis_gorseller$"))
     
     # PDF rapor butonu handler (Pro özelliği)
     app.add_handler(CallbackQueryHandler(okwis_pdf_olustur, pattern="^okwis_pdf$"))
