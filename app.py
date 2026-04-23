@@ -536,10 +536,10 @@ ANALIZ_DIL_NOTU = (
 
 # Ortak analiz kuralları — tüm modlarda geçerli (kısa, ~50 token)
 _ORTAK_KURALLAR = (
-    "Net yön ver: al/izle/kaçın. Somut fiyat/tarih/seviye ver. "
-    "Kaçamak dil yok ('etkilenebilir', 'değerlendirilebilir' yasak). "
-    "Ters senaryo somut olsun. Markdown yasak. Em dash (—) yasak, tire (-) kullan. "
-    "Liste/madde işareti yasak, düz cümle yaz. Türkçe yaz."
+    "Net yön ver: al/tut/sat/kaçın. Somut fiyat/tarih/seviye ver. "
+    "Kaçamak dil kesinlikle yasak ('etkilenebilir', 'değerlendirilebilir', 'olabilir', 'düşünülebilir' yasak). "
+    "Kesin yargı ver, ihtimal değil. Ters senaryo somut olsun. "
+    "Markdown yasak. Em dash (—) yasak, tire (-) kullan. Türkçe yaz."
 )
 
 # Mod-spesifik analist kimlikleri (~40-50 token her biri)
@@ -552,7 +552,7 @@ _MOD_KIMLIK = {
     "magazin":    "Marka-piyasa analistisin. Ünlü/viral olayların şirket değerine etkisini analiz et. Her çıkarım somut bir habere dayansın.",
     "ozel_gun":   "Takvim-tüketim analistisin. Özel günlerin perakende/lojistik/seyahat etkisini analiz et. Sadece özel gün verilerinden çıkarım yap.",
     "dogal_afet": "Afet ekonomisi analistisin. Deprem/afet verilerinden yeniden yapılanma ekonomisini analiz et. Afet yoksa açıkça belirt.",
-    "okwis":      "Kıdemli makro yatırım analistisin. 8 modun verisini sentezleyip net, aksiyon odaklı çıkarım yap.",
+    "okwis":      "Kıdemli makro yatırım analistisin, hedge fon geçmişin var. 8 modun verisini sentezleyip paranın nereye gideceğini kesin olarak söyle. Belirsiz dil yasak — her cümle bir karar içermeli. Kullanıcı ne olabileceğini değil, ne yapması gerektiğini öğrenmek istiyor.",
 }
 
 # Geriye dönük uyumluluk — eski kod _ANALIST_KIMLIK kullanıyorsa çalışsın
@@ -676,6 +676,27 @@ ANALIZ_FOOTER_HTML = "<b>Yeni analiz:</b> /analiz"
 def _tg_html_escape(text: str) -> str:
     """Telegram HTML modu için model/ kullanıcı metnini güvenle kaçır."""
     return html.escape(text or "", quote=False)
+
+
+def _analiz_html_temizle(text: str) -> str:
+    """AI çıktısındaki Telegram HTML taglarını koru, diğer her şeyi escape et.
+    
+    İzin verilen taglar: <b>, </b>, <i>, </i>, <code>, </code>
+    Diğer tüm < > karakterleri escape edilir.
+    """
+    import re as _re
+    IZINLI = _re.compile(r'<(/?(b|i|code))>', _re.IGNORECASE)
+    parcalar = IZINLI.split(text or "")
+    sonuc = []
+    i = 0
+    while i < len(parcalar):
+        parca = parcalar[i]
+        if IZINLI.fullmatch(parca):
+            sonuc.append(parca.lower())
+        else:
+            sonuc.append(html.escape(parca, quote=False))
+        i += 1
+    return "".join(sonuc)
 
 
 def _markdown_temizle(text: str) -> str:
@@ -2531,98 +2552,146 @@ def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", pr
 
     # ── KISA ANALİZ ──────────────────────────────────────────────────────────
     if stil == "kisa":
+        FORMAT_KURALI = (
+            "FORMAT: Her bölüm baslik satirinda <b>BASLIK</b> ile baslat, altina 1-2 satir yaz. "
+            "Bölümler arasinda bos satir birak. Toplam 10-14 satir. "
+            "Telegram HTML: <b>kalin</b> kullanabilirsin, diger tag yasak."
+        )
         if profil_var:
-            varlik_ek = f'\nKullanıcı özellikle "{varlik}" üzerine odaklanmak istiyor.' if varlik and varlik.strip() else ""
+            varlik_ek = f'\nKullanici ozellikle "{varlik}" uzerine odaklanmak istiyor.' if varlik and varlik.strip() else ""
             prompt = (
                 f"{profil_blogu}\n\n---\n"
                 + f"{birlestik_baglam}\n\n"
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
-                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS KİŞİSEL KISA ANALİZ{varlik_ek}\n\n"
-                + "Portföydeki/profildeki varlıkları merkeze alarak, 4 satırda net aksiyon ver:\n\n"
-                + "POZİSYON: (her varlık için şu an ne yapmalısın — AL/TUT/AZALT/SAT — tek satır)\n"
-                + "FİYAT: (somut fiyat hedefleri — giriş seviyesi / çıkış seviyesi / stop-loss)\n"
-                + "ZAMANLAMA: (ne zaman aksiyon — kısa vade 1-2 hafta / orta vade 1-3 ay)\n"
-                + "UYARI: (şu an yapılmaması gereken tek şey — somut)\n\n"
-                + "Kurallar: Sadece 4 satır. 'Senin X'in', 'elindeki Y' dili kullan. Soyut değil, somut fiyat/tarih ver. Türkçe yaz."
+                + f"Gorev: {ulke} / {ay_adi} {yil} — OKWIS KISISEL KISA ANALIZ{varlik_ek}\n\n"
+                + "Portfoydeki/profildeki varliklari merkeze al. Kullanicinin elindeki parayi su an nereye koyacagini soyle.\n\n"
+                + "<b>POZISYON</b>\n"
+                + "Her varlik icin tek satirda: varlik adi - AL/TUT/SAT - neden (hangi mod sinyali)\n\n"
+                + "<b>FIYAT HEDEFI</b>\n"
+                + "Her varlik icin: giris seviyesi / hedef / stop-loss (somut rakam)\n\n"
+                + "<b>ZAMANLAMA</b>\n"
+                + "Kisa vade (1-2 hafta) ve orta vade (1-3 ay) icin ayri aksiyon\n\n"
+                + "<b>YAPMA</b>\n"
+                + "Su an kesinlikle yapilmamasi gereken tek sey - somut, neden\n\n"
+                + f"{FORMAT_KURALI}\n"
+                + "Kural: 'Senin X'in', 'elindeki Y' dili kullan. Soyut degil, somut fiyat/tarih ver. Turkce yaz."
             )
         elif varlik and varlik.strip():
             prompt = (
                 f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
-                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS VARLIK KISA ANALİZ: {varlik}\n\n"
-                + "8 modun verisini bu varlık için filtrele. 4 satırda net aksiyon ver:\n\n"
-                + f"POZİSYON: ({varlik} için şu an: AL/TUT/KAÇIN — ve neden, hangi modun verisi)\n"
-                + f"FİYAT: (somut fiyat seviyeleri — giriş / hedef / stop-loss)\n"
-                + "ZAMANLAMA: (kısa vade 1-2 hafta / orta vade 1-3 ay — hangi sinyal tetikleyici)\n"
-                + "YAPMA: (şu an kesinlikle yapılmaması gereken — somut)\n\n"
-                + "Kurallar: Sadece 4 satır. Somut fiyat/seviye ver. Türkçe yaz."
+                + f"Gorev: {ulke} / {ay_adi} {yil} — OKWIS VARLIK KISA ANALIZ: {varlik}\n\n"
+                + f"8 modun verisini {varlik} icin filtrele. Kullaniciya su an ne yapmasi gerektigini soyle.\n\n"
+                + f"<b>POZISYON</b>\n"
+                + f"{varlik} icin: AL / TUT / SAT - hangi modun verisi, neden simdi\n\n"
+                + f"<b>FIYAT HEDEFI</b>\n"
+                + "Giris seviyesi / hedef fiyat / stop-loss (somut rakam)\n\n"
+                + "<b>ZAMANLAMA</b>\n"
+                + "Kisa vade (1-2 hafta) / orta vade (1-3 ay) - hangi sinyal tetikleyici\n\n"
+                + "<b>YAPMA</b>\n"
+                + "Su an kesinlikle yapilmamasi gereken - somut, neden bu tezi bozar\n\n"
+                + f"{FORMAT_KURALI}\n"
+                + "Kural: Somut fiyat/seviye ver. Turkce yaz."
             )
         else:
             prompt = (
                 f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
-                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS GENEL KISA ANALİZ\n\n"
-                + "8 modun verisini sentezle. 4 satırda net aksiyon ver:\n\n"
-                + f"YÜKSELEN: (şu an en güçlü 2-3 sektör — hangi modun verisi, neden)\n"
-                + f"AL_İZLE: ({ulke} piyasasından 3 somut varlık — hangi modun sinyaline dayanıyor)\n"
-                + "ZAMANLAMA: (kısa vade 1-2 hafta / orta vade 1-3 ay — hangi sinyal tetikleyici)\n"
-                + "KAÇIN: (şu an uzak durulması gereken — somut isim/sektör)\n\n"
-                + "Kurallar: Sadece 4 satır. Gerçek isim ver. Türkçe yaz."
+                + f"Gorev: {ulke} / {ay_adi} {yil} — OKWIS GENEL KISA ANALIZ\n\n"
+                + "8 modun verisini sentezle. Kullanicinin parasini su an nereye koyacagini soyle.\n\n"
+                + f"<b>EN GUCLU FIRSAT</b>\n"
+                + f"{ulke} piyasasinda su an en net sinyal veren 2-3 varlik/sektor - hangi modun verisi, neden simdi\n\n"
+                + f"<b>POZISYON ONERILERI</b>\n"
+                + "Her varlik icin: AL/TUT/SAT - giris seviyesi / hedef / stop-loss\n\n"
+                + "<b>ZAMANLAMA</b>\n"
+                + "Kisa vade (1-2 hafta) / orta vade (1-3 ay) - hangi sinyal tetikleyici\n\n"
+                + "<b>UZAK DUR</b>\n"
+                + "Su an kesinlikle girilmemesi gereken sektor/varlik - somut isim, neden\n\n"
+                + f"{FORMAT_KURALI}\n"
+                + "Kural: Gercek isim ver. Somut fiyat/seviye ver. Turkce yaz."
             )
 
     # ── DETAYLI ANALİZ ───────────────────────────────────────────────────────
     else:
+        FORMAT_KURALI_DETAY = (
+            "FORMAT: Her bolum baslik satirinda <b>BASLIK</b> ile baslat, altina 2-3 satir yaz. "
+            "Bolumler arasinda bos satir birak. Toplam 20-28 satir. "
+            "Telegram HTML: <b>kalin</b> kullanabilirsin, diger tag yasak."
+        )
         if profil_var:
-            varlik_ek = f'\nKullanıcı özellikle "{varlik}" üzerine odaklanmak istiyor.' if varlik and varlik.strip() else ""
+            varlik_ek = f'\nKullanici ozellikle "{varlik}" uzerine odaklanmak istiyor.' if varlik and varlik.strip() else ""
             prompt = (
                 f"{profil_blogu}\n\n---\n"
                 + f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
-                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS KİŞİSEL DETAYLI ANALİZ{varlik_ek}\n\n"
-                + "Profildeki varlıkları ve 8 modun verisini kullanarak tam derinlikli analiz yap:\n\n"
-                + "PORTFÖY DURUMU: (profildeki her varlık için ayrı değerlendirme — mevcut pozisyon sağlıklı mı?)\n"
-                + "POZİSYON STRATEJİSİ: (her varlık için somut strateji — ne kadar süre tut, hangi seviyede ekle/azalt)\n"
-                + "FİYAT HARİTASI: (her varlık için 3 seviye — agresif giriş / konservatif giriş / stop-loss)\n"
-                + "ZAMANLAMA: (kısa vade 1-2 hafta / orta vade 1-3 ay / uzun vade 3-12 ay — her dönem için aksiyon)\n"
-                + "YENİ FIRSAT: (mevcut piyasa koşullarında profiline uygun yeni pozisyon var mı? — somut, neden şimdi)\n"
-                + "RİSK YÖNETİMİ: (portföyünü tehdit eden 2-3 risk — ve her biri için hedge/koruma stratejisi)\n"
-                + "YAPMA LİSTESİ: (şu an kesinlikle yapılmaması gereken 2-3 şey — somut, neden)\n\n"
-                + "Kurallar: 'Senin portföyün', 'elindeki X' dili kullan. Her başlık somut fiyat/tarih içermeli. Türkçe yaz."
+                + f"Gorev: {ulke} / {ay_adi} {yil} — OKWIS KISISEL DETAYLI ANALIZ{varlik_ek}\n\n"
+                + "Profildeki varliklari ve 8 modun verisini kullanarak tam derinlikli analiz yap. "
+                + "Kullanicinin elindeki parayi su an nereye, ne kadar, ne zaman koyacagini soyle.\n\n"
+                + "<b>PORTFOY DURUMU</b>\n"
+                + "Profildeki her varlik icin: mevcut pozisyon saglikli mi, devam et mi cik mi - somut karar\n\n"
+                + "<b>POZISYON STRATEJISI</b>\n"
+                + "Her varlik icin: AL/TUT/AZALT/SAT - ne kadar sure tut, hangi seviyede ekle, hangi seviyede cik\n\n"
+                + "<b>FIYAT HARITASI</b>\n"
+                + "Her varlik icin 3 seviye: agresif giris / konservatif giris / stop-loss (somut rakam)\n\n"
+                + "<b>ZAMANLAMA</b>\n"
+                + "Kisa vade (1-2 hafta) / orta vade (1-3 ay) / uzun vade (3-12 ay) - her donem icin ayri aksiyon\n\n"
+                + "<b>YENİ FIRSAT</b>\n"
+                + "Mevcut piyasa kosullarinda profiline uygun yeni pozisyon var mi - somut varlik, neden simdi, giris seviyesi\n\n"
+                + "<b>RISK YONETIMI</b>\n"
+                + "Portfoyu tehdit eden 2-3 risk ve her biri icin hedge/koruma stratejisi\n\n"
+                + "<b>YAPMA LISTESI</b>\n"
+                + "Su an kesinlikle yapilmamasi gereken 2-3 sey - somut, neden\n\n"
+                + f"{FORMAT_KURALI_DETAY}\n"
+                + "Kural: 'Senin portfoyn', 'elindeki X' dili kullan. Her baslik somut fiyat/tarih icermeli. Turkce yaz."
             )
         elif varlik and varlik.strip():
             prompt = (
                 f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
-                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS VARLIK DETAYLI ANALİZ: {varlik}\n\n"
-                + f"8 modun tüm verisini {varlik} için derinlemesine analiz et:\n\n"
-                + f"MEVCUT DURUM: ({varlik} şu an hangi fiyat/seviyede, momentum ne yönde — hangi modun verisi)\n"
-                + f"POZİSYON STRATEJİSİ: (AL/TUT/KAÇIN ve neden — hangi koşulda pozisyon aç, hangi koşulda kapat)\n"
-                + f"FİYAT HARİTASI: (3 kritik seviye — güçlü destek / direnç / stop-loss — ve neden bu seviyeler)\n"
-                + "ZAMANLAMA: (kısa 1-2 hafta / orta 1-3 ay / uzun 3-12 ay — her dönem için ayrı aksiyon)\n"
-                + "KATALIZ: (fiyatı tetikleyecek olay nedir — hangi haber/veri/tarih izlenmeli)\n"
-                + "YAPMA: (şu an kesinlikle yapılmaması gereken — somut, neden bu tezi bozar)\n"
-                + "RİSK: (en büyük 2 risk ve her biri için koruma stratejisi)\n\n"
-                + "Kurallar: Her başlık somut fiyat/tarih/seviye içermeli. Türkçe yaz."
+                + f"Gorev: {ulke} / {ay_adi} {yil} — OKWIS VARLIK DETAYLI ANALIZ: {varlik}\n\n"
+                + f"8 modun tum verisini {varlik} icin derinlemesine analiz et. Kullaniciya kesin karar ver.\n\n"
+                + f"<b>MEVCUT DURUM</b>\n"
+                + f"{varlik} su an hangi fiyat/seviyede, momentum ne yonde - hangi modun verisi bunu destekliyor\n\n"
+                + f"<b>POZISYON KARARI</b>\n"
+                + "AL / TUT / SAT - kesin karar, hangi kosulda pozisyon ac, hangi kosulda kapat\n\n"
+                + f"<b>FIYAT HARITASI</b>\n"
+                + "3 kritik seviye: guclu destek / direnc / stop-loss - neden bu seviyeler\n\n"
+                + "<b>ZAMANLAMA</b>\n"
+                + "Kisa (1-2 hafta) / orta (1-3 ay) / uzun (3-12 ay) - her donem icin ayri aksiyon\n\n"
+                + "<b>KATALIZ</b>\n"
+                + "Fiyati tetikleyecek olay nedir - hangi haber/veri/tarih izlenmeli, ne zaman\n\n"
+                + "<b>RISK</b>\n"
+                + "En buyuk 2 risk ve her biri icin koruma stratejisi\n\n"
+                + "<b>YAPMA</b>\n"
+                + "Su an kesinlikle yapilmamasi gereken - somut, neden bu tezi bozar\n\n"
+                + f"{FORMAT_KURALI_DETAY}\n"
+                + "Kural: Her baslik somut fiyat/tarih/seviye icermeli. Turkce yaz."
             )
         else:
             prompt = (
                 f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
-                + f"Görev: {ulke} / {ay_adi} {yil} — OKWIS GENEL DETAYLI ANALİZ\n\n"
-                + "8 modun tüm verisini derinlemesine sentezle:\n\n"
-                + f"MAKRO TABLO: (8 moddan çıkan en güçlü 3 sinyal — ne görüyorum, neden önemli)\n"
-                + f"YÜKSELEN SEKTÖRLER: (momentum kazanan 2-3 sektör — hangi mod destekliyor, ne kadar sürer)\n"
-                + f"POZİSYON FİKİRLERİ: ({ulke} piyasasından 3 somut varlık — giriş seviyesi / hedef / stop-loss)\n"
-                + "ZAMANLAMA: (kısa 1-2 hafta / orta 1-3 ay / uzun 3-12 ay — her dönem için ayrı aksiyon)\n"
-                + "DÜŞEN/KAÇIN: (momentum kaybeden 1-2 sektör/varlık — somut, neden şimdi)\n"
-                + "GİRİŞİM FIRSATI: (bu dönemde büyüyen problem alanı — kim çözüyor, neden şimdi)\n"
-                + "TERS SENARYO: (tüm tezi çökertecek 1 gelişme — hangi modun verisi bu riski işaret ediyor)\n\n"
-                + "Kurallar: Her başlık somut isim/fiyat/tarih içermeli. Gerçek isim ver. Türkçe yaz."
+                + f"Gorev: {ulke} / {ay_adi} {yil} — OKWIS GENEL DETAYLI ANALIZ\n\n"
+                + "8 modun tum verisini derinlemesine sentezle. Kullanicinin parasini nereye koyacagini soyle.\n\n"
+                + f"<b>MAKRO TABLO</b>\n"
+                + "8 moddan cikan en guclu 3 sinyal - ne goruyorum, neden onemli, ne kadar sure guclu kalir\n\n"
+                + f"<b>EN GUCLU POZISYONLAR</b>\n"
+                + f"{ulke} piyasasindan 3 somut varlik - giris seviyesi / hedef / stop-loss / neden simdi\n\n"
+                + f"<b>YUKSELEN SEKTORLER</b>\n"
+                + "Momentum kazanan 2-3 sektor - hangi mod destekliyor, ne kadar surer, somut sirket/ETF\n\n"
+                + "<b>ZAMANLAMA</b>\n"
+                + "Kisa (1-2 hafta) / orta (1-3 ay) / uzun (3-12 ay) - her donem icin ayri aksiyon\n\n"
+                + "<b>UZAK DUR</b>\n"
+                + "Momentum kaybeden 1-2 sektor/varlik - somut isim, neden simdi cikis\n\n"
+                + "<b>TERS SENARYO</b>\n"
+                + "Tum tezi cokertecek 1 gelisme - hangi modun verisi bu riski isaret ediyor, ne zaman izle\n\n"
+                + f"{FORMAT_KURALI_DETAY}\n"
+                + "Kural: Her baslik somut isim/fiyat/tarih icermeli. Gercek isim ver. Turkce yaz."
             )
 
     try:
@@ -3172,7 +3241,7 @@ async def okwis_detay_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE
         f"{alt_cizgi}\n"
         f"▸ <b>{_tg_html_escape(ulke)}</b>{varlik_satir}{profil_satir}\n"
         f"{alt_cizgi}\n\n"
-        f"{_tg_html_escape(analiz)}\n\n"
+        f"{_analiz_html_temizle(analiz)}\n\n"
         f"{ANALIZ_FOOTER_HTML}"
     )
     
@@ -4317,7 +4386,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                 f"{alt_cizgi}\n"
                 f"▸ <b>{_tg_html_escape(ulke)}</b>{varlik_satir}{profil_satir}\n"
                 f"{alt_cizgi}\n\n"
-                f"{_tg_html_escape(analiz)}\n\n"
+                f"{_analiz_html_temizle(analiz)}\n\n"
                 f"{ANALIZ_FOOTER_HTML}"
             )
 
