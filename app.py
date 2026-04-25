@@ -3472,7 +3472,7 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>Hava</b> modu için <code>OPENWEATHER_API_KEY</code> (.env) gerekir.\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>📦 Abonelik Planları</b>\n"
-        "🆓 <b>Ücretsiz</b> — Günde 3 analiz hakkı\n"
+        f"🆓 <b>Ücretsiz</b> — Günde {ANALIZ_GUNLUK_LIMIT} analiz hakkı\n"
         "⚡ <b>Premium</b> — <b>$30/ay</b> · Sınırsız analiz + tüm modlar\n"
         "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
         "📩 Abone olmak için: @hasmetyildiz\n"
