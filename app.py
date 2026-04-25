@@ -3442,7 +3442,7 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>📖 Nasıl kullanılır?</b>\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
         "<b>/analiz</b> — Yeni bir analiz başlat\n"
-        "  ◆ <b>Okwis</b> — Tüm modları paralel tarar, ultra sade sonuç verir\n"
+        "  🔒 <b>Okwis</b> — Tüm modları paralel tarar, ultra sade sonuç verir <i>(Premium)</i>\n"
         "  ◈ <b>Tüm Modlar</b> — 8 moddan istediğini seç (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)\n\n"
         "<b>◆ Portföy Sistemi</b>\n"
         "<b>/portfoy</b> — Portföyünü görüntüle\n"
@@ -4062,20 +4062,25 @@ async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
             return ConversationHandler.END
 
-    klavye = [
-        [
-            InlineKeyboardButton("◆ Okwis — Tanrının Gözü", callback_data="mod_okwis"),
-        ],
-        [
-            InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar"),
-        ],
-    ]
-    reply_markup = InlineKeyboardMarkup(klavye)
+    pro_mu = _kullanici_pro_mu(user_id) if user_id else False
 
-    await update.message.reply_text(
-        "Nasıl analiz yapalım?",
-        reply_markup=reply_markup
-    )
+    if pro_mu:
+        # Pro/Claude: Okwis butonu aktif
+        klavye = [
+            [InlineKeyboardButton("◆ Okwis — Tanrının Gözü", callback_data="mod_okwis")],
+            [InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar")],
+        ]
+        alt_metin = "Nasıl analiz yapalım?"
+    else:
+        # Free: Okwis kilitli, sadece Tüm Modlar aktif
+        klavye = [
+            [InlineKeyboardButton("🔒 Okwis — Tanrının Gözü (Premium)", callback_data="okwis_kilitli")],
+            [InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar")],
+        ]
+        alt_metin = "Nasıl analiz yapalım?"
+
+    reply_markup = InlineKeyboardMarkup(klavye)
+    await update.message.reply_text(alt_metin, reply_markup=reply_markup)
     return MOD_SECIMI
 
 
@@ -4087,6 +4092,35 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if query.data == "yakinda":
         await query.edit_message_text("◆ Bu mod yakında geliyor. /analiz ile tekrar dene.")
         return ConversationHandler.END
+
+    # Okwis kilitli butonu — free kullanıcı tıkladı
+    if query.data == "okwis_kilitli":
+        await query.answer(
+            "Bu özellik Premium ve Tam Güç planlarına özeldir.",
+            show_alert=True,
+        )
+        await query.edit_message_text(
+            "🔒 <b>Okwis — Tanrının Gözü</b> Premium özelliğidir.\n\n"
+            "8 modun tüm verisini aynı anda sentezleyen bu mod yalnızca ücretli planlarda kullanılabilir.\n\n"
+            "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz + Okwis modu\n"
+            "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI + Okwis modu\n\n"
+            "📩 Abone olmak için: @hasmetyildiz\n"
+            "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+            "Ücretsiz planda <b>◈ Tüm Modlar</b> ile 8 modu tek tek kullanabilirsin.",
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+        return ConversationHandler.END
+
+    # mod_okwis seçildi — pro kontrolü (direkt callback ile gelenler için)
+    if query.data == "mod_okwis":
+        user_id = update.effective_user.id if update.effective_user else None
+        if not _kullanici_pro_mu(user_id):
+            await query.answer(
+                "Bu özellik Premium ve Tam Güç planlarına özeldir.",
+                show_alert=True,
+            )
+            return ConversationHandler.END
 
     # Tüm Modlar menüsü — 8 mod ekranını göster
     if query.data == "menu_tum_modlar":
