@@ -2717,7 +2717,7 @@ def _karsilama_mesaji_html() -> str:
         "büyük resim faktörlerin piyasalara etkisini analiz ediyorum.\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>📦 Abonelik Planları</b>\n\n"
-        "🆓 <b>Ücretsiz</b> — Günde <b>3 analiz hakkı</b>\n"
+        f"🆓 <b>Ücretsiz</b> — Günde <b>{ANALIZ_GUNLUK_LIMIT} analiz hakkı</b>\n"
         "⚡ <b>Premium</b> — <b>$30/ay</b> · Sınırsız analiz + tüm modlar\n"
         "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
