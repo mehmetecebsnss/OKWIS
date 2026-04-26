@@ -2715,14 +2715,7 @@ def _karsilama_mesaji_html() -> str:
         "◆ Merhaba. Ben <b>Okwis AI</b>.\n\n"
         "Mevsimler, hava olayları, jeopolitik gelişmeler gibi "
         "büyük resim faktörlerin piyasalara etkisini analiz ediyorum.\n\n"
-        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "<b>📦 Abonelik Planları</b>\n\n"
-        f"🆓 <b>Ücretsiz</b> — Günde <b>{ANALIZ_GUNLUK_LIMIT} analiz hakkı</b>\n"
-        "⚡ <b>Premium</b> — <b>$30/ay</b> · Sınırsız analiz + tüm modlar\n"
-        "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
-        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-        "💳 <b>Abone olmak için:</b> @hasmetyildiz\n"
-        "👥 <b>Topluluk grubumuz:</b> <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+        f"🆓 Ücretsiz planınla günde <b>{ANALIZ_GUNLUK_LIMIT} analiz hakkın</b> var.\n\n"
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "Başlamak için <b>/analiz</b> yaz.\n"
         "Planını görmek için <b>/hesabim</b> yaz.\n"
@@ -3152,7 +3145,14 @@ async def profil_iptal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/start komutu — kullanıcıyı karşıla, oturum verisini temizle"""
     context.user_data.clear()
-    await update.message.reply_text(_karsilama_mesaji_html(), parse_mode=ParseMode.HTML)
+    klavye = InlineKeyboardMarkup([
+        [InlineKeyboardButton("💎 Abonelik Planları", callback_data="abonelik_goster")],
+    ])
+    await update.message.reply_text(
+        _karsilama_mesaji_html(),
+        parse_mode=ParseMode.HTML,
+        reply_markup=klavye,
+    )
 
 
 async def start_ve_konusmayi_bitir(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3258,6 +3258,69 @@ async def okwis_detay_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE
     
     await gonder_parcali_html(query, context, mesaj, reply_markup=reply_markup)
     return ConversationHandler.END
+
+
+def _abonelik_mesaji_html() -> str:
+    """Abonelik planları mesajı — şık kart formatı"""
+    return (
+        "◆ <b>Okwis Abonelik Planları</b>\n"
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+
+        "⚡ <b>PREMIUM</b>  ·  <b>$60 / ay</b>\n"
+        "◈ Sınırsız analiz\n"
+        "◈ Tüm 8 mod + Okwis — Tanrının Gözü\n"
+        "◈ Portföy takibi ve kişisel profil\n"
+        "◈ Alarm bildirimleri\n\n"
+
+        "🔥 <b>TAM GÜÇ</b>  ·  <b>$80 / ay</b>\n"
+        "◈ Premium'un tüm özellikleri\n"
+        "◈ Claude AI motoru (en güçlü analiz)\n"
+        "◈ Öncelikli destek\n"
+        "◈ PDF rapor çıktısı\n\n"
+
+        "🔥 <b>TAM GÜÇ — 2 AYLIK</b>  ·  <b>$100</b>\n"
+        "◈ Tam Güç'ün tüm özellikleri\n"
+        "◈ 2 ay kesintisiz erişim\n"
+        "◈ <i>Aylığa vurursak $50 — $30 tasarruf</i>\n\n"
+
+        "👑 <b>TAM GÜÇ — YILLIK</b>  ·  <b>$399 / yıl</b>\n"
+        "◈ Tam Güç'ün tüm özellikleri\n"
+        "◈ 12 ay kesintisiz erişim\n"
+        "◈ <i>Aylığa vurursak $33 — en avantajlı plan</i>\n"
+        "◈ Yeni özellikler öncelikli erişim\n\n"
+
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
+        "📩 <b>Abone olmak için doğrudan yaz:</b>\n"
+        "👉 @hasmetyildiz\n\n"
+        "👥 <b>Topluluğumuza katıl:</b>\n"
+        "👉 <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis topluluğu</a>\n\n"
+        "<i>Ödeme sonrası planın aynı gün aktif edilir.</i>"
+    )
+
+
+async def abonelik_goster(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Abonelik planlarını göster — buton veya /abonelik komutu"""
+    klavye = InlineKeyboardMarkup([
+        [InlineKeyboardButton("📩 Abone ol → @hasmetyildiz", url="https://t.me/hasmetyildiz")],
+        [InlineKeyboardButton("👥 Topluluğa katıl", url="https://t.me/+ztlxRCC7UspmZTY0")],
+    ])
+
+    if update.callback_query:
+        query = update.callback_query
+        await query.answer()
+        await query.message.reply_text(
+            _abonelik_mesaji_html(),
+            parse_mode=ParseMode.HTML,
+            reply_markup=klavye,
+            disable_web_page_preview=True,
+        )
+    else:
+        await update.message.reply_text(
+            _abonelik_mesaji_html(),
+            parse_mode=ParseMode.HTML,
+            reply_markup=klavye,
+            disable_web_page_preview=True,
+        )
 
 
 async def kalite_karti_goster(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -3473,7 +3536,7 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>📦 Abonelik Planları</b>\n"
         f"🆓 <b>Ücretsiz</b> — Günde {ANALIZ_GUNLUK_LIMIT} analiz hakkı\n"
-        "⚡ <b>Premium</b> — <b>$30/ay</b> · Sınırsız analiz + tüm modlar\n"
+        "⚡ <b>Premium</b> — <b>$60/ay</b> · Sınırsız analiz + tüm modlar\n"
         "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
         "📩 Abone olmak için: @hasmetyildiz\n"
         "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
@@ -3859,16 +3922,17 @@ async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         yukseltme_satiri = (
             "\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
             "🔥 <b>Tam Güç'e yükselt:</b> $80/ay · Claude AI + öncelikli destek\n"
-            "📩 Yükseltmek için: @hasmetyildiz"
+            "📩 Yükseltmek için: @hasmetyildiz · Planlar: /abonelik"
         )
     else:
         plan_satiri = "🆓 Ücretsiz"
         pro_satiri = f"Kalan günlük hak: <b>{max(0, ANALIZ_GUNLUK_LIMIT - gunluk)}/{ANALIZ_GUNLUK_LIMIT}</b>"
         yukseltme_satiri = (
             "\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
-            "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz + tüm modlar\n"
-            "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
+            "⚡ <b>Premium</b> — $60/ay · Sınırsız analiz + tüm modlar\n"
+            "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI\n\n"
             "📩 Abone olmak için: @hasmetyildiz\n"
+            "📋 Tüm planlar: /abonelik\n"
             "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>"
         )
 
@@ -4051,8 +4115,8 @@ async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
             await update.message.reply_text(
                 (
                     f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
-                    "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz\n"
-                    "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI\n\n"
+                    "Daha fazla analiz için bir plan seç:\n"
+                    "� /abonelik — tüm planları gör\n\n"
                     "📩 Abone olmak için: @hasmetyildiz\n"
                     "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
                     "Yarın tekrar ücretsiz deneyebilirsin."
@@ -4102,8 +4166,7 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         await query.edit_message_text(
             "🔒 <b>Okwis — Tanrının Gözü</b> Premium özelliğidir.\n\n"
             "8 modun tüm verisini aynı anda sentezleyen bu mod yalnızca ücretli planlarda kullanılabilir.\n\n"
-            "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz + Okwis modu\n"
-            "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI + Okwis modu\n\n"
+            "📋 Tüm planları görmek için: /abonelik\n\n"
             "📩 Abone olmak için: @hasmetyildiz\n"
             "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
             "Ücretsiz planda <b>◈ Tüm Modlar</b> ile 8 modu tek tek kullanabilirsin.",
@@ -4302,8 +4365,8 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             await query.edit_message_text(
                 (
                     f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
-                    "⚡ <b>Premium</b> — $30/ay · Sınırsız analiz\n"
-                    "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI\n\n"
+                    "Daha fazla analiz için bir plan seç:\n"
+                    "� /abonelik — tüm planları gör\n\n"
                     "📩 Abone olmak için: @hasmetyildiz\n"
                     "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
                     "Yarın tekrar ücretsiz deneyebilirsin."
@@ -4885,6 +4948,7 @@ def main():
     app.add_handler(CommandHandler("start", start))
     app.add_handler(CommandHandler("yardim", yardim))
     app.add_handler(CommandHandler("hesabim", hesabim))
+    app.add_handler(CommandHandler("abonelik", abonelik_goster))
     app.add_handler(CommandHandler("performans", performans))
     app.add_handler(CommandHandler("gecmis", gecmis))
     app.add_handler(CommandHandler("backtest", backtest))
@@ -4905,6 +4969,9 @@ def main():
 
     # Kalite kartı butonu handler
     app.add_handler(CallbackQueryHandler(kalite_karti_goster, pattern="^show_quality_card$"))
+
+    # Abonelik planları butonu handler
+    app.add_handler(CallbackQueryHandler(abonelik_goster, pattern="^abonelik_goster$"))
     
     # Okwis görseller butonu handler
     app.add_handler(CallbackQueryHandler(okwis_gorseller_goster, pattern="^okwis_gorseller$"))

@@ -34,6 +34,128 @@ Bunu yaparken sıradan bir finans botundan farklı bir yol izler: piyasayı sade
 - İkincil sembol: **◈** (içi boş elmas) — alt modlar ve detay seçenekleri için
 - Renk paleti: Koyu zemin, altın/sarı vurgu, minimal beyaz metin (premium, ciddi, güvenilir his)
 
+---
+
+## 2B. GÖRSEL KİMLİK — RENK PALETİ & TİPOGRAFİ
+
+### Renk Paleti
+
+| Rol | İsim | HEX | Kullanım |
+|-----|------|-----|----------|
+| **Ana Zemin** | Obsidian Black | `#0D0D0D` | Tüm post arka planları, ana zemin |
+| **İkincil Zemin** | Charcoal | `#1A1A1A` | Kart içi arka plan, bölüm ayırıcı |
+| **Üçüncül Zemin** | Dark Slate | `#242424` | Hover, vurgu kutusu, alıntı arka planı |
+| **Ana Vurgu** | Matte Gold | `#C9A84C` | Başlıklar, ◆ sembolü, CTA butonları |
+| **İkincil Vurgu** | Pale Gold | `#E8D5A3` | Alt başlıklar, önemli kelimeler |
+| **Üçüncül Vurgu** | Deep Gold | `#8B6914` | Gölge, derinlik, ince çizgiler |
+| **Ana Metin** | Off White | `#F0EDE8` | Gövde metni, açıklamalar |
+| **İkincil Metin** | Warm Gray | `#9E9A94` | Tarih, kaynak, küçük notlar |
+| **Ayırıcı** | Dark Gold Line | `#3D3020` | Bölüm çizgileri, border |
+
+#### Renk Kullanım Kuralları
+- Zemin her zaman **koyu mat** — parlak veya gradient zemin kullanılmaz
+- Altın rengi **vurgu** içindir, zemin olarak kullanılmaz
+- Beyaz (`#FFFFFF`) kullanılmaz — yerine Off White (`#F0EDE8`) kullanılır
+- Kırmızı, mavi, yeşil gibi renkler yalnızca **veri gösterimi** için (AL=yeşil, SAT=kırmızı) kullanılabilir, marka rengi değildir
+
+---
+
+### Tipografi
+
+#### Birincil Font — Anton
+- **Kullanım:** Ana başlıklar, büyük slogan metinleri, sayılar
+- **Stil:** Tüm büyük harf (ALL CAPS), sıkı letter-spacing (-0.02em)
+- **Ağırlık:** Regular (Anton tek ağırlıklı bir fonttur, zaten bold görünür)
+- **Boyut rehberi:**
+  - Hero başlık: 64–80px
+  - Bölüm başlığı: 36–48px
+  - Vurgu kelimesi: 24–32px
+- **Renk:** Matte Gold `#C9A84C` veya Off White `#F0EDE8`
+- **Google Fonts:** `https://fonts.google.com/specimen/Anton`
+
+#### İkincil Font — Barlow Condensed
+- **Kullanım:** Alt başlıklar, gövde metni, açıklamalar, buton metinleri
+- **Neden:** Anton ile aynı dar/condensed DNA'yı paylaşır, güçlü ama okunabilir
+- **Ağırlıklar:** SemiBold (600) alt başlık için, Regular (400) gövde için
+- **Boyut rehberi:**
+  - Alt başlık: 18–22px, SemiBold
+  - Gövde metni: 14–16px, Regular
+  - Küçük not/tarih: 11–12px, Regular, Warm Gray
+- **Letter-spacing:** 0.03–0.05em (hafif açık, okunabilirlik için)
+- **Renk:** Off White `#F0EDE8` veya Warm Gray `#9E9A94`
+- **Google Fonts:** `https://fonts.google.com/specimen/Barlow+Condensed`
+
+#### Font Kombinasyon Kuralı
+```
+ANTON (büyük harf, altın)     ← dikkat çeker
+Barlow Condensed (normal)     ← bilgi verir
+```
+Anton asla küçük harfle kullanılmaz. Barlow Condensed asla ALL CAPS başlık olarak kullanılmaz.
+
+---
+
+### Görsel Kompozisyon Kuralları
+
+#### Post Yapısı (Instagram/Twitter kare format — 1080x1080)
+```
+┌─────────────────────────────┐
+│  ◆ OKWIS          [tarih]   │  ← Header: logo sembolü + tarih (Barlow, Warm Gray)
+│─────────────────────────────│  ← Altın çizgi ayırıcı
+│                             │
+│   BAŞLIK METNİ              │  ← Anton, Matte Gold, büyük
+│   (1-2 satır max)           │
+│                             │
+│   Açıklama veya analiz      │  ← Barlow Condensed, Off White
+│   metni buraya gelir.       │
+│   Kısa, net, somut.         │
+│                             │
+│─────────────────────────────│  ← Altın çizgi ayırıcı
+│  @hasmetyildiz  t.me/okwis  │  ← Footer: CTA (Barlow, Pale Gold)
+└─────────────────────────────┘
+```
+
+#### Story Format (1080x1920)
+- Üst 1/3: Başlık (Anton, büyük)
+- Orta 1/3: İçerik (Barlow Condensed)
+- Alt 1/3: CTA + logo
+
+#### Grafik Elementler
+- **◆ sembolü** her postta mutlaka bulunur — sol üst köşe veya başlık önünde
+- **Altın yatay çizgi** (`#C9A84C`, 1-2px) bölüm ayırıcı olarak kullanılır
+- **Glow efekti** — altın rengi üzerine çok hafif dış ışıma (blur: 8px, opacity: 0.3) kullanılabilir
+- **Gradient** yasak — düz mat renkler kullanılır
+- **Fotoğraf** kullanılmaz — tamamen tipografi ve geometri bazlı tasarım
+
+---
+
+### Renk + Font Kombinasyon Örnekleri
+
+**Örnek 1 — Güçlü Slogan Postu**
+```
+Zemin: #0D0D0D
+Başlık (Anton): "TANRININ GÖZÜ" → #C9A84C
+Alt metin (Barlow): "8 mod. 1 karar." → #F0EDE8
+◆ sembolü: #C9A84C
+```
+
+**Örnek 2 — Analiz Çıktısı Postu**
+```
+Zemin: #1A1A1A
+Bölüm başlığı (Anton): "POZİSYON" → #C9A84C
+İçerik (Barlow SemiBold): "BTC — AL" → #F0EDE8
+Fiyat (Barlow Regular): "$62.000 giriş / $71.000 hedef" → #E8D5A3
+Uyarı (Barlow Regular): "Stop: $59.500" → #9E9A94
+```
+
+**Örnek 3 — Abonelik CTA Postu**
+```
+Zemin: #0D0D0D
+Başlık (Anton): "GÜNDE 1 ÜCRETSİZ" → #F0EDE8
+Vurgu (Anton): "$30/AY" → #C9A84C
+Alt metin (Barlow): "Sınırsız analiz. Tüm modlar." → #9E9A94
+CTA (Barlow SemiBold): "@hasmetyildiz" → #C9A84C
+```
+
 ### Ne Değildir
 - Okwis bir kripto botu değildir (kripto dahil her varlığı analiz eder ama sadece kripto odaklı değildir)
 - Okwis bir sinyal servisi değildir (sinyal değil, bağlamsal analiz verir)
