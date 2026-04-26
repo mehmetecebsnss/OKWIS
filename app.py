@@ -1,4 +1,4 @@
-"""
+﻿"""
 Okwis AI — Telegram Yatırım Asistanı
 8 analiz modu (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)
 + Okwis — Tanrının Gözü (tüm modların birleşimi, ultra sade çıktı).
@@ -1283,6 +1283,119 @@ def _tahmin_istatistik() -> dict:
     oran = (len(dogru) / len(dogrulanan) * 100) if dogrulanan else None
     return {"toplam": toplam, "dogrulanan": len(dogrulanan),
             "dogru": len(dogru), "yanlis": len(yanlis), "oran": oran}
+
+
+def _tahmin_otomatik_dogrula() -> int:
+    """
+    Hedef tarihi geçmiş ve henüz doğrulanmamış tahminleri gerçek fiyatla karşılaştır.
+    Döner: doğrulanan tahmin sayısı.
+    """
+    if not _TAHMIN_KAYIT_PATH.exists():
+        return 0
+
+    try:
+        from fiyat_servisi import sembol_tespit, kripto_fiyat_al, hisse_fiyat_al
+        from fiyat_servisi import kripto_gecmis_al, hisse_gecmis_al
+    except ImportError:
+        return 0
+
+    bugun = date.today()
+    kayitlar = []
+    try:
+        with open(_TAHMIN_KAYIT_PATH, encoding="utf-8") as f:
+            for satir in f:
+                s = satir.strip()
+                if s:
+                    try:
+                        kayitlar.append(json.loads(s))
+                    except json.JSONDecodeError:
+                        pass
+    except Exception:
+        return 0
+
+    degistirilen = 0
+    for kayit in kayitlar:
+        # Zaten doğrulanmış veya varlık yok → atla
+        if kayit.get("dogrulandi") is not None:
+            continue
+        varlik = kayit.get("varlik", "")
+        if not varlik or varlik == "genel":
+            continue
+        # Hedef tarihi geçmiş mi?
+        hedef_str = kayit.get("hedef_tarih", "")
+        if not hedef_str:
+            continue
+        try:
+            hedef = date.fromisoformat(hedef_str)
+        except ValueError:
+            continue
+        if hedef > bugun:
+            continue  # Henüz zamanı gelmemiş
+
+        # Tahmin tarihi ve hedef tarihi arasındaki fiyat değişimini bul
+        tahmin_tarih_str = kayit.get("tarih", "")
+        try:
+            tahmin_tarih = date.fromisoformat(tahmin_tarih_str)
+        except ValueError:
+            continue
+
+        gun_farki = (hedef - tahmin_tarih).days
+        if gun_farki < 1:
+            continue
+
+        # Gerçek fiyat verisini çek
+        try:
+            tespit = sembol_tespit(varlik)
+            if not tespit:
+                continue
+            tip, sembol = tespit
+            if tip == "kripto":
+                gecmis = kripto_gecmis_al(sembol, gun=min(gun_farki + 5, 90))
+            else:
+                gecmis = hisse_gecmis_al(sembol, gun=min(gun_farki + 5, 90))
+
+            if not gecmis or len(gecmis) < 2:
+                continue
+
+            # Tahmin tarihine en yakın fiyat (başlangıç)
+            baslangic_fiyat = gecmis[0][1]
+            # Hedef tarihine en yakın fiyat (bitiş)
+            bitis_fiyat = gecmis[-1][1]
+
+            if baslangic_fiyat <= 0:
+                continue
+
+            gercek_degisim = (bitis_fiyat - baslangic_fiyat) / baslangic_fiyat * 100
+            gercek_yon = "bullish" if gercek_degisim > 1 else ("bearish" if gercek_degisim < -1 else "neutral")
+
+            tahmin_yon = kayit.get("yon", "neutral")
+            dogru = (tahmin_yon == gercek_yon) or (
+                tahmin_yon == "bullish" and gercek_degisim > 0
+            ) or (
+                tahmin_yon == "bearish" and gercek_degisim < 0
+            )
+
+            kayit["dogrulandi"] = dogru
+            kayit["gercek_yon"] = gercek_yon
+            kayit["gercek_degisim_yuzde"] = round(gercek_degisim, 2)
+            kayit["dogrulama_tarihi"] = bugun.isoformat()
+            degistirilen += 1
+
+        except Exception as e:
+            logger.warning("Tahmin doğrulama hatası (%s): %s", varlik, e)
+            continue
+
+    # Güncellenmiş kayıtları geri yaz
+    if degistirilen > 0:
+        try:
+            with open(_TAHMIN_KAYIT_PATH, "w", encoding="utf-8") as f:
+                for kayit in kayitlar:
+                    f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
+            logger.info("Tahmin otomatik doğrulama: %d tahmin güncellendi", degistirilen)
+        except Exception as e:
+            logger.warning("Tahmin dosyası yazılamadı: %s", e)
+
+    return degistirilen
 
 
 def _gecmis_tahminler_html(son_n: int = 10) -> str:
@@ -3630,6 +3743,14 @@ async def fiyat_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def performans(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/performans — canlı güven skoru özet paneli + tahmin istatistiği"""
+    # Önce otomatik doğrulama çalıştır
+    try:
+        guncellenen = await asyncio.to_thread(_tahmin_otomatik_dogrula)
+        if guncellenen > 0:
+            logger.info("Performans: %d tahmin otomatik doğrulandı", guncellenen)
+    except Exception as e:
+        logger.warning("Otomatik doğrulama hatası: %s", e)
+
     guven_metni = _performans_ozeti_hesapla()
     istat = _tahmin_istatistik()
     if istat["toplam"] > 0:

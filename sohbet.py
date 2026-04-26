@@ -270,6 +270,86 @@ def _gtts(metin: str) -> bytes:
     return buf.read()
 
 
+def _fiyat_baglam_olustur(mesaj: str) -> str:
+    """
+    Mesajda geçen varlık için gerçek zamanlı fiyat + 30 günlük trend özeti üret.
+    Sohbet sistemine bağlam olarak eklenir.
+    """
+    try:
+        from fiyat_servisi import sembol_tespit, kripto_fiyat_al, hisse_fiyat_al
+        from fiyat_servisi import kripto_gecmis_al, hisse_gecmis_al
+        import statistics
+
+        tespit = sembol_tespit(mesaj)
+        if not tespit:
+            return ""
+
+        tip, sembol = tespit
+
+        if tip == "kripto":
+            bilgi = kripto_fiyat_al(sembol)
+            gecmis = kripto_gecmis_al(sembol, gun=30)
+            para = "USD"
+        else:
+            bilgi = hisse_fiyat_al(sembol)
+            gecmis = hisse_gecmis_al(sembol, gun=30)
+            para = bilgi.get("para_birimi", "USD") if bilgi else "USD"
+
+        if not bilgi:
+            return ""
+
+        isim = bilgi.get("isim") or bilgi.get("sembol") or sembol
+        fiyat = bilgi.get("fiyat_usd") or bilgi.get("fiyat")
+        yuksek = bilgi.get("yuksek_24s") or bilgi.get("yuksek_gun")
+        dusuk = bilgi.get("dusuk_24s") or bilgi.get("dusuk_gun")
+        degisim_24s = bilgi.get("degisim_24s") or bilgi.get("degisim_yuzde")
+
+        satirlar = [
+            f"[GERÇEK ZAMANLI FİYAT BİLGİSİ — {isim}]",
+            f"Anlık Fiyat: {fiyat:.4f} {para}" if fiyat else "",
+            f"24s Yüksek: {yuksek:.4f} {para}" if yuksek else "",
+            f"24s Düşük: {dusuk:.4f} {para}" if dusuk else "",
+            f"24s Değişim: {degisim_24s:+.2f}%" if degisim_24s is not None else "",
+        ]
+
+        # 30 günlük trend analizi
+        if gecmis and len(gecmis) >= 7:
+            degerler = [f[1] for f in gecmis]
+            en_yuksek = max(degerler)
+            en_dusuk = min(degerler)
+            ilk = degerler[0]
+            son = degerler[-1]
+            degisim_30g = ((son - ilk) / ilk) * 100 if ilk > 0 else 0
+            ort = statistics.mean(degerler)
+            # Destek/direnç: son 30 günün %20'lik alt/üst bantları
+            degerler_sirali = sorted(degerler)
+            n = len(degerler_sirali)
+            destek = statistics.mean(degerler_sirali[:max(1, n//5)])
+            direnc = statistics.mean(degerler_sirali[max(0, n - n//5):])
+            # Trend yönü
+            son_7 = degerler[-7:]
+            trend = "YUKARI" if son_7[-1] > son_7[0] else "AŞAĞI"
+            trend_guc = abs((son_7[-1] - son_7[0]) / son_7[0] * 100) if son_7[0] > 0 else 0
+
+            satirlar += [
+                "",
+                "[30 GÜNLÜK TREND ANALİZİ]",
+                f"30g Değişim: {degisim_30g:+.2f}%",
+                f"30g En Yüksek: {en_yuksek:.4f} {para}",
+                f"30g En Düşük: {en_dusuk:.4f} {para}",
+                f"30g Ortalama: {ort:.4f} {para}",
+                f"Tahmini Destek Bölgesi: {destek:.4f} {para}",
+                f"Tahmini Direnç Bölgesi: {direnc:.4f} {para}",
+                f"Son 7 Gün Trendi: {trend} ({trend_guc:.1f}%)",
+                "NOT: Bu veriler gerçek zamanlıdır. Analizinde bu fiyatları kullan.",
+            ]
+
+        return "\n".join(s for s in satirlar if s)
+
+    except Exception as e:
+        logger.warning("Fiyat bağlam oluşturma hatası: %s", e)
+        return ""
+
 # ── LLM Sohbet ────────────────────────────────────────────────────────────────
 
 def sohbet_cevabi_uret(
@@ -279,7 +359,7 @@ def sohbet_cevabi_uret(
 ) -> str:
     """
     Kullanıcı mesajına doğal, kısa cevap üret.
-    Sohbet geçmişini ve profil bilgisini kullanır.
+    Sohbet geçmişini, profil bilgisini ve gerçek zamanlı fiyat verisini kullanır.
     """
     now = datetime.now()
     aylar = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran",
@@ -303,12 +383,17 @@ def sohbet_cevabi_uret(
             satirlar.append(f"{rol}: {m['icerik']}")
         gecmis_metni = "\nÖnceki konuşma:\n" + "\n".join(satirlar) + "\n"
 
+    # Gerçek zamanlı fiyat bağlamı — mesajda varlık varsa ekle
+    fiyat_baglam = _fiyat_baglam_olustur(kullanici_mesaji)
+    fiyat_metni = f"\n{fiyat_baglam}\n" if fiyat_baglam else ""
+
     sistem = f"""Sen Okwis AI'sın — kıdemli makro yatırım analisti ve kullanıcının yakın danışmanı.
 Bugün: {tarih_str}
-{profil_metni}{gecmis_metni}
+{profil_metni}{gecmis_metni}{fiyat_metni}
 Kurallar:
 - Kısa ve doğal konuş. Arkadaş gibi, resmi değil.
 - Profil bilgisi varsa "senin portföyün", "elindeki X" diye sahiplen.
+- Fiyat verisi verilmişse MUTLAKA o gerçek fiyatları kullan, asla uydurma.
 - Finans sorusu değilse de yardımcı ol ama kısa tut.
 - Markdown kullanma. Düz metin yaz.
 - Türkçe yaz."""
