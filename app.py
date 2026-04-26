@@ -7,6 +7,7 @@ Okwis AI — Telegram Yatırım Asistanı
 import asyncio
 from collections import defaultdict
 import html
+import io
 import json
 import logging
 import os
@@ -2540,6 +2541,37 @@ def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", pr
         import logging as _lg
         _lg.getLogger(__name__).warning("Okwis Tavily araması başarısız: %s", _e)
 
+    # Varlık varsa gerçek zamanlı fiyat verisini bağlama ekle
+    if varlik and varlik.strip():
+        try:
+            from fiyat_servisi import sembol_tespit, kripto_fiyat_al, hisse_fiyat_al
+            tespit = sembol_tespit(varlik)
+            if tespit:
+                tip, sembol = tespit
+                if tip == "kripto":
+                    fiyat_bilgi = kripto_fiyat_al(sembol)
+                else:
+                    fiyat_bilgi = hisse_fiyat_al(sembol)
+                if fiyat_bilgi:
+                    fiyat = fiyat_bilgi.get("fiyat_usd") or fiyat_bilgi.get("fiyat")
+                    yuksek = fiyat_bilgi.get("yuksek_24s") or fiyat_bilgi.get("yuksek_gun")
+                    dusuk = fiyat_bilgi.get("dusuk_24s") or fiyat_bilgi.get("dusuk_gun")
+                    degisim = fiyat_bilgi.get("degisim_24s") or fiyat_bilgi.get("degisim_yuzde")
+                    para = fiyat_bilgi.get("para_birimi", "USD")
+                    fiyat_blok = (
+                        f"[GERÇEK ZAMANLI FİYAT VERİSİ — {varlik.upper()}]\n"
+                        f"Anlık Fiyat: {fiyat:.4f} {para}\n"
+                        f"Gün İçi Yüksek: {yuksek:.4f} {para}\n"
+                        f"Gün İçi Düşük: {dusuk:.4f} {para}\n"
+                        f"24s Değişim: {degisim:+.2f}%\n"
+                        f"Kaynak: {'CoinGecko' if tip == 'kripto' else 'Yahoo Finance'}\n"
+                        "NOT: Bu fiyat verileri gerçek zamanlıdır. Analizde bu fiyatları kullan, uydurma."
+                    )
+                    birlestik_baglam = fiyat_blok + "\n\n" + birlestik_baglam
+        except Exception as _fe:
+            import logging as _lg2
+            _lg2.getLogger(__name__).warning("Okwis fiyat verisi eklenemedi: %s", _fe)
+
     profil_blogu = _profil_okwis_blogu(profil)
 
     # Portföy bloğunu da ekle (profil bloğundan öncelikli — daha yapılandırılmış)
@@ -3544,6 +3576,56 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<i>Yatırım kararı için kendi araştırmanı yap.</i>"
     )
     await update.message.reply_text(mesaj, parse_mode=ParseMode.HTML)
+
+
+async def fiyat_komut(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/fiyat <varlık> — gerçek zamanlı fiyat + grafik"""
+    if not context.args:
+        await update.message.reply_text(
+            "Kullanım: <code>/fiyat bitcoin</code> veya <code>/fiyat THYAO</code> veya <code>/fiyat altın</code>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    sorgu = " ".join(context.args).strip()
+    await context.bot.send_chat_action(
+        chat_id=update.effective_chat.id, action="typing"
+    )
+
+    try:
+        from fiyat_servisi import fiyat_sorgula, sembol_tespit
+        # Direkt sembol sorgula (fiyat sorusu filtresi olmadan)
+        tespit = sembol_tespit(sorgu)
+        if not tespit:
+            await update.message.reply_text(
+                f"◆ <b>{sorgu}</b> için veri bulunamadı.\n\n"
+                "Desteklenen varlıklar: BTC, ETH, altın, dolar, THYAO, AAPL vb.\n"
+                "Örnek: <code>/fiyat bitcoin</code>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+
+        sonuc = await asyncio.to_thread(fiyat_sorgula, sorgu)
+        if sonuc:
+            if sonuc.get("grafik"):
+                await update.message.reply_photo(
+                    photo=io.BytesIO(sonuc["grafik"]),
+                    caption=sonuc["mesaj"],
+                    parse_mode=ParseMode.HTML,
+                )
+            else:
+                await update.message.reply_text(
+                    sonuc["mesaj"], parse_mode=ParseMode.HTML
+                )
+        else:
+            await update.message.reply_text(
+                f"◆ {sorgu} için şu an veri çekilemedi. Biraz sonra tekrar dene."
+            )
+    except Exception as e:
+        logger.warning("Fiyat komutu hatası: %s", e)
+        await update.message.reply_text(
+            "Fiyat verisi alınırken hata oluştu. Biraz sonra tekrar dene."
+        )
 
 
 async def performans(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -4744,7 +4826,7 @@ async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Yazılı mesajları yönet.
     Pro/Claude → niyet tespit et: analiz isteği mi sohbet mi?
-    Free → /analiz yönlendir.
+    Free → fiyat sorusu ise cevapla, değilse /analiz yönlendir.
     """
     if not update.message or not update.message.text:
         return
@@ -4753,7 +4835,32 @@ async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     if user_id is None:
         return
 
-    # Free kullanıcı → yönlendir
+    kullanici_mesaji = update.message.text.strip()
+
+    # ── Fiyat sorusu tespiti — tüm kullanıcılara açık ────────────────────────
+    try:
+        from fiyat_servisi import fiyat_sorusu_mu, fiyat_sorgula
+        if fiyat_sorusu_mu(kullanici_mesaji):
+            await context.bot.send_chat_action(
+                chat_id=update.effective_chat.id, action="typing"
+            )
+            sonuc = await asyncio.to_thread(fiyat_sorgula, kullanici_mesaji)
+            if sonuc:
+                if sonuc.get("grafik"):
+                    await update.message.reply_photo(
+                        photo=io.BytesIO(sonuc["grafik"]),
+                        caption=sonuc["mesaj"],
+                        parse_mode=ParseMode.HTML,
+                    )
+                else:
+                    await update.message.reply_text(
+                        sonuc["mesaj"], parse_mode=ParseMode.HTML
+                    )
+                return
+    except Exception as _fe:
+        logger.warning("Fiyat servisi hatası: %s", _fe)
+
+    # ── Free kullanıcı → yönlendir ────────────────────────────────────────────
     if not _kullanici_pro_mu(user_id):
         await update.message.reply_text(
             "Analiz başlatmak için /analiz yaz.\n"
@@ -4763,10 +4870,8 @@ async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     from sohbet import sohbet_cevabi_uret, gecmis_ekle
-    kullanici_mesaji = update.message.text.strip()
     profil = _kullanici_profili_al(user_id)
 
-    # Direkt sohbet modu - komut algılama kaldırıldı
     gecmis_ekle(user_id, "user", kullanici_mesaji)
 
     await context.bot.send_chat_action(
@@ -4949,6 +5054,7 @@ def main():
     app.add_handler(CommandHandler("yardim", yardim))
     app.add_handler(CommandHandler("hesabim", hesabim))
     app.add_handler(CommandHandler("abonelik", abonelik_goster))
+    app.add_handler(CommandHandler("fiyat", fiyat_komut))
     app.add_handler(CommandHandler("performans", performans))
     app.add_handler(CommandHandler("gecmis", gecmis))
     app.add_handler(CommandHandler("backtest", backtest))
