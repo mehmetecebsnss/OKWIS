@@ -3323,7 +3323,7 @@ def _abonelik_mesaji_html() -> str:
 
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "📩 <b>Abone olmak için doğrudan yaz:</b>\n"
-        "👉 @hasmetyildiz\n\n"
+        "👉 @mehmethaneceye\n\n"
         "👥 <b>Topluluğumuza katıl:</b>\n"
         "👉 <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis topluluğu</a>\n\n"
         "<i>Ödeme sonrası planın aynı gün aktif edilir.</i>"
@@ -3333,7 +3333,7 @@ def _abonelik_mesaji_html() -> str:
 async def abonelik_goster(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Abonelik planlarını göster — buton veya /abonelik komutu"""
     klavye = InlineKeyboardMarkup([
-        [InlineKeyboardButton("📩 Abone ol → @hasmetyildiz", url="https://t.me/hasmetyildiz")],
+        [InlineKeyboardButton("📩 Abone ol → @mehmethaneceye", url="https://t.me/mehmethaneceye")],
         [InlineKeyboardButton("👥 Topluluğa katıl", url="https://t.me/+ztlxRCC7UspmZTY0")],
     ])
 
@@ -3570,7 +3570,7 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         f"🆓 <b>Ücretsiz</b> — Günde {ANALIZ_GUNLUK_LIMIT} analiz hakkı\n"
         "⚡ <b>Premium</b> — <b>$60/ay</b> · Sınırsız analiz + tüm modlar\n"
         "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
-        "📩 Abone olmak için: @hasmetyildiz\n"
+        "📩 Abone olmak için: @mehmethaneceye\n"
         "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
         f"<i>Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</i>\n"
         "<i>Yatırım kararı için kendi araştırmanı yap.</i>"
@@ -4004,7 +4004,7 @@ async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         yukseltme_satiri = (
             "\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
             "🔥 <b>Tam Güç'e yükselt:</b> $80/ay · Claude AI + öncelikli destek\n"
-            "📩 Yükseltmek için: @hasmetyildiz · Planlar: /abonelik"
+            "📩 Yükseltmek için: @mehmethaneceye · Planlar: /abonelik"
         )
     else:
         plan_satiri = "🆓 Ücretsiz"
@@ -4013,7 +4013,7 @@ async def hesabim(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "\n<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
             "⚡ <b>Premium</b> — $60/ay · Sınırsız analiz + tüm modlar\n"
             "🔥 <b>Tam Güç</b> — $80/ay · Sınırsız analiz + Claude AI\n\n"
-            "📩 Abone olmak için: @hasmetyildiz\n"
+            "📩 Abone olmak için: @mehmethaneceye\n"
             "📋 Tüm planlar: /abonelik\n"
             "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>"
         )
@@ -4199,7 +4199,7 @@ async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
                     f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
                     "Daha fazla analiz için bir plan seç:\n"
                     "� /abonelik — tüm planları gör\n\n"
-                    "📩 Abone olmak için: @hasmetyildiz\n"
+                    "📩 Abone olmak için: @mehmethaneceye\n"
                     "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
                     "Yarın tekrar ücretsiz deneyebilirsin."
                 ),
@@ -4249,7 +4249,7 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             "🔒 <b>Okwis — Tanrının Gözü</b> Premium özelliğidir.\n\n"
             "8 modun tüm verisini aynı anda sentezleyen bu mod yalnızca ücretli planlarda kullanılabilir.\n\n"
             "📋 Tüm planları görmek için: /abonelik\n\n"
-            "📩 Abone olmak için: @hasmetyildiz\n"
+            "📩 Abone olmak için: @mehmethaneceye\n"
             "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
             "Ücretsiz planda <b>◈ Tüm Modlar</b> ile 8 modu tek tek kullanabilirsin.",
             parse_mode=ParseMode.HTML,
@@ -4449,7 +4449,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                     f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
                     "Daha fazla analiz için bir plan seç:\n"
                     "� /abonelik — tüm planları gör\n\n"
-                    "📩 Abone olmak için: @hasmetyildiz\n"
+                    "📩 Abone olmak için: @mehmethaneceye\n"
                     "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
                     "Yarın tekrar ücretsiz deneyebilirsin."
                 ),
