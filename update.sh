@@ -37,15 +37,28 @@ cd "$PROJE_DIZIN"
 # Git repo varsa pull yap, yoksa rsync ile güncelle
 if [ -d "$PROJE_DIZIN/.git" ]; then
     echo "    GitHub'dan çekiliyor..."
+    
+    # Metrics dosyalarını Git'ten kaldır (eğer track ediliyorsa)
+    git rm -r --cached metrics/ 2>/dev/null || true
+    
+    # Yerel değişiklikleri stash et
+    if ! git diff-index --quiet HEAD --; then
+        echo "    Yerel değişiklikler saklanıyor..."
+        git stash push -m "Auto-stash before update $(date +%Y%m%d_%H%M%S)"
+    fi
+    
+    # GitHub'dan güncellemeyi çek
     git pull origin main
+    
+    echo "    ✅ Kod güncellendi"
 else
     # push.sh ile gönderilmişse rsync ile güncelle
     SCRIPT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
     rsync -a --exclude='.env' --exclude='__pycache__' --exclude='*.pyc' \
         --exclude='.git' --exclude='metrics/' \
         "$SCRIPT_DIR/" "$PROJE_DIZIN/"
+    echo "    ✅ Kod güncellendi"
 fi
-echo "    OK"
 
 # ── 3. Bağımlılıkları güncelle ────────────────────────────
 echo "[3/5] Python paketleri güncelleniyor..."
