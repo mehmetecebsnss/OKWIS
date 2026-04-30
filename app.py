@@ -44,6 +44,12 @@ from alarm_sistemi import (
     ALARM_ARALIK_SANIYE,
 )
 from gorsel_olusturucu import gorsel_olusturucu_al
+from hizli_para_baglam import (
+    hizli_para_aktif_mi,
+    hizli_para_ayarla,
+    hizli_para_analizi,
+    hizli_para_html_formatla,
+)
 
 # ─── Kaynak Etiketleri (mod → kullanılan kaynaklar) ──────────────────────────
 _MOD_KAYNAKLARI: dict[str, list[str]] = {
@@ -3651,7 +3657,16 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
         "<b>/analiz</b> — Yeni bir analiz başlat\n"
         "  🔒 <b>Okwis</b> — Tüm modları paralel tarar, ultra sade sonuç verir <i>(Premium)</i>\n"
+        "  ⚡ <b>Hızlı Para Modu</b> — Agresif kısa vadeli trade önerileri (giriş, TP, SL, kaldıraç) <i>(Premium)</i>\n"
         "  ◈ <b>Tüm Modlar</b> — 8 moddan istediğini seç (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)\n\n"
+        "<b>◆ Hızlı Para Modu</b> <i>(Premium)</i>\n"
+        "Kısa vadeli (2-7 gün) trade setup'ları:\n"
+        "  • Net pozisyon (LONG/SHORT/BEKLE)\n"
+        "  • Giriş aralığı + 3 TP seviyesi\n"
+        "  • Stop loss + Risk/ödül oranı\n"
+        "  • Kaldıraç önerisi\n"
+        "Desteklenen: Kripto, Forex, Hisse, Emtia\n"
+        "Kullanım: /analiz → Hızlı Para → Açık → Varlık adı yaz (BTC, EUR/USD, AAPL)\n\n"
         "<b>◆ Portföy Sistemi</b>\n"
         "<b>/portfoy</b> — Portföyünü görüntüle\n"
         "<code>/portfoy ekle BTC 0.5</code> — Varlık ekle\n"
@@ -3670,7 +3685,8 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>◆ Analiz Geçmişi</b>\n"
         "<b>/performans</b> — Canlı güven skoru özeti + tahmin istatistikleri\n"
         "<b>/gecmis</b> — Son tahmin geçmişi (/gecmis 20 ile daha fazla gör)\n"
-        "<b>/backtest</b> — Geçmiş tahminlerin performans raporu (/backtest 30 ile daha fazla)\n\n"
+        "<b>/backtest</b> — Geçmiş tahminlerin performans raporu (/backtest 30 ile daha fazla)\n"
+        "  Premium kullanıcılar için Hızlı Para Modu backtest raporu da gösterilir\n\n"
         "<b>◆ Diğer</b>\n"
         "<b>/start</b> — Karşılama; analiz akışındaysan akışı kapatır\n"
         "<b>/cancel</b> — Analiz akışını iptal eder\n"
@@ -3681,8 +3697,8 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>━━━━━━━━━━━━━━━━━━━━</b>\n"
         "<b>📦 Abonelik Planları</b>\n"
         f"🆓 <b>Ücretsiz</b> — Günde {ANALIZ_GUNLUK_LIMIT} analiz hakkı\n"
-        "⚡ <b>Premium</b> — <b>$60/ay</b> · Sınırsız analiz + tüm modlar\n"
-        "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + öncelikli destek\n\n"
+        "⚡ <b>Premium</b> — <b>$60/ay</b> · Sınırsız analiz + tüm modlar + Hızlı Para Modu\n"
+        "🔥 <b>Tam Güç</b> — <b>$80/ay</b> · Sınırsız analiz + Claude AI + Hızlı Para Modu + öncelikli destek\n\n"
         "📩 Abone olmak için: @mehmethanece\n"
         "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
         f"<i>Bilgilendirme amaçlıdır; yatırım tavsiyesi değildir.</i>\n"
@@ -3790,7 +3806,12 @@ async def gecmis(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
 async def backtest(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/backtest [n] — backtest raporu (geçmiş tahminlerin performansı)"""
-    from backtest import backtest_raporu_html, performans_grafigi_olustur, detayli_analiz_grafigi_olustur
+    from backtest import (
+        backtest_raporu_html, performans_grafigi_olustur, detayli_analiz_grafigi_olustur,
+        hizli_para_raporu_html, hizli_para_performans_ozeti
+    )
+    
+    user_id = update.effective_user.id if update.effective_user else None
     
     n = 20
     if context.args:
@@ -3799,7 +3820,7 @@ async def backtest(update: Update, context: ContextTypes.DEFAULT_TYPE):
         except ValueError:
             n = 20
     
-    # Metin raporu
+    # Okwis/Modlar backtest raporu
     rapor = backtest_raporu_html(n)
     await update.message.reply_text(rapor, parse_mode=ParseMode.HTML)
     
@@ -3826,6 +3847,19 @@ async def backtest(update: Update, context: ContextTypes.DEFAULT_TYPE):
             )
     except Exception as e:
         logger.warning("Detaylı analiz grafiği oluşturulamadı: %s", e)
+    
+    # Hızlı Para Modu backtest (sadece Pro kullanıcılar için)
+    if _kullanici_pro_mu(user_id):
+        try:
+            hp_ozet = hizli_para_performans_ozeti()
+            if hp_ozet["toplam"] > 0:
+                hp_rapor = hizli_para_raporu_html(n)
+                await update.message.reply_text(
+                    hp_rapor,
+                    parse_mode=ParseMode.HTML,
+                )
+        except Exception as e:
+            logger.warning("Hızlı Para backtest raporu oluşturulamadı: %s", e)
 
 
 async def bildirim_ayar(update: Update, context: ContextTypes.DEFAULT_TYPE):
@@ -4332,16 +4366,18 @@ async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     pro_mu = _kullanici_pro_mu(user_id) if user_id else False
 
     if pro_mu:
-        # Pro/Claude: Okwis butonu aktif
+        # Pro/Claude: Okwis + Hızlı Para butonu aktif
         klavye = [
             [InlineKeyboardButton("◆ Okwis — Tanrının Gözü", callback_data="mod_okwis")],
+            [InlineKeyboardButton("⚡ Hızlı Para Modu", callback_data="mod_hizli_para")],
             [InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar")],
         ]
         alt_metin = "Nasıl analiz yapalım?"
     else:
-        # Free: Okwis kilitli, sadece Tüm Modlar aktif
+        # Free: Okwis ve Hızlı Para kilitli, sadece Tüm Modlar aktif
         klavye = [
             [InlineKeyboardButton("🔒 Okwis — Tanrının Gözü (Premium)", callback_data="okwis_kilitli")],
+            [InlineKeyboardButton("🔒 Hızlı Para Modu (Premium)", callback_data="hizli_para_kilitli")],
             [InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar")],
         ]
         alt_metin = "Nasıl analiz yapalım?"
@@ -4378,6 +4414,24 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return ConversationHandler.END
 
+    # Hızlı Para kilitli butonu — free kullanıcı tıkladı
+    if query.data == "hizli_para_kilitli":
+        await query.answer(
+            "Bu özellik Premium ve Tam Güç planlarına özeldir.",
+            show_alert=True,
+        )
+        await query.edit_message_text(
+            "🔒 <b>⚡ Hızlı Para Modu</b> Premium özelliğidir.\n\n"
+            "Agresif kısa vadeli trade önerileri (giriş, TP, SL, kaldıraç) yalnızca ücretli planlarda kullanılabilir.\n\n"
+            "📋 Tüm planları görmek için: /abonelik\n\n"
+            "📩 Abone olmak için: @mehmethanece\n"
+            "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+            "Ücretsiz planda <b>◈ Tüm Modlar</b> ile 8 modu tek tek kullanabilirsin.",
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+        return ConversationHandler.END
+
     # mod_okwis seçildi — pro kontrolü (direkt callback ile gelenler için)
     if query.data == "mod_okwis":
         user_id = update.effective_user.id if update.effective_user else None
@@ -4387,6 +4441,52 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 show_alert=True,
             )
             return ConversationHandler.END
+
+    # mod_hizli_para seçildi — toggle ekranı göster
+    if query.data == "mod_hizli_para":
+        user_id = update.effective_user.id if update.effective_user else None
+        if not _kullanici_pro_mu(user_id):
+            await query.answer(
+                "Bu özellik Premium ve Tam Güç planlarına özeldir.",
+                show_alert=True,
+            )
+            return ConversationHandler.END
+        
+        # Toggle ekranı
+        aktif = hizli_para_aktif_mi(user_id)
+        durum_emoji = "🟢" if aktif else "🔴"
+        durum_text = "AKTİF" if aktif else "KAPALI"
+        
+        klavye = [
+            [
+                InlineKeyboardButton("🟢 Açık", callback_data="hizli_para_on"),
+                InlineKeyboardButton("🔴 Kapalı", callback_data="hizli_para_off"),
+            ],
+            [InlineKeyboardButton("◀️ Geri", callback_data="menu_ana")],
+        ]
+        
+        await query.edit_message_text(
+            f"<b>⚡ HIZLI PARA MODU</b>\n\n"
+            f"Durum: {durum_emoji} <b>{durum_text}</b>\n\n"
+            f"<b>Bu mod ne yapar?</b>\n"
+            f"Agresif kısa vadeli trade önerileri (2-7 gün):\n"
+            f"  • Net pozisyon (LONG/SHORT/BEKLE)\n"
+            f"  • Giriş aralığı\n"
+            f"  • 3 TP seviyesi (kademeli kar al)\n"
+            f"  • Stop loss\n"
+            f"  • Risk/ödül oranı\n"
+            f"  • Kaldıraç önerisi\n\n"
+            f"<b>Nasıl kullanılır?</b>\n"
+            f"1. Modu AÇ\n"
+            f"2. Varlık adı yaz (BTC, EUR/USD, AAPL, XAUUSD)\n"
+            f"3. Analiz gelir (8 mod taranır)\n\n"
+            f"<b>⚠️ UYARI:</b> Yüksek riskli kısa vadeli işlemler.\n"
+            f"Stop loss MUTLAKA kullan. Portföyünün max %5'i ile işlem yap.\n\n"
+            f"<i>Yatırım tavsiyesi değildir.</i>",
+            reply_markup=InlineKeyboardMarkup(klavye),
+            parse_mode=ParseMode.HTML,
+        )
+        return MOD_SECIMI
 
     # Tüm Modlar menüsü — 8 mod ekranını göster
     if query.data == "menu_tum_modlar":
@@ -4405,6 +4505,63 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
             reply_markup=InlineKeyboardMarkup(klavye)
         )
         return MOD_SECIMI
+
+    # Ana menüye dön
+    if query.data == "menu_ana":
+        user_id = update.effective_user.id if update.effective_user else None
+        pro_mu = _kullanici_pro_mu(user_id) if user_id else False
+        
+        if pro_mu:
+            klavye = [
+                [InlineKeyboardButton("◆ Okwis — Tanrının Gözü", callback_data="mod_okwis")],
+                [InlineKeyboardButton("⚡ Hızlı Para Modu", callback_data="mod_hizli_para")],
+                [InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar")],
+            ]
+        else:
+            klavye = [
+                [InlineKeyboardButton("🔒 Okwis — Tanrının Gözü (Premium)", callback_data="okwis_kilitli")],
+                [InlineKeyboardButton("🔒 Hızlı Para Modu (Premium)", callback_data="hizli_para_kilitli")],
+                [InlineKeyboardButton("◈ Tüm Modlar", callback_data="menu_tum_modlar")],
+            ]
+        
+        await query.edit_message_text(
+            "Nasıl analiz yapalım?",
+            reply_markup=InlineKeyboardMarkup(klavye)
+        )
+        return MOD_SECIMI
+
+    # Hızlı Para Modu AÇ
+    if query.data == "hizli_para_on":
+        user_id = update.effective_user.id if update.effective_user else None
+        hizli_para_ayarla(user_id, True)
+        await query.answer("⚡ Hızlı Para Modu AKTİF!", show_alert=False)
+        await query.edit_message_text(
+            "<b>⚡ HIZLI PARA MODU AKTİF</b>\n\n"
+            "Artık varlık adı yazarak kısa vadeli trade önerisi alabilirsin.\n\n"
+            "<b>Örnek varlıklar:</b>\n"
+            "  • Kripto: BTC, ETH, XRP, SOL\n"
+            "  • Forex: EUR/USD, GBP/USD, USD/JPY\n"
+            "  • Hisse: AAPL, MSFT, TSLA, THYAO\n"
+            "  • Emtia: XAUUSD (altın), WTI (petrol)\n\n"
+            "<b>Şimdi ne yapmalısın?</b>\n"
+            "Sadece varlık adını yaz (örn: <code>BTC</code>)\n\n"
+            "<i>Modu kapatmak için: /analiz → Hızlı Para → Kapalı</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        return ConversationHandler.END
+
+    # Hızlı Para Modu KAPAT
+    if query.data == "hizli_para_off":
+        user_id = update.effective_user.id if update.effective_user else None
+        hizli_para_ayarla(user_id, False)
+        await query.answer("Hızlı Para Modu kapatıldı.", show_alert=False)
+        await query.edit_message_text(
+            "<b>⚡ Hızlı Para Modu KAPALI</b>\n\n"
+            "Normal analiz moduna döndün.\n\n"
+            "Tekrar açmak için: /analiz → Hızlı Para Modu",
+            parse_mode=ParseMode.HTML,
+        )
+        return ConversationHandler.END
 
     # Modu kaydet
     context.user_data["mod"] = query.data
@@ -4946,6 +5103,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
 async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """
     Yazılı mesajları yönet.
+    Hızlı Para Modu aktifse → varlık analizi yap
     Pro/Claude → niyet tespit et: analiz isteği mi sohbet mi?
     Free → fiyat sorusu ise cevapla, değilse /analiz yönlendir.
     """
@@ -4957,6 +5115,76 @@ async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
         return
 
     kullanici_mesaji = update.message.text.strip()
+
+    # ── Hızlı Para Modu aktif mi? ─────────────────────────────────────────────
+    if hizli_para_aktif_mi(user_id):
+        # Varlık adı olarak yorumla
+        varlik = kullanici_mesaji.upper()
+        
+        # Ülke seç (kullanıcı profili varsa oradan, yoksa varsayılan)
+        profil = _kullanici_profili_al(user_id)
+        ulke = profil.get("ulke", "ABD") if profil else "ABD"
+        
+        await context.bot.send_chat_action(
+            chat_id=update.effective_chat.id, action="typing"
+        )
+        
+        await update.message.reply_text(
+            f"⚡ <b>Hızlı Para Analizi Başladı</b>\n\n"
+            f"Varlık: <b>{varlik}</b>\n"
+            f"Ülke: <b>{ulke}</b>\n\n"
+            f"8 mod taranıyor...\n"
+            f"<i>Bu 10-20 saniye sürebilir.</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        
+        try:
+            # Analiz yap
+            analiz = await asyncio.to_thread(
+                hizli_para_analizi,
+                varlik=varlik,
+                ulke=ulke,
+                user_id=user_id,
+                llm_fn=llm_metin_uret,
+            )
+            
+            # HTML formatla
+            html_cikti = hizli_para_html_formatla(analiz)
+            
+            # 8 Mod Detayı butonu ekle
+            klavye = [
+                [InlineKeyboardButton("📊 8 Mod Detayını Göster", callback_data=f"hizli_para_detay_{varlik}")],
+                [InlineKeyboardButton("🔄 Yeni Analiz", callback_data="menu_ana")],
+            ]
+            reply_markup = InlineKeyboardMarkup(klavye)
+            
+            # Gönder
+            await update.message.reply_text(
+                html_cikti,
+                parse_mode=ParseMode.HTML,
+                reply_markup=reply_markup,
+            )
+            
+        except ValueError as ve:
+            await update.message.reply_text(
+                f"⚠️ <b>Analiz Hatası</b>\n\n{_tg_html_escape(str(ve))}\n\n"
+                f"Lütfen geçerli bir varlık adı yaz:\n"
+                f"  • Kripto: BTC, ETH, XRP\n"
+                f"  • Forex: EUR/USD, GBP/USD\n"
+                f"  • Hisse: AAPL, MSFT, THYAO\n"
+                f"  • Emtia: XAUUSD, WTI",
+                parse_mode=ParseMode.HTML,
+            )
+        except Exception as e:
+            logger.error("Hızlı Para analizi hatası: %s", e)
+            await update.message.reply_text(
+                f"⚠️ <b>Beklenmeyen Hata</b>\n\n"
+                f"Analiz sırasında bir sorun oluştu. Lütfen tekrar dene.\n\n"
+                f"Hata: <code>{_tg_html_escape(str(e)[:200])}</code>",
+                parse_mode=ParseMode.HTML,
+            )
+        
+        return
 
     # ── Fiyat sorusu tespiti — tüm kullanıcılara açık ────────────────────────
     try:

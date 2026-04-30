@@ -4,6 +4,87 @@ Kod veya davranış değişikliklerinin kısa kaydı. Ayrıntılı parça listes
 
 ---
 
+## 2026-04-30 — ⚡ Hızlı Para Modu (Agresif Kısa Vadeli Trade Önerileri)
+
+**Amaç:** Pro kullanıcılar için agresif kısa vadeli (2-7 gün) trade setup'ları sunmak.
+
+**Yapılanlar:**
+
+1. **`hizli_para_baglam.py`** ✨ YENİ
+   - 8 mod paralel tarama (Okwis gibi ama kısa vadeli odak)
+   - Varlık tipi tespiti (kripto/forex/hisse/emtia)
+   - Gerçek zamanlı fiyat entegrasyonu
+   - JSON çıktı + HTML formatter
+   - Trade kayıt sistemi (backtest için)
+
+2. **Analiz Çıktısı** ✅
+   - Net pozisyon: LONG/SHORT/BEKLE
+   - Giriş aralığı (dar band, max %2-3)
+   - 3 TP seviyesi (kademeli kar al: TP1, TP2, TP3)
+   - Stop loss (net, max %3-5 risk)
+   - Risk/ödül oranı (min 1:2)
+   - Kaldıraç önerisi (varlık tipine göre konservatif)
+   - Güven skoru (0-100)
+   - Neden + Riskler
+
+3. **UI/UX** ✅
+   - `/analiz` → [⚡ Hızlı Para Modu] butonu (Pro kullanıcılar)
+   - Toggle ekranı (🟢 Açık / 🔴 Kapalı)
+   - Mod aktifken: varlık adı yaz → analiz gelir
+   - "📊 8 Mod Detayını Göster" butonu
+   - Free kullanıcılar için kilit ekranı
+
+4. **Desteklenen Varlıklar** ✅
+   - Kripto: BTC, ETH, XRP, SOL, ADA, vb.
+   - Forex: EUR/USD, GBP/USD, USD/JPY, USD/TRY, vb.
+   - Hisse: AAPL, MSFT, TSLA, THYAO, GARAN, vb.
+   - Emtia: XAUUSD (altın), WTI (petrol), XAGUSD (gümüş), vb.
+
+5. **Backtest Entegrasyonu** ✅
+   - `metrics/hizli_para_islemler.jsonl` — trade kayıtları
+   - `hizli_para_performans_ozeti()` — performans metrikleri
+   - `hizli_para_raporu_html()` — HTML rapor
+   - `/backtest` komutuna Hızlı Para sekmesi eklendi
+   - Sonuç dağılımı: TP1/TP2/TP3/Stop Loss hit oranları
+   - Varlık tipi bazlı performans
+
+6. **Güvenlik ve Uyarılar** ✅
+   - Her analizde risk uyarısı
+   - Stop loss kullanımı vurgusu
+   - Portföy yüzdesi önerisi (max %5)
+   - Kaldıraç dikkat mesajı
+   - "Yatırım tavsiyesi değildir" disclaimer
+
+7. **Kaldıraç Önerileri** ✅
+   - Kripto: Max 3-5x (volatilite yüksek)
+   - Forex: Max 5-10x (likidite yüksek)
+   - Hisse: Max 2-3x (konservatif)
+   - Emtia: Max 3-5x (orta risk)
+
+**Dosyalar:** 
+- `hizli_para_baglam.py` (yeni)
+- `app.py` (güncellendi)
+- `backtest.py` (güncellendi)
+- `metrics/hizli_para_modu.json` (yeni)
+- `metrics/hizli_para_islemler.jsonl` (yeni)
+- `HIZLI_PARA_MODU.md` (dokümantasyon)
+
+**Özellikler:**
+- Sadece Pro/Tam Güç kullanıcılar
+- 8 mod paralel tarama
+- Gerçek zamanlı fiyat
+- Varlık tipi otomatik tespit
+- Backtest takibi
+- Güvenlik uyarıları
+
+**Test Senaryoları:**
+- BTC analizi ✅
+- EUR/USD analizi ✅
+- AAPL analizi ✅
+- XAUUSD analizi ✅
+
+---
+
 ## 2026-04-20 — Prompt Optimizasyonu (Verimlilik Güncellemesi)
 
 **Amaç:** Token verimliliğini artırarak aynı bütçeyle daha derin ve tutarlı analiz çıktısı almak.

@@ -20,6 +20,7 @@ except ImportError:
 
 
 TAHMIN_DOSYASI = Path(__file__).resolve().parent / "metrics" / "tahmin_kayitlari.jsonl"
+HIZLI_PARA_DOSYASI = Path(__file__).resolve().parent / "metrics" / "hizli_para_islemler.jsonl"
 
 
 def tahminleri_yukle() -> list[dict]:
@@ -38,6 +39,24 @@ def tahminleri_yukle() -> list[dict]:
                     continue
     
     return tahminler
+
+
+def hizli_para_islemlerini_yukle() -> list[dict]:
+    """Hızlı Para Modu işlemlerini yükle"""
+    if not HIZLI_PARA_DOSYASI.exists():
+        return []
+    
+    islemler = []
+    with open(HIZLI_PARA_DOSYASI, "r", encoding="utf-8") as f:
+        for satir in f:
+            satir = satir.strip()
+            if satir:
+                try:
+                    islemler.append(json.loads(satir))
+                except json.JSONDecodeError:
+                    continue
+    
+    return islemler
 
 
 def performans_ozeti() -> dict:
@@ -525,3 +544,188 @@ if __name__ == "__main__":
     print("\nSon 5 Tahmin:")
     for i, t in enumerate(son_n_tahmin(5), 1):
         print(f"  {i}. {t['tarih']} - {t['ulke']} - {t['varlik']}")
+
+
+# ─── Hızlı Para Modu Backtest ────────────────────────────────────────────────
+
+def hizli_para_performans_ozeti() -> dict:
+    """
+    Hızlı Para Modu performans özeti
+    
+    Returns:
+        {
+            "toplam": int,
+            "dogrulanan": int,
+            "bekleyen": int,
+            "tp1_hit": int,
+            "tp2_hit": int,
+            "tp3_hit": int,
+            "stop_loss_hit": int,
+            "basari_orani": float | None,
+            "ortalama_risk_odul": float,
+            "varlik_tipi_bazli": {tip: {"toplam": int, "dogrulanan": int}},
+        }
+    """
+    islemler = hizli_para_islemlerini_yukle()
+    
+    toplam = len(islemler)
+    dogrulanan = sum(1 for i in islemler if i.get("dogrulandi") is True)
+    bekleyen = sum(1 for i in islemler if i.get("dogrulandi") is None)
+    
+    # Sonuç bazlı
+    tp1_hit = sum(1 for i in islemler if i.get("sonuc") == "tp1")
+    tp2_hit = sum(1 for i in islemler if i.get("sonuc") == "tp2")
+    tp3_hit = sum(1 for i in islemler if i.get("sonuc") == "tp3")
+    stop_loss_hit = sum(1 for i in islemler if i.get("sonuc") == "stop_loss")
+    
+    basari_orani = None
+    if toplam - bekleyen > 0:
+        basarili = tp1_hit + tp2_hit + tp3_hit
+        basari_orani = (basarili / (toplam - bekleyen)) * 100
+    
+    # Ortalama risk/ödül
+    risk_odul_listesi = [i.get("risk_odul", 0) for i in islemler if i.get("risk_odul")]
+    ortalama_risk_odul = sum(risk_odul_listesi) / len(risk_odul_listesi) if risk_odul_listesi else 0
+    
+    # Varlık tipi bazlı (kripto, forex, hisse, emtia)
+    varlik_tipi_bazli = defaultdict(lambda: {"toplam": 0, "dogrulanan": 0, "bekleyen": 0})
+    for i in islemler:
+        # Varlık tipini tahmin et (basit)
+        varlik = i.get("varlik", "").lower()
+        if any(k in varlik for k in ["btc", "eth", "xrp", "sol", "ada"]):
+            tip = "kripto"
+        elif "/" in varlik or "usd" in varlik or "eur" in varlik:
+            tip = "forex"
+        elif any(k in varlik for k in ["xau", "wti", "gold", "oil"]):
+            tip = "emtia"
+        else:
+            tip = "hisse"
+        
+        varlik_tipi_bazli[tip]["toplam"] += 1
+        if i.get("dogrulandi") is True:
+            varlik_tipi_bazli[tip]["dogrulanan"] += 1
+        elif i.get("dogrulandi") is None:
+            varlik_tipi_bazli[tip]["bekleyen"] += 1
+    
+    return {
+        "toplam": toplam,
+        "dogrulanan": dogrulanan,
+        "bekleyen": bekleyen,
+        "tp1_hit": tp1_hit,
+        "tp2_hit": tp2_hit,
+        "tp3_hit": tp3_hit,
+        "stop_loss_hit": stop_loss_hit,
+        "basari_orani": basari_orani,
+        "ortalama_risk_odul": ortalama_risk_odul,
+        "varlik_tipi_bazli": dict(varlik_tipi_bazli),
+    }
+
+
+def hizli_para_son_n_islem(n: int = 10) -> list[dict]:
+    """Son N Hızlı Para işlemini getir (en yeni önce)"""
+    islemler = hizli_para_islemlerini_yukle()
+    islemler.sort(key=lambda i: i.get("ts_utc", ""), reverse=True)
+    return islemler[:n]
+
+
+def hizli_para_raporu_html(n: int = 20) -> str:
+    """
+    Hızlı Para Modu backtest raporu HTML formatında
+    
+    Args:
+        n: Kaç işlem gösterilsin
+    
+    Returns:
+        HTML formatında rapor
+    """
+    ozet = hizli_para_performans_ozeti()
+    son_islemler = hizli_para_son_n_islem(n)
+    
+    # Başlık
+    html = [
+        "<b>⚡ HIZLI PARA MODU — BACKTEST RAPORU</b>",
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>",
+        "",
+    ]
+    
+    # Genel özet
+    html.append("<b>📊 Genel Performans</b>")
+    html.append(f"Toplam İşlem: <b>{ozet['toplam']}</b>")
+    html.append(f"Doğrulanan: <b>{ozet['dogrulanan']}</b>")
+    html.append(f"Bekleyen: <b>{ozet['bekleyen']}</b>")
+    
+    if ozet['basari_orani'] is not None:
+        html.append(f"Başarı Oranı: <b>{ozet['basari_orani']:.1f}%</b>")
+    else:
+        html.append("Başarı Oranı: <i>Henüz doğrulanmış işlem yok</i>")
+    
+    html.append(f"Ort. Risk/Ödül: <b>1:{ozet['ortalama_risk_odul']:.1f}</b>")
+    html.append("")
+    
+    # Sonuç dağılımı
+    if ozet['dogrulanan'] > 0:
+        html.append("<b>🎯 Sonuç Dağılımı</b>")
+        html.append(f"  TP1: <b>{ozet['tp1_hit']}</b>")
+        html.append(f"  TP2: <b>{ozet['tp2_hit']}</b>")
+        html.append(f"  TP3: <b>{ozet['tp3_hit']}</b>")
+        html.append(f"  Stop Loss: <b>{ozet['stop_loss_hit']}</b>")
+        html.append("")
+    
+    # Varlık tipi bazlı
+    if ozet['varlik_tipi_bazli']:
+        html.append("<b>📈 Varlık Tipi Bazlı</b>")
+        for tip, veri in ozet['varlik_tipi_bazli'].items():
+            toplam_tip = veri['toplam']
+            dogru_tip = veri['dogrulanan']
+            bekleyen_tip = veri['bekleyen']
+            
+            if toplam_tip - bekleyen_tip > 0:
+                oran_tip = (dogru_tip / (toplam_tip - bekleyen_tip)) * 100
+                html.append(f"▸ <b>{tip.upper()}</b>: {dogru_tip}/{toplam_tip - bekleyen_tip} ({oran_tip:.0f}%)")
+            else:
+                html.append(f"▸ <b>{tip.upper()}</b>: {toplam_tip} işlem (henüz doğrulanmadı)")
+        
+        html.append("")
+    
+    # Son işlemler
+    html.append(f"<b>🕰️ Son {min(n, len(son_islemler))} İşlem</b>")
+    html.append("")
+    
+    for i, islem in enumerate(son_islemler, 1):
+        tarih = islem.get("tarih", "?")
+        varlik = islem.get("varlik", "?")
+        pozisyon = islem.get("pozisyon", "?")
+        giris_min = islem.get("giris_min", 0)
+        giris_max = islem.get("giris_max", 0)
+        tp1 = islem.get("tp1", 0)
+        stop_loss = islem.get("stop_loss", 0)
+        sure = islem.get("sure", "?")
+        dogrulandi = islem.get("dogrulandi")
+        sonuc = islem.get("sonuc")
+        
+        # Durum ikonu
+        if dogrulandi is True:
+            if sonuc in ["tp1", "tp2", "tp3"]:
+                durum = "✅"
+            else:
+                durum = "❌"
+        else:
+            durum = "⏳"
+        
+        # Pozisyon emoji
+        poz_emoji = "🟢" if pozisyon == "LONG" else ("🔴" if pozisyon == "SHORT" else "🟡")
+        
+        html.append(f"{durum} <b>{i}.</b> {tarih} · {poz_emoji} {pozisyon}")
+        html.append(f"   {varlik} · Giriş: ${giris_min:,.2f}-${giris_max:,.2f}")
+        html.append(f"   TP1: ${tp1:,.2f} · SL: ${stop_loss:,.2f}")
+        html.append(f"   Süre: {sure}")
+        
+        if dogrulandi is not None and sonuc:
+            html.append(f"   Sonuç: <b>{sonuc.upper()}</b>")
+        
+        html.append("")
+    
+    html.append("<b>━━━━━━━━━━━━━━━━━━━━</b>")
+    html.append("<i>İşlemleri manuel olarak doğrulamak için admin ile iletişime geç.</i>")
+    
+    return "\n".join(html)
