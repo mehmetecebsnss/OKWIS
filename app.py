@@ -3494,6 +3494,39 @@ async def kalite_karti_goster(update: Update, context: ContextTypes.DEFAULT_TYPE
     await query.answer("✅ Kalite kartı gösterildi")
 
 
+async def hizli_para_detay_goster(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Hızlı Para Modu detaylarını göster (neden + riskler)"""
+    query = update.callback_query
+    await query.answer()
+    
+    # Callback data'dan varlık adını al
+    varlik = query.data.replace("hizli_para_detay_", "")
+    
+    # Context'ten analizi al
+    analiz = context.user_data.get(f"hizli_para_analiz_{varlik}")
+    
+    if not analiz:
+        await query.answer("Analiz verisi bulunamadı. Yeni bir analiz yapın.", show_alert=True)
+        return
+    
+    # Detaylı HTML formatla (detay=True)
+    detay_html = hizli_para_html_formatla(analiz, detay=True)
+    
+    # Geri butonu
+    klavye = [
+        [InlineKeyboardButton("◀️ Geri", callback_data="menu_ana")],
+    ]
+    reply_markup = InlineKeyboardMarkup(klavye)
+    
+    # Detayları mesaj olarak gönder
+    await query.message.reply_text(
+        detay_html,
+        parse_mode=ParseMode.HTML,
+        reply_markup=reply_markup,
+    )
+    await query.answer("✅ Detaylar gösterildi")
+
+
 async def okwis_gorseller_goster(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Okwis analizi için görselleri (güven skoru + olasılık zincirleri) gönder"""
     query = update.callback_query
@@ -5148,12 +5181,15 @@ async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
                 llm_fn=llm_metin_uret,
             )
             
-            # HTML formatla
-            html_cikti = hizli_para_html_formatla(analiz)
+            # HTML formatla (detay=False, sadece trade setup)
+            html_cikti = hizli_para_html_formatla(analiz, detay=False)
             
-            # 8 Mod Detayı butonu ekle
+            # Analizi context'e kaydet (detay butonu için)
+            context.user_data[f"hizli_para_analiz_{varlik}"] = analiz
+            
+            # Butonlar: Detaylar + Yeni Analiz
             klavye = [
-                [InlineKeyboardButton("📊 8 Mod Detayını Göster", callback_data=f"hizli_para_detay_{varlik}")],
+                [InlineKeyboardButton("📋 Detaylar", callback_data=f"hizli_para_detay_{varlik}")],
                 [InlineKeyboardButton("🔄 Yeni Analiz", callback_data="menu_ana")],
             ]
             reply_markup = InlineKeyboardMarkup(klavye)
@@ -5424,6 +5460,9 @@ def main():
 
     # Kalite kartı butonu handler
     app.add_handler(CallbackQueryHandler(kalite_karti_goster, pattern="^show_quality_card$"))
+
+    # Hızlı Para Modu detay butonu handler
+    app.add_handler(CallbackQueryHandler(hizli_para_detay_goster, pattern="^hizli_para_detay_"))
 
     # Abonelik planları butonu handler
     app.add_handler(CallbackQueryHandler(abonelik_goster, pattern="^abonelik_goster$"))

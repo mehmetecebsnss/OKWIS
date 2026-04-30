@@ -451,8 +451,14 @@ JSON geçerli olmalı (virgül, tırnak, parantez kontrolü yap).
 
 # ─── HTML Formatter ───────────────────────────────────────────────────────────
 
-def hizli_para_html_formatla(analiz: dict) -> str:
-    """Hızlı Para analizini Telegram HTML formatına çevir."""
+def hizli_para_html_formatla(analiz: dict, detay: bool = False) -> str:
+    """
+    Hızlı Para analizini Telegram HTML formatına çevir.
+    
+    Args:
+        analiz: Analiz sonucu dict
+        detay: True ise neden + riskler göster, False ise sadece trade setup
+    """
     import html
     
     def esc(text):
@@ -474,16 +480,19 @@ def hizli_para_html_formatla(analiz: dict) -> str:
     guven = analiz.get("guven", 0)
     varlik_tipi = analiz.get("varlik_tipi", "").upper()
     
-    # Pozisyon emoji
+    # Pozisyon emoji ve text (daha net)
     if pozisyon == "LONG":
         poz_emoji = "🟢"
-        poz_text = "LONG (AL)"
+        poz_text = "LONG"
+        poz_aciklama = "AL (Fiyat yükselecek)"
     elif pozisyon == "SHORT":
         poz_emoji = "🔴"
-        poz_text = "SHORT (SAT)"
+        poz_text = "SHORT"
+        poz_aciklama = "SAT (Fiyat düşecek)"
     else:
         poz_emoji = "🟡"
         poz_text = "BEKLE"
+        poz_aciklama = "Pozisyon açma (Belirsiz)"
     
     # TP yüzdeleri hesapla
     giris_orta = (giris_min + giris_max) / 2
@@ -495,37 +504,56 @@ def hizli_para_html_formatla(analiz: dict) -> str:
     else:
         tp1_yuzde = tp2_yuzde = tp3_yuzde = sl_yuzde = 0
     
-    # Riskler formatla
-    risk_satirlari = "\n".join(f"  • {esc(r)}" for r in riskler[:3])
-    
-    # HTML oluştur
-    html_text = f"""<b>⚡ HIZLI PARA ANALİZİ — {esc(varlik)}</b>
+    # ── ANA MESAJ (Temiz, Premium) ────────────────────────────────────────────
+    if not detay:
+        html_text = f"""<b>⚡ {esc(varlik)}</b>  ·  <i>{esc(varlik_tipi)}</i>
+
+{poz_emoji} <b>{esc(poz_text)}</b>
+<i>{esc(poz_aciklama)}</i>
+
 <b>━━━━━━━━━━━━━━━━━━━━</b>
 
-{poz_emoji} <b>POZİSYON:</b> {esc(poz_text)}
-📊 <b>VARLIK TİPİ:</b> {esc(varlik_tipi)}
+<b>📍 GİRİŞ</b>
+${giris_min:,.2f} - ${giris_max:,.2f}
 
-📍 <b>GİRİŞ:</b> ${giris_min:,.2f} - ${giris_max:,.2f}
+<b>🎯 KAR AL</b>
+TP1  ${tp1:,.2f}  <i>({tp1_yuzde:+.1f}%)</i>
+TP2  ${tp2:,.2f}  <i>({tp2_yuzde:+.1f}%)</i>
+TP3  ${tp3:,.2f}  <i>({tp3_yuzde:+.1f}%)</i>
 
-🎯 <b>KAR AL SEVİYELERİ:</b>
-  TP1: ${tp1:,.2f} ({tp1_yuzde:+.1f}%)
-  TP2: ${tp2:,.2f} ({tp2_yuzde:+.1f}%)
-  TP3: ${tp3:,.2f} ({tp3_yuzde:+.1f}%)
+<b>🛑 STOP LOSS</b>
+${stop_loss:,.2f}  <i>({sl_yuzde:+.1f}%)</i>
 
-🛑 <b>STOP LOSS:</b> ${stop_loss:,.2f} ({sl_yuzde:+.1f}%)
+<b>━━━━━━━━━━━━━━━━━━━━</b>
 
-⏱️ <b>SÜRE:</b> {esc(sure)}
-💰 <b>RİSK/ÖDÜL:</b> 1:{risk_odul:.1f}
-📊 <b>KALDIRAÇ:</b> Max {kaldirac_max}x (dikkatli!)
-🎯 <b>GÜVEN:</b> {guven}/100
+⏱️ Süre: <b>{esc(sure)}</b>
+💰 Risk/Ödül: <b>1:{risk_odul:.1f}</b>
+📊 Kaldıraç: <b>Max {kaldirac_max}x</b>
+🎯 Güven: <b>{guven}/100</b>
 
-<b>🔍 NEDEN?</b>
+<i>⚠️ Stop loss kullan. Max %5 portföy.</i>"""
+    
+    # ── DETAY MESAJI (Neden + Riskler) ────────────────────────────────────────
+    else:
+        risk_satirlari = "\n".join(f"  • {esc(r)}" for r in riskler[:3])
+        
+        html_text = f"""<b>⚡ {esc(varlik)} — DETAYLAR</b>
+
+<b>🔍 NEDEN {esc(poz_text)}?</b>
 {esc(neden)}
 
-<b>⚠️ RİSKLER:</b>
+<b>⚠️ RİSKLER</b>
 {risk_satirlari}
 
-<i>⚠️ Yüksek riskli kısa vadeli işlem. Stop loss MUTLAKA kullan.
-Portföyünün max %5'i ile işlem yap. Yatırım tavsiyesi değildir.</i>"""
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+<b>📊 8 MOD ANALİZİ</b>
+Bu öneri şu modlardan derlendi:
+  • Jeopolitik (yüksek öncelik)
+  • Mevsim, Hava, Sektör
+  • Trendler, Magazin
+  • Özel Günler, Doğal Afet
+
+<i>Yatırım tavsiyesi değildir. Kendi araştırmanı yap.</i>"""
     
     return html_text
