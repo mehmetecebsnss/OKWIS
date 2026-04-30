@@ -16,7 +16,7 @@ from mevsim_baglam import topla_mevsim_baglami
 from ozel_gunler_baglam import topla_ozel_gunler_baglami
 from sektor_baglam import topla_sektor_baglami
 from trendler_baglam import topla_trendler_baglami
-from fiyat_servisi import fiyat_al, fiyat_grafigi_ascii
+from fiyat_servisi import fiyat_sorgula, sembol_tespit
 
 logger = logging.getLogger(__name__)
 
@@ -299,28 +299,32 @@ def hizli_para_analizi(
     # Varlık tipi tespit
     varlik_tipi = _varlik_tipi_tespit(varlik)
     
-    # Fiyat verisi al
-    fiyat_verisi = fiyat_al(varlik)
-    if not fiyat_verisi or not fiyat_verisi.get("fiyat"):
+    # Fiyat verisi al (fiyat_sorgula kullan)
+    fiyat_sonuc = fiyat_sorgula(varlik)
+    
+    if not fiyat_sonuc or not fiyat_sonuc.get("mesaj"):
         logger.warning("Fiyat verisi alınamadı: %s", varlik)
         fiyat_str = f"Fiyat verisi alınamadı ({varlik}). Genel piyasa verisiyle analiz yap."
+        fiyat_verisi = {}
     else:
-        fiyat = fiyat_verisi["fiyat"]
-        yuksek_24h = fiyat_verisi.get("yuksek_24h", "N/A")
-        dusuk_24h = fiyat_verisi.get("dusuk_24h", "N/A")
-        degisim_24h = fiyat_verisi.get("degisim_24h_yuzde", "N/A")
-        hacim_24h = fiyat_verisi.get("hacim_24h", "N/A")
+        # fiyat_sorgula'dan gelen mesajı parse et
+        mesaj = fiyat_sonuc.get("mesaj", "")
+        
+        # Basit fiyat çıkarımı (mesajdan)
+        import re
+        fiyat_match = re.search(r'\$?([\d,]+\.?\d*)', mesaj)
+        fiyat = float(fiyat_match.group(1).replace(',', '')) if fiyat_match else 0
+        
+        fiyat_verisi = {
+            "fiyat": fiyat,
+            "mesaj": mesaj,
+        }
         
         fiyat_str = f"""
 GERÇEK ZAMANLI FİYAT — {varlik.upper()}
-Anlık: ${fiyat:,.2f}
-24h Yüksek: ${yuksek_24h}
-24h Düşük: ${dusuk_24h}
-24h Değişim: {degisim_24h}%
-24h Hacim: ${hacim_24h}
+{mesaj}
 
-30 Günlük Grafik:
-{fiyat_grafigi_ascii(varlik)}
+Not: Fiyat servisi üzerinden alınan gerçek zamanlı veri.
 """
     
     # 8 mod bağlamı topla
