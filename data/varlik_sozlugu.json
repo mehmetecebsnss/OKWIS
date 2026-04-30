@@ -1,0 +1,82 @@
+{
+  "_aciklama": "Okwis AI - Varlık Sözlüğü: Kullanıcı input'unu ticker sembolüne çevir",
+  "_guncelleme": "2026-04-30",
+  
+  "turkiye_hisseleri": {
+    "koç holding": {"ticker": "KCHOL.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["koc holding", "koc", "kchol"]},
+    "sabancı holding": {"ticker": "SAHOL.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["sabanci", "sabanci holding", "sahol"]},
+    "türk hava yolları": {"ticker": "THYAO.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["thy", "turk hava yollari", "thyao"]},
+    "garanti bankası": {"ticker": "GARAN.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["garanti", "garan", "garanti bbva"]},
+    "akbank": {"ticker": "AKBNK.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["akbnk"]},
+    "iş bankası": {"ticker": "ISCTR.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["is bankasi", "isbank", "isctr"]},
+    "ereğli demir çelik": {"ticker": "EREGL.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["erdemir", "eregli", "eregl"]},
+    "şişecam": {"ticker": "SISE.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["sisecam", "sise"]},
+    "bim": {"ticker": "BIMAS.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["bimas"]},
+    "aselsan": {"ticker": "ASELS.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["asels"]},
+    "tüpraş": {"ticker": "TUPRS.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["tupras", "tuprs"]},
+    "ford otosan": {"ticker": "FROTO.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["froto"]},
+    "tofaş": {"ticker": "TOASO.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["tofas", "toaso"]},
+    "pegasus": {"ticker": "PGSUS.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["pgsus"]},
+    "tav havalimanları": {"ticker": "TAVHL.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["tav", "tavhl"]},
+    "emlak konut": {"ticker": "EKGYO.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["ekgyo"]},
+    "vestel": {"ticker": "VESTL.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["vestl"]},
+    "turkcell": {"ticker": "TCELL.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["tcell"]},
+    "türk telekom": {"ticker": "TTKOM.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["turk telekom", "ttkom"]},
+    "halkbank": {"ticker": "HALKB.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["halkb"]},
+    "vakıfbank": {"ticker": "VAKBN.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["vakifbank", "vakbn"]},
+    "yapı kredi": {"ticker": "YKBNK.IS", "ulke": "TR", "tip": "hisse", "alternatifler": ["yapi kredi", "ykbnk"]},
+    "bist 100": {"ticker": "XU100.IS", "ulke": "TR", "tip": "endeks", "alternatifler": ["xu100", "bist100"]}
+  },
+  
+  "abd_hisseleri": {
+    "apple": {"ticker": "AAPL", "ulke": "US", "tip": "hisse", "alternatifler": ["aapl"]},
+    "microsoft": {"ticker": "MSFT", "ulke": "US", "tip": "hisse", "alternatifler": ["msft"]},
+    "google": {"ticker": "GOOGL", "ulke": "US", "tip": "hisse", "alternatifler": ["alphabet", "googl"]},
+    "amazon": {"ticker": "AMZN", "ulke": "US", "tip": "hisse", "alternatifler": ["amzn"]},
+    "nvidia": {"ticker": "NVDA", "ulke": "US", "tip": "hisse", "alternatifler": ["nvda"]},
+    "tesla": {"ticker": "TSLA", "ulke": "US", "tip": "hisse", "alternatifler": ["tsla"]},
+    "meta": {"ticker": "META", "ulke": "US", "tip": "hisse", "alternatifler": ["facebook", "fb"]},
+    "netflix": {"ticker": "NFLX", "ulke": "US", "tip": "hisse", "alternatifler": ["nflx"]},
+    "s&p 500": {"ticker": "^GSPC", "ulke": "US", "tip": "endeks", "alternatifler": ["sp500", "s&p500"]},
+    "nasdaq": {"ticker": "^IXIC", "ulke": "US", "tip": "endeks", "alternatifler": []},
+    "dow jones": {"ticker": "^DJI", "ulke": "US", "tip": "endeks", "alternatifler": ["dow"]}
+  },
+  
+  "kripto": {
+    "bitcoin": {"ticker": "BTC-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["btc"]},
+    "ethereum": {"ticker": "ETH-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["eth"]},
+    "binance coin": {"ticker": "BNB-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["bnb"]},
+    "solana": {"ticker": "SOL-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["sol"]},
+    "xrp": {"ticker": "XRP-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["ripple"]},
+    "cardano": {"ticker": "ADA-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["ada"]},
+    "avalanche": {"ticker": "AVAX-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["avax"]},
+    "polkadot": {"ticker": "DOT-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["dot"]},
+    "dogecoin": {"ticker": "DOGE-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["doge"]},
+    "shiba inu": {"ticker": "SHIB-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["shib"]},
+    "polygon": {"ticker": "MATIC-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["matic"]},
+    "chainlink": {"ticker": "LINK-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["link"]},
+    "litecoin": {"ticker": "LTC-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["ltc"]},
+    "uniswap": {"ticker": "UNI-USD", "ulke": "GLOBAL", "tip": "kripto", "alternatifler": ["uni"]}
+  },
+  
+  "emtia": {
+    "altın": {"ticker": "GC=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["gold", "xauusd", "altin"]},
+    "gümüş": {"ticker": "SI=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["silver", "xagusd", "gumus"]},
+    "petrol": {"ticker": "CL=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["wti", "crude oil", "oil"]},
+    "brent petrol": {"ticker": "BZ=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["brent"]},
+    "doğalgaz": {"ticker": "NG=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["natural gas", "dogalgaz", "gaz"]},
+    "bakır": {"ticker": "HG=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["copper", "bakir"]},
+    "buğday": {"ticker": "ZW=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["wheat", "bugday"]},
+    "mısır": {"ticker": "ZC=F", "ulke": "GLOBAL", "tip": "emtia", "alternatifler": ["corn", "misir"]}
+  },
+  
+  "forex": {
+    "dolar/tl": {"ticker": "USDTRY=X", "ulke": "TR", "tip": "forex", "alternatifler": ["usd/try", "dolar", "usdtry"]},
+    "euro/tl": {"ticker": "EURTRY=X", "ulke": "TR", "tip": "forex", "alternatifler": ["eur/try", "euro", "eurtry"]},
+    "sterlin/tl": {"ticker": "GBPTRY=X", "ulke": "TR", "tip": "forex", "alternatifler": ["gbp/try", "sterlin", "gbptry"]},
+    "eur/usd": {"ticker": "EURUSD=X", "ulke": "GLOBAL", "tip": "forex", "alternatifler": ["eurusd"]},
+    "gbp/usd": {"ticker": "GBPUSD=X", "ulke": "GLOBAL", "tip": "forex", "alternatifler": ["gbpusd"]},
+    "usd/jpy": {"ticker": "USDJPY=X", "ulke": "GLOBAL", "tip": "forex", "alternatifler": ["usdjpy"]},
+    "usd/chf": {"ticker": "USDCHF=X", "ulke": "GLOBAL", "tip": "forex", "alternatifler": ["usdchf"]}
+  }
+}

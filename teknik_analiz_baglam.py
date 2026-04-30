@@ -35,12 +35,17 @@ VARLIK_SEMBOL_MAP = {
     "eth": "ETH-USD",
     "ethereum": "ETH-USD",
     "xrp": "XRP-USD",
+    "ripple": "XRP-USD",
     "sol": "SOL-USD",
     "solana": "SOL-USD",
     "ada": "ADA-USD",
     "cardano": "ADA-USD",
     "doge": "DOGE-USD",
     "dogecoin": "DOGE-USD",
+    "bnb": "BNB-USD",
+    "binance": "BNB-USD",
+    "usdt": "USDT-USD",
+    "tether": "USDT-USD",
     
     # Hisse (doğrudan sembol)
     "aapl": "AAPL",
@@ -53,19 +58,37 @@ VARLIK_SEMBOL_MAP = {
     "tesla": "TSLA",
     "amzn": "AMZN",
     "amazon": "AMZN",
+    "meta": "META",
+    "facebook": "META",
+    "nvda": "NVDA",
+    "nvidia": "NVDA",
     
     # Türk hisseleri
     "thyao": "THYAO.IS",
+    "turkcell": "THYAO.IS",
     "garan": "GARAN.IS",
+    "garanti": "GARAN.IS",
     "akbnk": "AKBNK.IS",
+    "akbank": "AKBNK.IS",
+    "isctr": "ISCTR.IS",
+    "isbank": "ISCTR.IS",
+    "ykbnk": "YKBNK.IS",
+    "yapikredi": "YKBNK.IS",
     
     # Emtia
     "altın": "GC=F",
+    "altin": "GC=F",
     "gold": "GC=F",
     "xauusd": "GC=F",
     "petrol": "CL=F",
     "wti": "CL=F",
     "oil": "CL=F",
+    "gümüş": "SI=F",
+    "gumus": "SI=F",
+    "silver": "SI=F",
+    "bakır": "HG=F",
+    "bakir": "HG=F",
+    "copper": "HG=F",
 }
 
 
@@ -77,13 +100,25 @@ def _sembol_bul(varlik: str) -> Optional[str]:
     if varlik_lower in VARLIK_SEMBOL_MAP:
         return VARLIK_SEMBOL_MAP[varlik_lower]
     
-    # Kısmi eşleşme
+    # Kısmi eşleşme (daha akıllı)
     for key, sembol in VARLIK_SEMBOL_MAP.items():
-        if key in varlik_lower or varlik_lower in key:
+        # Tam kelime eşleşmesi
+        if varlik_lower == key or key == varlik_lower:
+            return sembol
+        # Başlangıç eşleşmesi (bitcoin -> btc)
+        if varlik_lower.startswith(key) or key.startswith(varlik_lower):
             return sembol
     
-    # Bulunamadı, varlık adını olduğu gibi dene
-    return varlik.upper()
+    # Bulunamadı, varlık adını olduğu gibi dene (büyük harfe çevir)
+    # Eğer "-USD" veya ".IS" gibi suffix yoksa, olduğu gibi kullan
+    varlik_upper = varlik.upper()
+    
+    # Kripto gibi görünüyorsa -USD ekle
+    if len(varlik_upper) <= 5 and varlik_upper.isalpha():
+        # Kısa sembol, muhtemelen kripto
+        return f"{varlik_upper}-USD"
+    
+    return varlik_upper
 
 
 # ─── Fiyat Verisi Alma ────────────────────────────────────────────────────────

@@ -400,3 +400,306 @@ def gorsel_olusturucu_al() -> GorselOlusturucu:
     if _gorsel_olusturucu is None:
         _gorsel_olusturucu = GorselOlusturucu()
     return _gorsel_olusturucu
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# YENİ: GELİŞMİŞ GÖRSEL ÖZELLİKLERİ
+# ═══════════════════════════════════════════════════════════════════════════════
+
+class GelismisGorselOlusturucu(GorselOlusturucu):
+    """Gelişmiş görsel özellikleri ile genişletilmiş sınıf"""
+    
+    def __init__(self):
+        super().__init__()
+        # Yeni renk paletleri
+        self.renk_paletleri = {
+            "varsayilan": {
+                'baslik': '#1a1a2e',
+                'vurgu': '#0f3460',
+                'pozitif': '#16213e',
+                'notr': '#533483',
+                'negatif': '#e94560',
+            },
+            "profesyonel": {
+                'baslik': '#2c3e50',
+                'vurgu': '#3498db',
+                'pozitif': '#27ae60',
+                'notr': '#95a5a6',
+                'negatif': '#e74c3c',
+            },
+            "modern": {
+                'baslik': '#1e272e',
+                'vurgu': '#0984e3',
+                'pozitif': '#00b894',
+                'notr': '#636e72',
+                'negatif': '#d63031',
+            },
+        }
+    
+    def heatmap_grafigi(
+        self,
+        data: dict[str, dict[str, float]],
+        baslik: str,
+        x_etiket: str = "Kategori",
+        y_etiket: str = "Metrik",
+    ) -> Optional[io.BytesIO]:
+        """
+        Heatmap (ısı haritası) grafiği oluştur
+        
+        Args:
+            data: {satir_adi: {sutun_adi: deger}}
+            baslik: Grafik başlığı
+        
+        Returns:
+            BytesIO buffer (PNG) veya None
+        """
+        if not MATPLOTLIB_VAR:
+            return None
+        
+        if not data:
+            return None
+        
+        # Verileri matrise çevir
+        satirlar = list(data.keys())
+        sutunlar = list(next(iter(data.values())).keys())
+        
+        matris = []
+        for satir in satirlar:
+            satir_data = []
+            for sutun in sutunlar:
+                satir_data.append(data[satir].get(sutun, 0))
+            matris.append(satir_data)
+        
+        # Grafik oluştur
+        fig, ax = plt.subplots(figsize=(10, 8), facecolor='white')
+        
+        im = ax.imshow(matris, cmap='RdYlGn', aspect='auto', vmin=0, vmax=100)
+        
+        # Eksen etiketleri
+        ax.set_xticks(range(len(sutunlar)))
+        ax.set_yticks(range(len(satirlar)))
+        ax.set_xticklabels(sutunlar, rotation=45, ha='right')
+        ax.set_yticklabels(satirlar)
+        
+        # Değerleri hücrelere yaz
+        for i in range(len(satirlar)):
+            for j in range(len(sutunlar)):
+                text = ax.text(j, i, f'{matris[i][j]:.0f}',
+                             ha="center", va="center", color="black", fontsize=10, fontweight='600')
+        
+        # Colorbar
+        cbar = plt.colorbar(im, ax=ax)
+        cbar.set_label('Değer', rotation=270, labelpad=20, fontsize=10, fontweight='600')
+        
+        # Başlık
+        ax.set_title(baslik, fontsize=14, fontweight='bold', color='#1a1a2e', pad=20)
+        ax.set_xlabel(x_etiket, fontsize=11, fontweight='600')
+        ax.set_ylabel(y_etiket, fontsize=11, fontweight='600')
+        
+        plt.tight_layout()
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
+        buf.seek(0)
+        plt.close(fig)
+        
+        return buf
+    
+    def radar_chart(
+        self,
+        kategoriler: list[str],
+        degerler: list[float],
+        baslik: str,
+        max_deger: float = 100,
+    ) -> Optional[io.BytesIO]:
+        """
+        Radar (örümcek ağı) grafiği oluştur
+        
+        Args:
+            kategoriler: Kategori isimleri
+            degerler: Her kategori için değer (0-max_deger)
+            baslik: Grafik başlığı
+            max_deger: Maksimum değer
+        
+        Returns:
+            BytesIO buffer (PNG) veya None
+        """
+        if not MATPLOTLIB_VAR:
+            return None
+        
+        if not kategoriler or not degerler:
+            return None
+        
+        # Açıları hesapla
+        N = len(kategoriler)
+        angles = [n / float(N) * 2 * 3.14159 for n in range(N)]
+        degerler += degerler[:1]  # Döngüyü kapat
+        angles += angles[:1]
+        
+        # Grafik oluştur
+        fig, ax = plt.subplots(figsize=(8, 8), subplot_kw=dict(projection='polar'), facecolor='white')
+        
+        # Çizgi ve alan
+        ax.plot(angles, degerler, 'o-', linewidth=2, color='#16213e', label='Skor')
+        ax.fill(angles, degerler, alpha=0.25, color='#16213e')
+        
+        # Kategori etiketleri
+        ax.set_xticks(angles[:-1])
+        ax.set_xticklabels(kategoriler, fontsize=10)
+        
+        # Y ekseni
+        ax.set_ylim(0, max_deger)
+        ax.set_yticks([max_deger * 0.25, max_deger * 0.5, max_deger * 0.75, max_deger])
+        ax.set_yticklabels([f'{int(max_deger * 0.25)}', f'{int(max_deger * 0.5)}',
+                           f'{int(max_deger * 0.75)}', f'{int(max_deger)}'], fontsize=8, color='#666666')
+        
+        # Grid
+        ax.grid(True, linestyle='--', alpha=0.3)
+        
+        # Başlık
+        plt.title(baslik, size=14, fontweight='bold', color='#1a1a2e', pad=20)
+        
+        plt.tight_layout()
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
+        buf.seek(0)
+        plt.close(fig)
+        
+        return buf
+    
+    def watermark_ekle(
+        self,
+        gorsel_buffer: io.BytesIO,
+        watermark_text: str = "OKWIS AI",
+    ) -> io.BytesIO:
+        """
+        Görsele watermark ekle
+        
+        Args:
+            gorsel_buffer: Orijinal görsel
+            watermark_text: Watermark metni
+        
+        Returns:
+            Watermark eklenmiş görsel
+        """
+        if not MATPLOTLIB_VAR:
+            return gorsel_buffer
+        
+        try:
+            from PIL import Image, ImageDraw, ImageFont
+            
+            # Görseli aç
+            gorsel_buffer.seek(0)
+            img = Image.open(gorsel_buffer)
+            
+            # Watermark ekle
+            draw = ImageDraw.Draw(img)
+            
+            # Font (varsayılan)
+            try:
+                font = ImageFont.truetype("arial.ttf", 20)
+            except Exception:
+                font = ImageFont.load_default()
+            
+            # Watermark pozisyonu (sağ alt köşe)
+            width, height = img.size
+            text_bbox = draw.textbbox((0, 0), watermark_text, font=font)
+            text_width = text_bbox[2] - text_bbox[0]
+            text_height = text_bbox[3] - text_bbox[1]
+            
+            x = width - text_width - 20
+            y = height - text_height - 20
+            
+            # Watermark çiz (yarı saydam)
+            draw.text((x, y), watermark_text, fill=(26, 26, 46, 128), font=font)
+            
+            # Yeni buffer'a kaydet
+            output = io.BytesIO()
+            img.save(output, format='PNG')
+            output.seek(0)
+            
+            return output
+        except Exception:
+            # Hata durumunda orijinal görseli döndür
+            return gorsel_buffer
+    
+    def karsilastirma_grafigi(
+        self,
+        veri1: dict,
+        veri2: dict,
+        etiket1: str,
+        etiket2: str,
+        baslik: str,
+    ) -> Optional[io.BytesIO]:
+        """
+        İki veri setini karşılaştırmalı grafik
+        
+        Args:
+            veri1: {kategori: deger}
+            veri2: {kategori: deger}
+            etiket1: İlk veri seti etiketi
+            etiket2: İkinci veri seti etiketi
+            baslik: Grafik başlığı
+        
+        Returns:
+            BytesIO buffer (PNG) veya None
+        """
+        if not MATPLOTLIB_VAR:
+            return None
+        
+        if not veri1 or not veri2:
+            return None
+        
+        kategoriler = list(veri1.keys())
+        degerler1 = list(veri1.values())
+        degerler2 = list(veri2.values())
+        
+        x = range(len(kategoriler))
+        width = 0.35
+        
+        fig, ax = plt.subplots(figsize=(10, 6), facecolor='white')
+        
+        bars1 = ax.bar([i - width/2 for i in x], degerler1, width, label=etiket1,
+                       color='#16213e', alpha=0.85)
+        bars2 = ax.bar([i + width/2 for i in x], degerler2, width, label=etiket2,
+                       color='#0f3460', alpha=0.85)
+        
+        # Değerleri bar'ların üzerine yaz
+        for bars in [bars1, bars2]:
+            for bar in bars:
+                height = bar.get_height()
+                ax.text(bar.get_x() + bar.get_width()/2., height,
+                       f'{height:.1f}',
+                       ha='center', va='bottom', fontsize=9, fontweight='600')
+        
+        ax.set_xlabel('Kategori', fontsize=11, fontweight='600')
+        ax.set_ylabel('Değer', fontsize=11, fontweight='600')
+        ax.set_title(baslik, fontsize=14, fontweight='bold', color='#1a1a2e', pad=20)
+        ax.set_xticks(x)
+        ax.set_xticklabels(kategoriler, rotation=45, ha='right')
+        ax.legend()
+        ax.grid(axis='y', alpha=0.3, linestyle='--', linewidth=0.5)
+        ax.spines['top'].set_visible(False)
+        ax.spines['right'].set_visible(False)
+        
+        plt.tight_layout()
+        
+        buf = io.BytesIO()
+        plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
+        buf.seek(0)
+        plt.close(fig)
+        
+        return buf
+
+
+# Gelişmiş singleton instance
+_gelismis_gorsel_olusturucu: Optional[GelismisGorselOlusturucu] = None
+
+
+def gelismis_gorsel_olusturucu_al() -> GelismisGorselOlusturucu:
+    """Gelişmiş görsel oluşturucu singleton instance'ını döndür."""
+    global _gelismis_gorsel_olusturucu
+    if _gelismis_gorsel_olusturucu is None:
+        _gelismis_gorsel_olusturucu = GelismisGorselOlusturucu()
+    return _gelismis_gorsel_olusturucu

@@ -565,3 +565,292 @@ async def alarm_tara_ve_bildir(bot, plan_kayitlari_yukle_fn, kullanici_pro_mu_fn
         skor, seviye_adi, basarili, len(alicilar_gonderilecek), olay[:60]
     )
     _alarm_gonderildi_kaydet(anahtar)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# YENİ: AKILLI ALARM ÖZELLİKLERİ
+# ═══════════════════════════════════════════════════════════════════════════════
+
+_KULLANICI_FEEDBACK_PATH = _METRICS_DIR / "alarm_feedback.jsonl"
+_KULLANICI_AKTIF_SAATLER_PATH = _METRICS_DIR / "kullanici_aktif_saatler.json"
+
+
+def alarm_feedback_kaydet(user_id: int | str, alarm_id: str, faydali_mi: bool, neden: str = "") -> None:
+    """
+    Kullanıcı alarm feedback'i kaydet
+    
+    Args:
+        user_id: Kullanıcı ID
+        alarm_id: Alarm timestamp
+        faydali_mi: Alarm faydalı mıydı?
+        neden: Neden faydalı/faydasız (opsiyonel)
+    """
+    try:
+        _METRICS_DIR.mkdir(parents=True, exist_ok=True)
+        kayit = {
+            "ts": datetime.now(timezone.utc).isoformat(),
+            "user_id": str(user_id),
+            "alarm_id": alarm_id,
+            "faydali": faydali_mi,
+            "neden": neden,
+        }
+        with open(_KULLANICI_FEEDBACK_PATH, "a", encoding="utf-8") as f:
+            f.write(json.dumps(kayit, ensure_ascii=False) + "\n")
+    except Exception as e:
+        logger.warning("Alarm feedback kaydedilemedi: %s", e)
+
+
+def alarm_feedback_istatistikleri() -> dict:
+    """
+    Alarm feedback istatistikleri
+    
+    Returns:
+        {
+            "toplam": int,
+            "faydali": int,
+            "faydasiz": int,
+            "faydali_oran": float,
+            "kategori_bazli": {kategori: {"faydali": int, "faydasiz": int}},
+        }
+    """
+    if not _KULLANICI_FEEDBACK_PATH.exists():
+        return {
+            "toplam": 0,
+            "faydali": 0,
+            "faydasiz": 0,
+            "faydali_oran": 0,
+            "kategori_bazli": {},
+        }
+    
+    feedbackler = []
+    try:
+        with open(_KULLANICI_FEEDBACK_PATH, encoding="utf-8") as f:
+            for satir in f:
+                s = satir.strip()
+                if s:
+                    try:
+                        feedbackler.append(json.loads(s))
+                    except json.JSONDecodeError:
+                        continue
+    except Exception:
+        pass
+    
+    toplam = len(feedbackler)
+    faydali = sum(1 for f in feedbackler if f.get("faydali") is True)
+    faydasiz = toplam - faydali
+    faydali_oran = (faydali / toplam * 100) if toplam > 0 else 0
+    
+    return {
+        "toplam": toplam,
+        "faydali": faydali,
+        "faydasiz": faydasiz,
+        "faydali_oran": faydali_oran,
+        "kategori_bazli": {},
+    }
+
+
+def kullanici_aktif_saatler_kaydet(user_id: int | str) -> None:
+    """
+    Kullanıcının aktif olduğu saati kaydet (makine öğrenmesi için)
+    
+    Args:
+        user_id: Kullanıcı ID
+    """
+    try:
+        _METRICS_DIR.mkdir(parents=True, exist_ok=True)
+        
+        # Mevcut verileri yükle
+        if _KULLANICI_AKTIF_SAATLER_PATH.exists():
+            with open(_KULLANICI_AKTIF_SAATLER_PATH, encoding="utf-8") as f:
+                data = json.load(f)
+        else:
+            data = {}
+        
+        uid = str(user_id)
+        if uid not in data:
+            data[uid] = {"saatler": [0] * 24, "toplam": 0}
+        
+        # Şu anki saati kaydet
+        saat = datetime.now().hour
+        data[uid]["saatler"][saat] += 1
+        data[uid]["toplam"] += 1
+        
+        # Kaydet
+        with open(_KULLANICI_AKTIF_SAATLER_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False)
+    except Exception as e:
+        logger.warning("Aktif saat kaydedilemedi: %s", e)
+
+
+def kullanici_en_aktif_saatler(user_id: int | str, top_n: int = 3) -> list[int]:
+    """
+    Kullanıcının en aktif olduğu saatleri döndür
+    
+    Args:
+        user_id: Kullanıcı ID
+        top_n: Kaç saat döndürülsün
+    
+    Returns:
+        En aktif saatler listesi (0-23)
+    """
+    if not _KULLANICI_AKTIF_SAATLER_PATH.exists():
+        return list(range(9, 22))  # Varsayılan: 09:00-22:00
+    
+    try:
+        with open(_KULLANICI_AKTIF_SAATLER_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        
+        uid = str(user_id)
+        if uid not in data:
+            return list(range(9, 22))
+        
+        saatler = data[uid]["saatler"]
+        
+        # En yüksek aktiviteye sahip saatleri bul
+        saat_aktivite = [(saat, aktivite) for saat, aktivite in enumerate(saatler)]
+        saat_aktivite.sort(key=lambda x: x[1], reverse=True)
+        
+        return [saat for saat, _ in saat_aktivite[:top_n]]
+    except Exception:
+        return list(range(9, 22))
+
+
+def akilli_alarm_zamanlama(user_id: int | str) -> bool:
+    """
+    Kullanıcının aktif saatlerine göre alarm gönderilmeli mi?
+    
+    Args:
+        user_id: Kullanıcı ID
+    
+    Returns:
+        Şu an alarm gönderilebilir mi?
+    """
+    aktif_saatler = kullanici_en_aktif_saatler(user_id, top_n=8)
+    su_an_saat = datetime.now().hour
+    
+    # Kullanıcının aktif saatlerinde miyiz?
+    if su_an_saat in aktif_saatler:
+        return True
+    
+    # Gece saatleri (00:00-06:00) asla alarm gönderme
+    if 0 <= su_an_saat < 6:
+        return False
+    
+    # Diğer saatlerde %50 şans
+    return su_an_saat % 2 == 0
+
+
+def alarm_kategori_filtresi_ayarla(user_id: int | str, kategoriler: list[str]) -> None:
+    """
+    Kullanıcının ilgilendiği alarm kategorilerini ayarla
+    
+    Args:
+        user_id: Kullanıcı ID
+        kategoriler: ["jeopolitik", "ekonomi", "kripto", "forex", "hisse", "emtia"]
+    """
+    tercihler = bildirim_tercihleri_yukle()
+    uid = str(user_id)
+    mevcut = tercihler.get(uid, {})
+    if isinstance(mevcut, bool):
+        mevcut = {"acik": mevcut, "min_seviye": ACILIYET_BILGI, "portfoy_filtre": True}
+    
+    mevcut["kategoriler"] = kategoriler
+    tercihler[uid] = mevcut
+    bildirim_tercihleri_kaydet(tercihler)
+
+
+def kullanici_alarm_kategorileri(user_id: int | str) -> list[str]:
+    """Kullanıcının ilgilendiği alarm kategorileri"""
+    tercihler = bildirim_tercihleri_yukle()
+    tercih = tercihler.get(str(user_id), {})
+    if isinstance(tercih, dict):
+        return tercih.get("kategoriler", ["tumu"])
+    return ["tumu"]
+
+
+def alarm_kategori_belirle(olay: str, aksiyon: str) -> str:
+    """
+    Alarm içeriğinden kategori belirle
+    
+    Returns:
+        "jeopolitik" | "ekonomi" | "kripto" | "forex" | "hisse" | "emtia" | "genel"
+    """
+    icerik = (olay + " " + aksiyon).lower()
+    
+    # Jeopolitik
+    if any(k in icerik for k in ["savaş", "war", "conflict", "çatışma", "askeri", "military", "nükleer", "nuclear"]):
+        return "jeopolitik"
+    
+    # Kripto
+    if any(k in icerik for k in ["bitcoin", "btc", "ethereum", "eth", "crypto", "kripto", "blockchain"]):
+        return "kripto"
+    
+    # Forex
+    if any(k in icerik for k in ["dolar", "dollar", "euro", "eur", "usd", "forex", "döviz", "currency"]):
+        return "forex"
+    
+    # Emtia
+    if any(k in icerik for k in ["petrol", "oil", "altın", "gold", "xau", "gümüş", "silver", "commodity"]):
+        return "emtia"
+    
+    # Hisse
+    if any(k in icerik for k in ["hisse", "stock", "borsa", "market", "şirket", "company"]):
+        return "hisse"
+    
+    # Ekonomi
+    if any(k in icerik for k in ["faiz", "interest", "enflasyon", "inflation", "fed", "ecb", "merkez bankası"]):
+        return "ekonomi"
+    
+    return "genel"
+
+
+def gelismis_alarm_filtresi(olay: str, aksiyon: str, user_id: int | str) -> bool:
+    """
+    Gelişmiş alarm filtresi (kategori + zamanlama + feedback)
+    
+    Returns:
+        Alarm kullanıcıya gönderilmeli mi?
+    """
+    # Kategori filtresi
+    alarm_kategorisi = alarm_kategori_belirle(olay, aksiyon)
+    kullanici_kategorileri = kullanici_alarm_kategorileri(user_id)
+    
+    if "tumu" not in kullanici_kategorileri and alarm_kategorisi not in kullanici_kategorileri:
+        logger.debug("Alarm: user=%s kategori filtresi (%s not in %s)", user_id, alarm_kategorisi, kullanici_kategorileri)
+        return False
+    
+    # Zamanlama filtresi
+    if not akilli_alarm_zamanlama(user_id):
+        logger.debug("Alarm: user=%s zamanlama filtresi (aktif saat değil)", user_id)
+        return False
+    
+    return True
+
+
+def alarm_performans_raporu_html() -> str:
+    """
+    Alarm sistemi performans raporu
+    
+    Returns:
+        HTML formatında rapor
+    """
+    stats = alarm_feedback_istatistikleri()
+    
+    html = [
+        "<b>◆ ALARM SİSTEMİ PERFORMANSI</b>",
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>",
+        "",
+        "<b>📊 Genel İstatistikler</b>",
+        f"Toplam Feedback: <b>{stats['toplam']}</b>",
+        f"Faydalı: <b>{stats['faydali']}</b> ✅",
+        f"Faydasız: <b>{stats['faydasiz']}</b> ❌",
+    ]
+    
+    if stats['toplam'] > 0:
+        html.append(f"Faydalılık Oranı: <b>{stats['faydali_oran']:.1f}%</b>")
+    
+    html.append("")
+    html.append("<b>━━━━━━━━━━━━━━━━━━━━</b>")
+    html.append("<i>Alarm ayarlarını /alarm_ayarlar ile değiştirebilirsin</i>")
+    
+    return "\n".join(html)

@@ -1,6 +1,12 @@
 """
-Okwis AI — Backtest/Simülasyon Sistemi
+Okwis AI — Backtest/Simülasyon Sistemi (GELİŞTİRİLMİŞ)
 Geçmiş tahminleri göster, performans analizi yap
+
+YENİ ÖZELLİKLER:
+- Gelişmiş performans metrikleri (Sharpe, Drawdown, Profit Factor)
+- ROI hesaplama (Hızlı Para için)
+- Zaman serisi grafiği
+- Karşılaştırmalı performans analizi
 """
 
 import io
@@ -9,11 +15,13 @@ from datetime import datetime, timedelta
 from pathlib import Path
 from typing import Optional
 from collections import defaultdict
+import math
 
 try:
     import matplotlib
     matplotlib.use('Agg')
     import matplotlib.pyplot as plt
+    import matplotlib.dates as mdates
     MATPLOTLIB_VAR = True
 except ImportError:
     MATPLOTLIB_VAR = False
@@ -727,5 +735,269 @@ def hizli_para_raporu_html(n: int = 20) -> str:
     
     html.append("<b>━━━━━━━━━━━━━━━━━━━━</b>")
     html.append("<i>İşlemleri manuel olarak doğrulamak için admin ile iletişime geç.</i>")
+    
+    return "\n".join(html)
+
+
+# ═══════════════════════════════════════════════════════════════════════════════
+# YENİ: GELİŞMİŞ ANALİZ FONKSİYONLARI
+# ═══════════════════════════════════════════════════════════════════════════════
+
+def gelismis_performans_metrikleri() -> dict:
+    """
+    Gelişmiş performans metrikleri hesapla
+    
+    Returns:
+        {
+            "win_rate": float,
+            "profit_factor": float,
+            "max_consecutive_wins": int,
+            "max_consecutive_losses": int,
+            "sharpe_ratio": float,
+            "max_drawdown": float,
+        }
+    """
+    tahminler = tahminleri_yukle()
+    dogrulanmis = [t for t in tahminler if t.get("dogrulandi") is not None]
+    
+    if not dogrulanmis:
+        return {
+            "win_rate": 0,
+            "profit_factor": 0,
+            "max_consecutive_wins": 0,
+            "max_consecutive_losses": 0,
+            "sharpe_ratio": 0,
+            "max_drawdown": 0,
+        }
+    
+    # Win rate
+    kazananlar = [t for t in dogrulanmis if t.get("dogrulandi") is True]
+    kaybedenler = [t for t in dogrulanmis if t.get("dogrulandi") is False]
+    win_rate = (len(kazananlar) / len(dogrulanmis)) * 100 if dogrulanmis else 0
+    
+    # Profit factor
+    total_wins = len(kazananlar)
+    total_losses = len(kaybedenler)
+    profit_factor = total_wins / total_losses if total_losses > 0 else float('inf')
+    
+    # Ardışık kazanç/kayıp
+    max_consecutive_wins = 0
+    max_consecutive_losses = 0
+    current_wins = 0
+    current_losses = 0
+    
+    dogrulanmis_sirali = sorted(dogrulanmis, key=lambda t: t.get("ts_utc", ""))
+    
+    for t in dogrulanmis_sirali:
+        if t.get("dogrulandi") is True:
+            current_wins += 1
+            current_losses = 0
+            max_consecutive_wins = max(max_consecutive_wins, current_wins)
+        else:
+            current_losses += 1
+            current_wins = 0
+            max_consecutive_losses = max(max_consecutive_losses, current_losses)
+    
+    # Sharpe Ratio
+    returns = [1 if t.get("dogrulandi") is True else -1 for t in dogrulanmis_sirali]
+    if len(returns) > 1:
+        mean_return = sum(returns) / len(returns)
+        std_return = math.sqrt(sum((r - mean_return) ** 2 for r in returns) / len(returns))
+        sharpe_ratio = (mean_return / std_return) * math.sqrt(252) if std_return > 0 else 0
+    else:
+        sharpe_ratio = 0
+    
+    # Maximum Drawdown
+    cumulative = []
+    cum_sum = 0
+    for r in returns:
+        cum_sum += r
+        cumulative.append(cum_sum)
+    
+    if cumulative:
+        peak = cumulative[0]
+        max_dd = 0
+        for val in cumulative:
+            if val > peak:
+                peak = val
+            dd = ((peak - val) / peak * 100) if peak > 0 else 0
+            max_dd = max(max_dd, dd)
+    else:
+        max_dd = 0
+    
+    return {
+        "win_rate": win_rate,
+        "profit_factor": profit_factor,
+        "max_consecutive_wins": max_consecutive_wins,
+        "max_consecutive_losses": max_consecutive_losses,
+        "sharpe_ratio": sharpe_ratio,
+        "max_drawdown": max_dd,
+    }
+
+
+def hizli_para_roi_hesapla() -> dict:
+    """
+    Hızlı Para Modu için ROI hesapla
+    
+    Returns:
+        {
+            "total_roi": float,
+            "avg_roi_per_trade": float,
+            "win_rate": float,
+            "profit_factor": float,
+            "total_trades": int,
+        }
+    """
+    islemler = hizli_para_islemlerini_yukle()
+    dogrulanmis = [i for i in islemler if i.get("dogrulandi") is not None]
+    
+    if not dogrulanmis:
+        return {
+            "total_roi": 0,
+            "avg_roi_per_trade": 0,
+            "win_rate": 0,
+            "profit_factor": 0,
+            "total_trades": 0,
+        }
+    
+    # ROI hesaplama (TP1=1R, TP2=2R, TP3=3R, SL=-1R)
+    roi_list = []
+    for i in dogrulanmis:
+        sonuc = i.get("sonuc", "")
+        if sonuc == "tp1":
+            roi_list.append(1.0)
+        elif sonuc == "tp2":
+            roi_list.append(2.0)
+        elif sonuc == "tp3":
+            roi_list.append(3.0)
+        elif sonuc == "stop_loss":
+            roi_list.append(-1.0)
+        else:
+            roi_list.append(0.0)
+    
+    total_roi = sum(roi_list)
+    avg_roi = total_roi / len(roi_list) if roi_list else 0
+    
+    # Win rate
+    winning = [r for r in roi_list if r > 0]
+    losing = [r for r in roi_list if r < 0]
+    win_rate = (len(winning) / len(roi_list)) * 100 if roi_list else 0
+    
+    # Profit factor
+    total_profit = sum(winning)
+    total_loss = abs(sum(losing))
+    profit_factor = total_profit / total_loss if total_loss > 0 else float('inf')
+    
+    return {
+        "total_roi": total_roi * 100,
+        "avg_roi_per_trade": avg_roi * 100,
+        "win_rate": win_rate,
+        "profit_factor": profit_factor,
+        "total_trades": len(dogrulanmis),
+    }
+
+
+def zaman_serisi_performans_grafigi() -> Optional[io.BytesIO]:
+    """Zaman içinde kümülatif performans grafiği"""
+    if not MATPLOTLIB_VAR:
+        return None
+    
+    tahminler = tahminleri_yukle()
+    dogrulanmis = [t for t in tahminler if t.get("dogrulandi") is not None]
+    
+    if not dogrulanmis:
+        return None
+    
+    dogrulanmis_sirali = sorted(dogrulanmis, key=lambda t: t.get("ts_utc", ""))
+    
+    tarihler = []
+    kumul_skor = []
+    skor = 0
+    
+    for t in dogrulanmis_sirali:
+        try:
+            tarih = datetime.fromisoformat(t.get("ts_utc", ""))
+            tarihler.append(tarih)
+            skor += 1 if t.get("dogrulandi") is True else -1
+            kumul_skor.append(skor)
+        except Exception:
+            continue
+    
+    if not tarihler:
+        return None
+    
+    fig, ax = plt.subplots(figsize=(12, 6), facecolor='white')
+    
+    ax.plot(tarihler, kumul_skor, color='#16213e', linewidth=2.5, marker='o',
+            markersize=4, markerfacecolor='#0f3460', markeredgecolor='white', markeredgewidth=1)
+    
+    ax.axhline(y=0, color='#e0e0e0', linestyle='--', linewidth=1, alpha=0.7)
+    
+    ax.fill_between(tarihler, kumul_skor, 0, where=[s >= 0 for s in kumul_skor],
+                     color='#16213e', alpha=0.1)
+    ax.fill_between(tarihler, kumul_skor, 0, where=[s < 0 for s in kumul_skor],
+                     color='#e94560', alpha=0.1)
+    
+    ax.set_xlabel('Tarih', fontsize=11, fontweight='600', color='#1a1a2e')
+    ax.set_ylabel('Kümülatif Skor', fontsize=11, fontweight='600', color='#1a1a2e')
+    ax.set_title('Zaman İçinde Performans Trendi', fontsize=14, fontweight='bold',
+                 color='#1a1a2e', pad=20)
+    
+    ax.xaxis.set_major_formatter(mdates.DateFormatter('%d %b'))
+    ax.xaxis.set_major_locator(mdates.AutoDateLocator())
+    plt.xticks(rotation=45, ha='right')
+    
+    ax.grid(axis='both', alpha=0.3, linestyle='--', linewidth=0.5)
+    ax.spines['top'].set_visible(False)
+    ax.spines['right'].set_visible(False)
+    
+    plt.tight_layout()
+    
+    buf = io.BytesIO()
+    plt.savefig(buf, format='png', dpi=150, bbox_inches='tight', facecolor='white')
+    buf.seek(0)
+    plt.close(fig)
+    
+    return buf
+
+
+def gelismis_backtest_raporu_html() -> str:
+    """Gelişmiş backtest raporu HTML formatında"""
+    ozet = performans_ozeti()
+    gelismis = gelismis_performans_metrikleri()
+    hp_roi = hizli_para_roi_hesapla()
+    
+    html = [
+        "<b>◆ GELİŞMİŞ BACKTEST RAPORU</b>",
+        "<b>━━━━━━━━━━━━━━━━━━━━</b>",
+        "",
+        "<b>📊 Temel Performans</b>",
+        f"Toplam Tahmin: <b>{ozet['toplam']}</b>",
+        f"Doğrulanan: <b>{ozet['dogrulanan']}</b>",
+        f"Bekleyen: <b>{ozet['bekleyen']}</b>",
+    ]
+    
+    if ozet['oran'] is not None:
+        html.append(f"Win Rate: <b>{ozet['oran']:.1f}%</b>")
+    
+    html.append("")
+    html.append("<b>📈 Gelişmiş Metrikler</b>")
+    html.append(f"Profit Factor: <b>{gelismis['profit_factor']:.2f}</b>")
+    html.append(f"Sharpe Ratio: <b>{gelismis['sharpe_ratio']:.2f}</b>")
+    html.append(f"Max Drawdown: <b>{gelismis['max_drawdown']:.1f}%</b>")
+    html.append(f"Max Ardışık Kazanç: <b>{gelismis['max_consecutive_wins']}</b>")
+    html.append(f"Max Ardışık Kayıp: <b>{gelismis['max_consecutive_losses']}</b>")
+    
+    if hp_roi['total_trades'] > 0:
+        html.append("")
+        html.append("<b>⚡ Hızlı Para ROI</b>")
+        html.append(f"Toplam ROI: <b>{hp_roi['total_roi']:+.1f}%</b>")
+        html.append(f"İşlem Başına Ort: <b>{hp_roi['avg_roi_per_trade']:+.1f}%</b>")
+        html.append(f"Win Rate: <b>{hp_roi['win_rate']:.1f}%</b>")
+        html.append(f"Profit Factor: <b>{hp_roi['profit_factor']:.2f}</b>")
+    
+    html.append("")
+    html.append("<b>━━━━━━━━━━━━━━━━━━━━</b>")
+    html.append("<i>Detaylı grafikler için /backtest_grafik komutunu kullan</i>")
     
     return "\n".join(html)

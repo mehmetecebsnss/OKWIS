@@ -17,6 +17,13 @@ from ozel_gunler_baglam import topla_ozel_gunler_baglami
 from sektor_baglam import topla_sektor_baglami
 from trendler_baglam import topla_trendler_baglami
 from fiyat_servisi import fiyat_sorgula, sembol_tespit
+from teknik_analiz_baglam import topla_teknik_analiz_baglami
+from mod_koordinator import (
+    ModSinyal,
+    uyum_skoru_hesapla,
+    guven_skoru_hesapla,
+)
+from varlik_tanimlayici import varlik_tanimla, varlik_ulke_tespit, varlik_tip_tespit
 
 logger = logging.getLogger(__name__)
 
@@ -185,13 +192,52 @@ def _varlik_tipi_tespit(varlik: str) -> str:
     return "kripto"
 
 
-# ─── 8 Mod Bağlam Toplama ─────────────────────────────────────────────────────
+# ─── 9 Mod Bağlam Toplama (8 eski + Teknik Analiz) ────────────────────────────
 
-def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
-    """8 modu paralel tara, bağlamı topla (Okwis gibi ama kısa vadeli odak)."""
-    baglamlar = []
+def _9_mod_baglam_topla(ulke: str, varlik: str) -> tuple[str, list[ModSinyal]]:
+    """
+    9 modu paralel tara, bağlamı topla + sinyal listesi döndür.
     
-    # 1. Mevsim
+    Returns:
+        (baglam_metni, mod_sinyalleri)
+    """
+    baglamlar = []
+    sinyaller = []
+    
+    # 1. Teknik Analiz (EN ÖNEMLİ — kısa vadeli trade için)
+    try:
+        teknik = topla_teknik_analiz_baglami(varlik)
+        if teknik:
+            baglamlar.append(f"[TEKNİK ANALİZ — YÜKSEK ÖNCELİK]\n{teknik[:600]}")
+            
+            # Teknik analiz sinyalini parse et
+            if "BULLISH" in teknik:
+                yon = "bullish"
+                guc = 7.5
+            elif "BEARISH" in teknik:
+                yon = "bearish"
+                guc = 7.5
+            else:
+                yon = "neutral"
+                guc = 5.0
+            
+            # RSI'dan güven çıkar
+            import re
+            rsi_match = re.search(r'RSI.*?(\d+\.?\d*)', teknik)
+            if rsi_match:
+                rsi = float(rsi_match.group(1))
+                if rsi < 30 or rsi > 70:
+                    guven = 85  # Aşırı bölge, yüksek güven
+                else:
+                    guven = 70
+            else:
+                guven = 70
+            
+            sinyaller.append(ModSinyal("teknik_analiz", yon, guc, guven, "Teknik göstergeler"))
+    except Exception as e:
+        logger.warning("Teknik analiz bağlamı alınamadı: %s", e)
+    
+    # 2. Mevsim
     try:
         mevsim = topla_mevsim_baglami(ulke)
         if mevsim:
@@ -199,7 +245,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Mevsim bağlamı alınamadı: %s", e)
     
-    # 2. Hava
+    # 3. Hava
     try:
         hava = topla_hava_baglami(ulke)
         if hava:
@@ -207,7 +253,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Hava bağlamı alınamadı: %s", e)
     
-    # 3. Jeopolitik (EN ÖNEMLİ — kısa vadeli volatilite)
+    # 4. Jeopolitik (YÜKSEK ÖNCELİK — kısa vadeli volatilite)
     try:
         jeopolitik = topla_jeopolitik_baglami(ulke)
         if jeopolitik:
@@ -215,7 +261,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Jeopolitik bağlamı alınamadı: %s", e)
     
-    # 4. Sektör
+    # 5. Sektör
     try:
         sektor = topla_sektor_baglami(ulke)
         if sektor:
@@ -223,7 +269,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Sektör bağlamı alınamadı: %s", e)
     
-    # 5. Trendler
+    # 6. Trendler
     try:
         trendler = topla_trendler_baglami(ulke)
         if trendler:
@@ -231,7 +277,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Trendler bağlamı alınamadı: %s", e)
     
-    # 6. Magazin (düşük öncelik)
+    # 7. Magazin (düşük öncelik)
     try:
         magazin = topla_magazin_baglami(ulke)
         if magazin:
@@ -239,7 +285,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Magazin bağlamı alınamadı: %s", e)
     
-    # 7. Özel Günler
+    # 8. Özel Günler
     try:
         ozel_gun = topla_ozel_gunler_baglami(ulke)
         if ozel_gun:
@@ -247,7 +293,7 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Özel günler bağlamı alınamadı: %s", e)
     
-    # 8. Doğal Afet
+    # 9. Doğal Afet
     try:
         dogal_afet = topla_dogal_afet_baglami(ulke)
         if dogal_afet:
@@ -255,7 +301,8 @@ def _8_mod_baglam_topla(ulke: str, varlik: str) -> str:
     except Exception as e:
         logger.warning("Doğal afet bağlamı alınamadı: %s", e)
     
-    return "\n\n".join(baglamlar) if baglamlar else "Bağlam verisi alınamadı."
+    baglam_metni = "\n\n".join(baglamlar) if baglamlar else "Bağlam verisi alınamadı."
+    return (baglam_metni, sinyaller)
 
 
 # ─── Hızlı Para Analizi ───────────────────────────────────────────────────────
@@ -270,8 +317,8 @@ def hizli_para_analizi(
     Kısa vadeli trade önerisi üret.
     
     Args:
-        varlik: Varlık adı (BTC, EUR/USD, AAPL, XAUUSD)
-        ulke: Ülke (Türkiye, ABD, vb.)
+        varlik: Varlık adı (BTC, EUR/USD, AAPL, XAUUSD, Koç Holding)
+        ulke: Ülke (Türkiye, ABD, vb.) - artık otomatik tespit edilecek
         user_id: Kullanıcı ID
         llm_fn: LLM fonksiyonu (llm_metin_uret)
     
@@ -296,15 +343,37 @@ def hizli_para_analizi(
     """
     logger.info("Hızlı Para analizi başladı: %s, %s, user=%s", varlik, ulke, user_id)
     
-    # Varlık tipi tespit
-    varlik_tipi = _varlik_tipi_tespit(varlik)
+    # ─── YENİ: Varlık Tanımlama ───────────────────────────────────────────────
+    varlik_bilgi = varlik_tanimla(varlik)
     
-    # Fiyat verisi al (fiyat_sorgula kullan)
-    fiyat_sonuc = fiyat_sorgula(varlik)
+    if varlik_bilgi:
+        # Varlık tanımlandı - ticker ve ülke bilgisini kullan
+        ticker = varlik_bilgi["ticker"]
+        ulke_tespit = varlik_ulke_tespit(varlik_bilgi)
+        varlik_tipi = varlik_tip_tespit(varlik_bilgi)
+        
+        logger.info(
+            "Varlık tanımlandı: '%s' → %s (ticker: %s, ülke: %s, tip: %s)",
+            varlik, varlik_bilgi["isim"], ticker, ulke_tespit, varlik_tipi
+        )
+        
+        # Ülke parametresini override et (kullanıcı yanlış seçmiş olabilir)
+        ulke = ulke_tespit
+        varlik_display = varlik_bilgi["isim"]
+    else:
+        # Varlık tanımlanamadı - eski mantığı kullan
+        logger.warning("Varlık tanımlanamadı, eski mantık kullanılıyor: %s", varlik)
+        ticker = varlik
+        varlik_tipi = _varlik_tipi_tespit(varlik)
+        varlik_display = varlik
+    
+    # ─── Fiyat verisi al ──────────────────────────────────────────────────────
+    # Ticker kullanarak fiyat sorgula
+    fiyat_sonuc = fiyat_sorgula(ticker)
     
     if not fiyat_sonuc or not fiyat_sonuc.get("mesaj"):
-        logger.warning("Fiyat verisi alınamadı: %s", varlik)
-        fiyat_str = f"Fiyat verisi alınamadı ({varlik}). Genel piyasa verisiyle analiz yap."
+        logger.warning("Fiyat verisi alınamadı: %s (ticker: %s)", varlik, ticker)
+        fiyat_str = f"Fiyat verisi alınamadı ({varlik_display}). Genel piyasa verisiyle analiz yap."
         fiyat_verisi = {}
     else:
         # fiyat_sorgula'dan gelen mesajı parse et
@@ -321,14 +390,29 @@ def hizli_para_analizi(
         }
         
         fiyat_str = f"""
-GERÇEK ZAMANLI FİYAT — {varlik.upper()}
+GERÇEK ZAMANLI FİYAT — {varlik_display.upper()}
 {mesaj}
 
 Not: Fiyat servisi üzerinden alınan gerçek zamanlı veri.
 """
     
-    # 8 mod bağlamı topla
-    mod_baglami = _8_mod_baglam_topla(ulke, varlik)
+    # 9 mod bağlamı topla (8 eski + Teknik Analiz)
+    mod_baglami, mod_sinyalleri = _9_mod_baglam_topla(ulke, ticker)
+    
+    # Uyum skoru hesapla (eğer sinyal varsa)
+    uyum_bilgisi = ""
+    guven_carpani = 1.0
+    if mod_sinyalleri:
+        uyum = uyum_skoru_hesapla(mod_sinyalleri, varlik_tipi)
+        guven_carpani = uyum.guven_carpani
+        uyum_bilgisi = f"""
+
+MOD UYUM SKORU:
+- Consensus: {uyum.consensus.upper()}
+- Uyum: {uyum.uyum_skoru:.1f}/100
+- {uyum.detay}
+- Güven Çarpanı: {uyum.guven_carpani}x
+"""
     
     # Prompt oluştur
     prompt = f"""
@@ -342,8 +426,9 @@ VARLIK TİPİ: {varlik_tipi.upper()}
 
 {fiyat_str}
 
-8 MOD BAĞLAMI (Jeopolitik, Mevsim, Hava, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet):
+9 MOD BAĞLAMI (Teknik Analiz, Jeopolitik, Mevsim, Hava, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet):
 {mod_baglami}
+{uyum_bilgisi}
 
 ÇIKTI FORMATI (JSON):
 {{
@@ -380,6 +465,7 @@ KURALLAR:
 8. Her çıkarım somut veriye dayansın (fiyat, bağlam, teknik seviye)
 9. Riskler net olsun (Fed kararı, destek kırılması, vb.)
 10. Türkçe yaz (sembol/teknik terimler İngilizce kalabilir)
+11. MOD UYUM SKORUNU DİKKATE AL: Güven çarpanı {guven_carpani}x
 
 ÖNEMLİ: Sadece JSON çıktısı ver. Açıklama, yorum, markdown YASAK.
 JSON geçerli olmalı (virgül, tırnak, parantez kontrolü yap).
@@ -547,8 +633,9 @@ ${stop_loss:,.2f}  <i>({sl_yuzde:+.1f}%)</i>
 
 <b>━━━━━━━━━━━━━━━━━━━━</b>
 
-<b>📊 8 MOD ANALİZİ</b>
+<b>📊 9 MOD ANALİZİ</b>
 Bu öneri şu modlardan derlendi:
+  • Teknik Analiz (yüksek öncelik)
   • Jeopolitik (yüksek öncelik)
   • Mevsim, Hava, Sektör
   • Trendler, Magazin

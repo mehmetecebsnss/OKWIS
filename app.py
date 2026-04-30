@@ -1,6 +1,6 @@
 ﻿"""
 Okwis AI — Telegram Yatırım Asistanı
-8 analiz modu (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)
+9 analiz modu (Teknik Analiz, Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)
 + Okwis — Tanrının Gözü (tüm modların birleşimi, ultra sade çıktı).
 """
 
@@ -43,12 +43,47 @@ from alarm_sistemi import (
     kullanici_bildirim_ayarla,
     ALARM_ARALIK_SANIYE,
 )
+from gunluk_ozet_sistemi import (
+    kullanici_gunluk_ozet_acik_mi,
+    kullanici_gunluk_ozet_ayarla,
+    gunluk_ozet_zamani_geldi_mi,
+    gunluk_haberler_topla,
+    gunluk_ozet_prompt_olustur,
+    gunluk_ozet_kaydet,
+    gunluk_ozet_aktif_kullanicilar,
+    gunluk_ozet_istatistikleri,
+)
 from gorsel_olusturucu import gorsel_olusturucu_al
 from hizli_para_baglam import (
     hizli_para_aktif_mi,
     hizli_para_ayarla,
     hizli_para_analizi,
     hizli_para_html_formatla,
+)
+from message_utils import (
+    tg_html_escape as _tg_html_escape,
+    analiz_html_temizle as _analiz_html_temizle,
+    gonder_mesaj_guvenli,
+    gonder_foto_guvenli,
+    format_tarih,
+    format_sayi,
+    kisalt_metin,
+    emoji_durum,
+    emoji_seviye,
+)
+from user_utils import (
+    kullanici_pro_mu,
+    kullanici_plani_al,
+    kullanici_plan_ayarla,
+    kullanici_profili_al,
+    kullanici_profili_guncelle,
+    kullanici_ulke_al,
+    kullanici_sehir_al,
+    kullanici_gunluk_sayac,
+    kullanici_gunluk_artir,
+    kullanici_limit_kontrolu,
+    kullanici_admin_mi,
+    kullanici_istatistikleri,
 )
 
 # ─── Kaynak Etiketleri (mod → kullanılan kaynaklar) ──────────────────────────
@@ -253,6 +288,17 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+# ─── LLM Service (Yeni Modüler Yapı) ──────────────────────────────────────────
+# Backward compatible: Eski kod çalışmaya devam eder
+try:
+    from services.llm_service import get_llm_service, llm_metin_uret as llm_metin_uret_v2
+    LLM_SERVICE_AVAILABLE = True
+    logger.info("✅ LLM Service yüklendi (modüler yapı)")
+except ImportError as e:
+    LLM_SERVICE_AVAILABLE = False
+    llm_metin_uret_v2 = None
+    logger.warning("⚠️  LLM Service yüklenemedi, eski kod kullanılacak: %s", e)
+
 TELEGRAM_TOKEN = os.getenv("TELEGRAM_TOKEN")
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 DEEPSEEK_API_KEY = (os.getenv("DEEPSEEK_API_KEY") or "").strip()
@@ -441,13 +487,25 @@ def _claude_hatasi_gemini_yedegi_uygun(exc: BaseException) -> bool:
 def llm_metin_uret(prompt: str, user_id: int | str | None = None) -> str:
     """
     Tek LLM giriş noktası — kullanıcı planına göre motor seçer.
-
+    
+    ✨ YENİ: Modüler LLM Service kullanıyor (backward compatible)
+    
     Plan → Motor:
       claude  → Claude API (Anthropic) | anahtar yoksa Gemini'ye düşer
       pro     → Gemini (limit bypass, kota biterse DeepSeek)
       free    → Gemini (varsayılan)
       (AI_PROVIDER=deepseek olduğunda: tüm planlar DeepSeek önce, Gemini yedek)
     """
+    # ─── YENİ KOD: Modüler LLM Service ────────────────────────────────────
+    if LLM_SERVICE_AVAILABLE:
+        try:
+            # Yeni modüler servisi kullan
+            return llm_metin_uret_v2(prompt, user_id)
+        except Exception as e:
+            logger.warning("LLM Service başarısız, eski koda düşülüyor: %s", e)
+            # Eski koda düş (fallback)
+    
+    # ─── ESKİ KOD: Backward Compatibility (Fallback) ──────────────────────
     # Claude planı: önce Claude dene
     if user_id is not None:
         plan_bilgi = _kullanici_plan_bilgisi(user_id)
@@ -559,7 +617,7 @@ _MOD_KIMLIK = {
     "magazin":    "Marka-piyasa analistisin. Ünlü/viral olayların şirket değerine etkisini analiz et. Her çıkarım somut bir habere dayansın.",
     "ozel_gun":   "Takvim-tüketim analistisin. Özel günlerin perakende/lojistik/seyahat etkisini analiz et. Sadece özel gün verilerinden çıkarım yap.",
     "dogal_afet": "Afet ekonomisi analistisin. Deprem/afet verilerinden yeniden yapılanma ekonomisini analiz et. Afet yoksa açıkça belirt.",
-    "okwis":      "Kıdemli makro yatırım analistisin, hedge fon geçmişin var. 8 modun verisini sentezleyip paranın nereye gideceğini kesin olarak söyle. Belirsiz dil yasak — her cümle bir karar içermeli. Kullanıcı ne olabileceğini değil, ne yapması gerektiğini öğrenmek istiyor.",
+    "okwis":      "Kıdemli makro yatırım analistisin, hedge fon geçmişin var. 9 modun verisini sentezleyip paranın nereye gideceğini kesin olarak söyle. Belirsiz dil yasak — her cümle bir karar içermeli. Kullanıcı ne olabileceğini değil, ne yapması gerektiğini öğrenmek istiyor.",
 }
 
 # Geriye dönük uyumluluk — eski kod _ANALIST_KIMLIK kullanıyorsa çalışsın
@@ -669,6 +727,7 @@ _PLAN_KAYIT_PATH = _METRICS_DIR / "plan_kullanicilari.json"
 _ODEME_OLAYLARI_PATH = _METRICS_DIR / "odeme_olaylari.jsonl"
 _PROFIL_PATH = _METRICS_DIR / "kullanici_profilleri.json"
 _TAHMIN_KAYIT_PATH = _METRICS_DIR / "tahmin_kayitlari.jsonl"
+_KULLANICI_KAYIT_PATH = _METRICS_DIR / "kullanici_kayitlari.json"
 ANALIZ_GUNLUK_LIMIT = int((os.getenv("ANALIZ_GUNLUK_LIMIT") or "3").strip() or 3)
 ADMIN_USER_IDS = {
     int(x.strip())
@@ -678,39 +737,6 @@ ADMIN_USER_IDS = {
 
 # Uyarı politikası (plan / MIMARI): kısa metin her zaman bot şablonuyla; model uzun disclaimer üretmez.
 ANALIZ_FOOTER_HTML = "<b>Yeni analiz:</b> /analiz"
-
-
-def _tg_html_escape(text: str) -> str:
-    """Telegram HTML modu için model/ kullanıcı metnini güvenle kaçır."""
-    return html.escape(text or "", quote=False)
-
-
-def _analiz_html_temizle(text: str) -> str:
-    """AI çıktısındaki izin verilen Telegram HTML taglarını koru, diğer her şeyi escape et.
-
-    İzin verilen taglar: <b>, </b>, <i>, </i>, <code>, </code>
-    Diğer tüm < > karakterleri escape edilir.
-    """
-    if not text:
-        return ""
-    # Önce izin verilen tagları geçici placeholder'larla koru
-    korunan = text
-    korunan = korunan.replace("<b>",    "\x00B_OPEN\x00")
-    korunan = korunan.replace("</b>",   "\x00B_CLOSE\x00")
-    korunan = korunan.replace("<i>",    "\x00I_OPEN\x00")
-    korunan = korunan.replace("</i>",   "\x00I_CLOSE\x00")
-    korunan = korunan.replace("<code>", "\x00C_OPEN\x00")
-    korunan = korunan.replace("</code>","\x00C_CLOSE\x00")
-    # Kalan tüm < > karakterlerini escape et
-    korunan = html.escape(korunan, quote=False)
-    # Placeholder'ları geri çevir
-    korunan = korunan.replace("\x00B_OPEN\x00",  "<b>")
-    korunan = korunan.replace("\x00B_CLOSE\x00", "</b>")
-    korunan = korunan.replace("\x00I_OPEN\x00",  "<i>")
-    korunan = korunan.replace("\x00I_CLOSE\x00", "</i>")
-    korunan = korunan.replace("\x00C_OPEN\x00",  "<code>")
-    korunan = korunan.replace("\x00C_CLOSE\x00", "</code>")
-    return korunan
 
 
 def _markdown_temizle(text: str) -> str:
@@ -1162,6 +1188,117 @@ def _admin_mi(user_id: int | None) -> bool:
     if user_id is None:
         return False
     return user_id in ADMIN_USER_IDS
+
+
+# ─── Kullanıcı Kayıt Sistemi ──────────────────────────────────────────────────
+
+def _kullanici_kayitlari_yukle() -> dict[str, dict]:
+    """Tüm kullanıcı kayıtlarını yükle."""
+    if not _KULLANICI_KAYIT_PATH.exists():
+        return {}
+    try:
+        with open(_KULLANICI_KAYIT_PATH, encoding="utf-8") as f:
+            data = json.load(f)
+        return data if isinstance(data, dict) else {}
+    except Exception as e:
+        logger.warning("Kullanıcı kayıt dosyası okunamadı: %s", e)
+    return {}
+
+
+def _kullanici_kayitlari_kaydet(data: dict[str, dict]) -> None:
+    """Kullanıcı kayıtlarını kaydet."""
+    try:
+        _METRICS_DIR.mkdir(parents=True, exist_ok=True)
+        with open(_KULLANICI_KAYIT_PATH, "w", encoding="utf-8") as f:
+            json.dump(data, f, ensure_ascii=False, indent=2)
+    except Exception as e:
+        logger.warning("Kullanıcı kayıt dosyası yazılamadı: %s", e)
+
+
+def _kullanici_kaydet(
+    user_id: int,
+    username: str | None = None,
+    first_name: str | None = None,
+    last_name: str | None = None,
+) -> None:
+    """Kullanıcıyı kaydet veya güncelle."""
+    data = _kullanici_kayitlari_yukle()
+    uid = str(user_id)
+    
+    simdi = datetime.now(timezone.utc).isoformat()
+    
+    if uid in data:
+        # Mevcut kullanıcı - güncelle
+        data[uid]["username"] = username or data[uid].get("username", "")
+        data[uid]["first_name"] = first_name or data[uid].get("first_name", "")
+        data[uid]["last_name"] = last_name or data[uid].get("last_name", "")
+        data[uid]["son_gorulme"] = simdi
+        data[uid]["start_sayisi"] = data[uid].get("start_sayisi", 0) + 1
+    else:
+        # Yeni kullanıcı
+        data[uid] = {
+            "user_id": user_id,
+            "username": username or "",
+            "first_name": first_name or "",
+            "last_name": last_name or "",
+            "ilk_kayit": simdi,
+            "son_gorulme": simdi,
+            "start_sayisi": 1,
+        }
+    
+    _kullanici_kayitlari_kaydet(data)
+
+
+def _kullanici_istatistikleri_al() -> dict:
+    """Admin paneli için kullanıcı istatistiklerini al."""
+    kullanici_kayitlari = _kullanici_kayitlari_yukle()
+    plan_kayitlari = _plan_kayitlarini_yukle()
+    limit_data = _kullanim_limitleri_yukle()
+    
+    bugun = date.today().isoformat()
+    
+    # Toplam kullanıcı sayısı
+    toplam_kullanici = len(kullanici_kayitlari)
+    
+    # Aktif kullanıcılar (bugün analiz yapanlar)
+    aktif_bugun = sum(1 for k in limit_data.values() if k.get("tarih") == bugun)
+    
+    # Plan dağılımı
+    plan_dagilimi = {"free": 0, "pro": 0, "claude": 0}
+    for uid in kullanici_kayitlari.keys():
+        plan_info = plan_kayitlari.get(uid, {})
+        plan = plan_info.get("plan", "free").lower()
+        if plan in plan_dagilimi:
+            plan_dagilimi[plan] += 1
+        else:
+            plan_dagilimi["free"] += 1
+    
+    # Start komutu istatistikleri
+    start_listesi = []
+    for uid, kayit in kullanici_kayitlari.items():
+        start_listesi.append({
+            "user_id": kayit.get("user_id", uid),
+            "username": kayit.get("username", ""),
+            "first_name": kayit.get("first_name", ""),
+            "last_name": kayit.get("last_name", ""),
+            "start_sayisi": kayit.get("start_sayisi", 0),
+            "ilk_kayit": kayit.get("ilk_kayit", ""),
+            "son_gorulme": kayit.get("son_gorulme", ""),
+        })
+    
+    # Start sayısına göre sırala (en çok kullanan üstte)
+    start_listesi.sort(key=lambda x: x["start_sayisi"], reverse=True)
+    
+    # Bugünkü analiz sayısı
+    bugun_analiz = sum(k.get(bugun, 0) for k in limit_data.values())
+    
+    return {
+        "toplam_kullanici": toplam_kullanici,
+        "aktif_bugun": aktif_bugun,
+        "plan_dagilimi": plan_dagilimi,
+        "start_listesi": start_listesi,
+        "bugun_analiz": bugun_analiz,
+    }
 
 
 def _odeme_kayit_son_n(n: int = 10) -> list[dict[str, str]]:
@@ -2575,13 +2712,21 @@ def dogal_afet_analizi_yap(ulke: str, baglam_metni: str, cikti_stili: str = CIKT
 
 async def _topla_tum_baglamlari(
     ulke: str,
+    varlik: str = "",  # Teknik Analiz için varlık gerekli
     ilerleme_cb=None,  # async callable(tamamlanan: int, toplam: int, mod_adi: str, basarili: bool)
-) -> dict[str, str]:
+) -> tuple[dict[str, str], list]:
     """
-    Tüm modların bağlamlarını topla.
+    Tüm modların bağlamlarını topla + mod sinyalleri.
     ilerleme_cb verilirse her mod tamamlandığında çağrılır — canlı bildirim için.
+    
+    Returns:
+        (baglamlar_dict, mod_sinyalleri_list)
     """
+    from teknik_analiz_baglam import topla_teknik_analiz_baglami
+    from mod_koordinator import ModSinyal
+    
     MODLAR = [
+        ("teknik_analiz", "◈ Teknik Analiz", lambda u: topla_teknik_analiz_baglami(varlik) if varlik else ""),
         ("mevsim",     "◈ Mevsim",        topla_mevsim_baglami),
         ("jeopolitik", "◈ Jeopolitik",     topla_jeopolitik_baglami),
         ("sektor",     "◈ Sektör",         topla_sektor_baglami),
@@ -2593,12 +2738,43 @@ async def _topla_tum_baglamlari(
     ]
     toplam = len(MODLAR)
     baglamlar: dict[str, str] = {}
+    mod_sinyalleri: list = []
 
     for i, (anahtar, adi, fn) in enumerate(MODLAR, start=1):
         try:
             deger = await asyncio.to_thread(fn, ulke)
             baglamlar[anahtar] = deger
             basarili = True
+            
+            # Teknik Analiz için sinyal üret
+            if anahtar == "teknik_analiz" and deger and varlik:
+                try:
+                    import re
+                    if "BULLISH" in deger:
+                        yon = "bullish"
+                        guc = 7.5
+                    elif "BEARISH" in deger:
+                        yon = "bearish"
+                        guc = 7.5
+                    else:
+                        yon = "neutral"
+                        guc = 5.0
+                    
+                    # RSI'dan güven çıkar
+                    rsi_match = re.search(r'RSI.*?(\d+\.?\d*)', deger)
+                    if rsi_match:
+                        rsi = float(rsi_match.group(1))
+                        if rsi < 30 or rsi > 70:
+                            guven = 85
+                        else:
+                            guven = 70
+                    else:
+                        guven = 70
+                    
+                    mod_sinyalleri.append(ModSinyal("teknik_analiz", yon, guc, guven, "Teknik göstergeler"))
+                except Exception as se:
+                    logger.warning("Teknik Analiz sinyali üretilemedi: %s", se)
+                    
         except Exception as e:
             logger.warning("Okwis bağlam hatası (%s): %s", anahtar, e)
             baglamlar[anahtar] = ""
@@ -2610,28 +2786,69 @@ async def _topla_tum_baglamlari(
             except Exception:
                 pass  # bildirim hatası analizi durdurmasın
 
-    return baglamlar
+    return (baglamlar, mod_sinyalleri)
 
 
-def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", profil: dict | None = None, stil: str = "kisa", user_id: int | str | None = None) -> str:
+def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", profil: dict | None = None, stil: str = "kisa", user_id: int | str | None = None, mod_sinyalleri: list = None) -> str:
     """Okwis — Tanrının Gözü.
     stil: 'kisa' → net, aksiyon odaklı özet | 'detay' → tam derinlikli analiz
+    mod_sinyalleri: ModSinyal listesi (mod koordinatör için)
     """
+    from mod_koordinator import uyum_skoru_hesapla, divergence_tespit
+    
     now = datetime.now()
     ay_adlari = ("Ocak","Şubat","Mart","Nisan","Mayıs","Haziran","Temmuz","Ağustos","Eylül","Ekim","Kasım","Aralık")
     ay_adi = ay_adlari[now.month - 1]
     yil = now.year
 
     etiketler = {
+        "teknik_analiz": "TEKNİK ANALİZ",
         "mevsim": "MEVSİM", "hava": "HAVA", "jeopolitik": "JEOPOLİTİK",
         "sektor": "SEKTÖR", "trendler": "TRENDLER", "magazin": "MAGAZİN",
         "ozel_gun": "ÖZEL GÜNLER", "dogal_afet": "DOĞAL AFET",
     }
     # Dinamik ağırlıklandırma: yüksek sinyal modlara daha fazla bağlam
     _MOD_ONEM = {
+        "teknik_analiz": 1.5,  # YENİ - en yüksek öncelik
         "jeopolitik": 1.5, "mevsim": 1.3, "sektor": 1.2, "dogal_afet": 1.1,
         "hava": 1.0, "trendler": 0.8, "ozel_gun": 0.7, "magazin": 0.6,
     }
+    
+    # Mod Koordinatör: Uyum skoru hesapla
+    uyum_bilgisi = ""
+    guven_carpani = 1.0
+    divergence_uyarisi = ""
+    
+    if mod_sinyalleri and len(mod_sinyalleri) > 0:
+        # Varlık tipini tespit et
+        varlik_tipi = "kripto"  # varsayılan
+        if varlik:
+            varlik_lower = varlik.lower()
+            if any(k in varlik_lower for k in ["aapl", "msft", "thyao", "hisse", "stock"]):
+                varlik_tipi = "hisse"
+            elif any(k in varlik_lower for k in ["eur", "usd", "gbp", "forex", "döviz"]):
+                varlik_tipi = "forex"
+            elif any(k in varlik_lower for k in ["altın", "gold", "petrol", "oil", "emtia"]):
+                varlik_tipi = "emtia"
+        
+        uyum = uyum_skoru_hesapla(mod_sinyalleri, varlik_tipi)
+        guven_carpani = uyum.guven_carpani
+        
+        uyum_bilgisi = f"""
+
+MOD KOORDİNASYON SKORU:
+- Consensus: {uyum.consensus.upper()}
+- Uyum: {uyum.uyum_skoru:.1f}/100
+- {uyum.detay}
+- Güven Çarpanı: {uyum.guven_carpani}x
+- Uyumlu Modlar: {uyum.uyumlu_mod_sayisi}/{len(mod_sinyalleri)}
+"""
+        
+        # Divergence tespiti
+        div = divergence_tespit(mod_sinyalleri)
+        if div:
+            divergence_uyarisi = f"\n\n{div}"
+    
     baz_limit = 220 if stil == "kisa" else 480
     parcalar = []
     for key, etiket in etiketler.items():
@@ -2720,9 +2937,13 @@ def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", pr
             prompt = (
                 f"{profil_blogu}\n\n---\n"
                 + f"{birlestik_baglam}\n\n"
+                + f"{uyum_bilgisi}\n"
+                + f"{divergence_uyarisi}\n"
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
                 + f"Görev: {ulke} / {ay_adi} {yil} — OKWİS KİŞİSEL KISA ANALİZ{varlik_ek}\n\n"
                 + "Portföydeki/profildeki varlıkları merkeze al. Kullanıcının elindeki parayı şu an nereye koyacağını söyle.\n\n"
+                + "ÖNEMLİ: Mod Koordinasyon Skorunu dikkate al. Güven çarpanı: {:.1f}x\n".format(guven_carpani)
+                + "Modlar arasında uyum varsa güvenle karar ver, çelişki varsa risk olarak belirt.\n\n"
                 + "<b>POZİSYON</b>\n"
                 + "Her varlık için tek satırda: varlık adı - AL/TUT/SAT - neden (hangi mod sinyali)\n\n"
                 + "<b>FİYAT HEDEFİ</b>\n"
@@ -2738,9 +2959,13 @@ def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", pr
             prompt = (
                 f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{uyum_bilgisi}\n"
+                + f"{divergence_uyarisi}\n"
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
                 + f"Görev: {ulke} / {ay_adi} {yil} — OKWİS VARLIK KISA ANALİZ: {varlik}\n\n"
-                + f"8 modun verisini {varlik} için filtrele. Kullanıcıya şu an ne yapması gerektiğini söyle.\n\n"
+                + f"9 modun verisini {varlik} için filtrele. Kullanıcıya şu an ne yapması gerektiğini söyle.\n\n"
+                + "ÖNEMLİ: Mod Koordinasyon Skorunu dikkate al. Güven çarpanı: {:.1f}x\n".format(guven_carpani)
+                + "Modlar arasında uyum varsa güvenle karar ver, çelişki varsa risk olarak belirt.\n\n"
                 + "<b>POZİSYON</b>\n"
                 + f"{varlik} için: AL / TUT / SAT - hangi modun verisi, neden şimdi\n\n"
                 + "<b>FİYAT HEDEFİ</b>\n"
@@ -2756,9 +2981,13 @@ def okwis_analizi_yap(ulke: str, baglamlar: dict[str, str], varlik: str = "", pr
             prompt = (
                 f"{birlestik_baglam}\n\n"
                 + (f"{prob_notu}\n\n" if prob_notu else "")
+                + f"{uyum_bilgisi}\n"
+                + f"{divergence_uyarisi}\n"
                 + f"{_MOD_KIMLIK['okwis']}\n{_ORTAK_KURALLAR}\n\n"
                 + f"Görev: {ulke} / {ay_adi} {yil} — OKWİS GENEL KISA ANALİZ\n\n"
-                + "8 modun verisini sentezle. Kullanıcının parasını şu an nereye koyacağını söyle.\n\n"
+                + "9 modun verisini sentezle. Kullanıcının parasını şu an nereye koyacağını söyle.\n\n"
+                + "ÖNEMLİ: Mod Koordinasyon Skorunu dikkate al. Güven çarpanı: {:.1f}x\n".format(guven_carpani)
+                + "Modlar arasında uyum varsa güvenle karar ver, çelişki varsa risk olarak belirt.\n\n"
                 + "<b>EN GÜÇLÜ FIRSAT</b>\n"
                 + f"{ulke} piyasasında şu an en net sinyal veren 2-3 varlık/sektör - hangi modun verisi, neden şimdi\n\n"
                 + "<b>POZİSYON ÖNERİLERİ</b>\n"
@@ -3296,6 +3525,16 @@ async def profil_iptal(update: Update, context: ContextTypes.DEFAULT_TYPE):
 async def start(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/start komutu — kullanıcıyı karşıla, oturum verisini temizle"""
     context.user_data.clear()
+    
+    # Kullanıcıyı kaydet
+    if update.effective_user:
+        _kullanici_kaydet(
+            user_id=update.effective_user.id,
+            username=update.effective_user.username,
+            first_name=update.effective_user.first_name,
+            last_name=update.effective_user.last_name,
+        )
+    
     klavye = InlineKeyboardMarkup([
         [InlineKeyboardButton("💎 Abonelik Planları", callback_data="abonelik_goster")],
     ])
@@ -3350,6 +3589,7 @@ async def okwis_detay_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE
     # Daha derin analiz — kaydedilmiş bağlamları kullan, tekrar çekme
     baglamlar = context.user_data.get("okwis_baglamlar")
     profil = context.user_data.get("okwis_profil")
+    mod_sinyalleri = context.user_data.get("okwis_mod_sinyalleri", [])  # YENİ
     ulke = context.user_data.get("ulke", "")
     varlik = context.user_data.get("varlik", "")
 
@@ -3366,7 +3606,7 @@ async def okwis_detay_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE
     )
 
     try:
-        analiz = await asyncio.to_thread(okwis_analizi_yap, ulke, baglamlar, varlik, profil, "detay", user_id)
+        analiz = await asyncio.to_thread(okwis_analizi_yap, ulke, baglamlar, varlik, profil, "detay", user_id, mod_sinyalleri)
     except Exception as e:
         logger.exception("Okwis detay analizi hatası: %s", e)
         await query.edit_message_text("Detay analizi üretilirken bir hata oluştu. /analiz ile tekrar dene.")
@@ -3691,7 +3931,7 @@ async def yardim(update: Update, context: ContextTypes.DEFAULT_TYPE):
         "<b>/analiz</b> — Yeni bir analiz başlat\n"
         "  🔒 <b>Okwis</b> — Tüm modları paralel tarar, ultra sade sonuç verir <i>(Premium)</i>\n"
         "  ⚡ <b>Hızlı Para Modu</b> — Agresif kısa vadeli trade önerileri (giriş, TP, SL, kaldıraç) <i>(Premium)</i>\n"
-        "  ◈ <b>Tüm Modlar</b> — 8 moddan istediğini seç (Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)\n\n"
+        "  ◈ <b>Tüm Modlar</b> — 9 moddan istediğini seç (Teknik Analiz, Mevsim, Hava, Jeopolitik, Sektör, Trendler, Magazin, Özel Günler, Doğal Afet)\n\n"
         "<b>◆ Hızlı Para Modu</b> <i>(Premium)</i>\n"
         "Kısa vadeli (2-7 gün) trade setup'ları:\n"
         "  • Net pozisyon (LONG/SHORT/BEKLE)\n"
@@ -4071,6 +4311,120 @@ async def bildirim_ayar(update: Update, context: ContextTypes.DEFAULT_TYPE):
     )
 
 
+async def gunluk_ozet_ayar(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/gunluk_ozet — günlük haber özeti ayarları (tüm kullanıcılar)"""
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        await update.message.reply_text("Kullanıcı bilgisi alınamadı.")
+        return
+
+    args = context.args or []
+
+    # ── Alt komutlar ──────────────────────────────────────────────────────────
+    if args:
+        alt = args[0].lower()
+
+        # /gunluk_ozet kapat / ac
+        if alt in ("kapat", "kapa"):
+            kullanici_gunluk_ozet_ayarla(user_id, False)
+            await update.message.reply_text(
+                "🔕 <b>Günlük haber özeti kapatıldı.</b>\n\n"
+                "<i>Tekrar açmak için /gunluk_ozet ac yaz.</i>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+
+        if alt in ("ac", "aç", "open"):
+            kullanici_gunluk_ozet_ayarla(user_id, True)
+            await update.message.reply_text(
+                "🔔 <b>Günlük haber özeti açıldı!</b>\n\n"
+                "Her akşam saat 20:00'de dünya genelinde yaşanan kritik haberlerin özeti ve yorumu gönderilecek.\n\n"
+                "<i>Kapatmak için /gunluk_ozet kapat yaz.</i>",
+                parse_mode=ParseMode.HTML,
+            )
+            return
+
+    # ── Durum göster (argümansız) ─────────────────────────────────────────────
+    acik = kullanici_gunluk_ozet_acik_mi(user_id)
+    
+    durum_ikon = "🔔" if acik else "🔕"
+    durum_metin = "Açık" if acik else "Kapalı"
+
+    # Toggle butonu
+    toggle_label = "🔕 Kapat" if acik else "🔔 Aç"
+    toggle_data = "gunluk_ozet_kapat" if acik else "gunluk_ozet_ac"
+
+    klavye = [
+        [
+            InlineKeyboardButton(toggle_label, callback_data=toggle_data),
+        ],
+        [InlineKeyboardButton("✕ Kapat", callback_data="gunluk_ozet_kapat_menu")],
+    ]
+
+    mesaj = (
+        f"<b>📰 Günlük Haber Özeti</b>\n"
+        f"<b>━━━━━━━━━━━━━━━━━━━━</b>\n\n"
+        f"Durum: {durum_ikon} <b>{durum_metin}</b>\n"
+        f"Gönderim Saati: <b>20:00</b> (her akşam)\n\n"
+        f"<b>Nedir?</b>\n"
+        f"Her akşam dünya genelinde yaşanan kritik haberlerin kısa özeti ve AI destekli trend yorumu.\n\n"
+        f"<b>İçerik:</b>\n"
+        f"• Ekonomi haberleri\n"
+        f"• Jeopolitik gelişmeler\n"
+        f"• Piyasa hareketleri\n"
+        f"• Trend analizi ve yorum\n\n"
+        f"<b>Kimler Kullanabilir?</b>\n"
+        f"✅ Tüm kullanıcılar (Free + Pro + Claude)\n\n"
+        f"<i>Komutlar:</i>\n"
+        f"<code>/gunluk_ozet ac</code> — özeti aç\n"
+        f"<code>/gunluk_ozet kapat</code> — özeti kapat"
+    )
+
+    await update.message.reply_text(
+        mesaj,
+        parse_mode=ParseMode.HTML,
+        reply_markup=InlineKeyboardMarkup(klavye),
+    )
+
+
+async def gunluk_ozet_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """Günlük özet ayarları inline buton tıklamaları"""
+    query = update.callback_query
+    if not query:
+        return
+    await query.answer()
+
+    user_id = update.effective_user.id if update.effective_user else None
+    if user_id is None:
+        return
+
+    data = query.data or ""
+
+    # Aç/Kapat
+    if data == "gunluk_ozet_ac":
+        kullanici_gunluk_ozet_ayarla(user_id, True)
+        await query.edit_message_text(
+            "🔔 <b>Günlük haber özeti açıldı!</b>\n\n"
+            "Her akşam saat 20:00'de dünya genelinde yaşanan kritik haberlerin özeti ve yorumu gönderilecek.\n\n"
+            "<i>/gunluk_ozet ile ayarları görüntüle.</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    if data == "gunluk_ozet_kapat":
+        kullanici_gunluk_ozet_ayarla(user_id, False)
+        await query.edit_message_text(
+            "🔕 <b>Günlük haber özeti kapatıldı.</b>\n\n"
+            "<i>/gunluk_ozet ile tekrar açabilirsin.</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        return
+
+    if data == "gunluk_ozet_kapat_menu":
+        await query.delete_message()
+        return
+
+
 async def bildirim_callback(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Bildirim ayarları inline buton tıklamaları"""
     from alarm_sistemi import (
@@ -4375,6 +4729,151 @@ async def odeme_kayit(update: Update, context: ContextTypes.DEFAULT_TYPE):
     await update.message.reply_text("\n".join(satirlar), parse_mode=ParseMode.HTML)
 
 
+async def admin_panel(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/admin — admin paneli: kullanıcı istatistikleri"""
+    admin_id = update.effective_user.id if update.effective_user else None
+    if not _admin_mi(admin_id):
+        await update.message.reply_text("Bu komut yalnız admin için.")
+        return
+    
+    # İstatistikleri al
+    stats = _kullanici_istatistikleri_al()
+    
+    # Mesaj oluştur
+    satirlar = [
+        "<b>👑 OKWIS AI - ADMIN PANELİ</b>",
+        "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
+        "",
+        "<b>📊 GENEL İSTATİSTİKLER</b>",
+        f"• Toplam Kullanıcı: <b>{stats['toplam_kullanici']}</b>",
+        f"• Aktif Kullanıcı (Bugün): <b>{stats['aktif_bugun']}</b>",
+        f"• Bugünkü Analiz Sayısı: <b>{stats['bugun_analiz']}</b>",
+        "",
+        "<b>💎 PLAN DAĞILIMI</b>",
+        f"• Free: <b>{stats['plan_dagilimi']['free']}</b> kullanıcı",
+        f"• Pro: <b>{stats['plan_dagilimi']['pro']}</b> kullanıcı",
+        f"• Claude: <b>{stats['plan_dagilimi']['claude']}</b> kullanıcı",
+        "",
+        "<b>🚀 START KOMUTU İSTATİSTİKLERİ</b>",
+        f"• Toplam /start: <b>{sum(u['start_sayisi'] for u in stats['start_listesi'])}</b>",
+        "",
+    ]
+    
+    # En aktif 15 kullanıcıyı göster
+    satirlar.append("<b>👥 EN AKTİF KULLANICILAR (Top 15)</b>")
+    satirlar.append("<i>Kullanıcı adı | /start sayısı | Son görülme</i>")
+    satirlar.append("")
+    
+    for i, user in enumerate(stats['start_listesi'][:15], 1):
+        # Kullanıcı adını oluştur
+        if user['username']:
+            kullanici_adi = f"@{user['username']}"
+        elif user['first_name']:
+            kullanici_adi = user['first_name']
+            if user['last_name']:
+                kullanici_adi += f" {user['last_name']}"
+        else:
+            kullanici_adi = f"ID: {user['user_id']}"
+        
+        # Son görülme tarihini formatla
+        try:
+            son_gorulme = user['son_gorulme'][:10] if user['son_gorulme'] else "Bilinmiyor"
+        except:
+            son_gorulme = "Bilinmiyor"
+        
+        satirlar.append(
+            f"{i}. {_tg_html_escape(kullanici_adi)} | "
+            f"<b>{user['start_sayisi']}</b>x | "
+            f"{son_gorulme}"
+        )
+    
+    satirlar.append("")
+    satirlar.append("<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>")
+    satirlar.append("<i>Detaylı liste için: /admin_detay</i>")
+    
+    # Mesajı gönder
+    mesaj = "\n".join(satirlar)
+    
+    # Mesaj çok uzunsa böl
+    if len(mesaj) > 4000:
+        parcalar = telegram_html_parcalara_bol(mesaj, 4000)
+        for parca in parcalar:
+            await update.message.reply_text(parca, parse_mode=ParseMode.HTML)
+    else:
+        await update.message.reply_text(mesaj, parse_mode=ParseMode.HTML)
+
+
+async def admin_detay(update: Update, context: ContextTypes.DEFAULT_TYPE):
+    """/admin_detay — tüm kullanıcıların detaylı listesi"""
+    admin_id = update.effective_user.id if update.effective_user else None
+    if not _admin_mi(admin_id):
+        await update.message.reply_text("Bu komut yalnız admin için.")
+        return
+    
+    # İstatistikleri al
+    stats = _kullanici_istatistikleri_al()
+    
+    # Plan bilgilerini al
+    plan_kayitlari = _plan_kayitlarini_yukle()
+    
+    # Mesaj oluştur
+    satirlar = [
+        "<b>👥 TÜM KULLANICILAR - DETAYLI LİSTE</b>",
+        "<b>━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━</b>",
+        "",
+    ]
+    
+    for i, user in enumerate(stats['start_listesi'], 1):
+        # Kullanıcı adını oluştur
+        if user['username']:
+            kullanici_adi = f"@{user['username']}"
+        elif user['first_name']:
+            kullanici_adi = user['first_name']
+            if user['last_name']:
+                kullanici_adi += f" {user['last_name']}"
+        else:
+            kullanici_adi = f"ID: {user['user_id']}"
+        
+        # Plan bilgisini al
+        plan_info = plan_kayitlari.get(str(user['user_id']), {})
+        plan = plan_info.get("plan", "free").upper()
+        
+        # Plan emoji
+        if plan == "CLAUDE":
+            plan_emoji = "🌟"
+        elif plan == "PRO":
+            plan_emoji = "💎"
+        else:
+            plan_emoji = "🆓"
+        
+        # Tarih formatla
+        try:
+            ilk_kayit = user['ilk_kayit'][:10] if user['ilk_kayit'] else "?"
+            son_gorulme = user['son_gorulme'][:10] if user['son_gorulme'] else "?"
+        except:
+            ilk_kayit = "?"
+            son_gorulme = "?"
+        
+        satirlar.append(
+            f"<b>{i}. {_tg_html_escape(kullanici_adi)}</b> {plan_emoji}\n"
+            f"   ID: <code>{user['user_id']}</code>\n"
+            f"   Plan: <b>{plan}</b>\n"
+            f"   /start: <b>{user['start_sayisi']}</b>x\n"
+            f"   İlk kayıt: {ilk_kayit}\n"
+            f"   Son görülme: {son_gorulme}\n"
+        )
+    
+    satirlar.append("")
+    satirlar.append(f"<b>Toplam: {len(stats['start_listesi'])} kullanıcı</b>")
+    
+    # Mesajı gönder (parçalara böl)
+    mesaj = "\n".join(satirlar)
+    parcalar = telegram_html_parcalara_bol(mesaj, 4000)
+    
+    for parca in parcalar:
+        await update.message.reply_text(parca, parse_mode=ParseMode.HTML)
+
+
 async def analiz_baslat(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """/analiz komutu — mod seçim ekranını göster"""
     context.user_data.clear()
@@ -4521,23 +5020,82 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
         )
         return MOD_SECIMI
 
-    # Tüm Modlar menüsü — 8 mod ekranını göster
+    # Tüm Modlar menüsü — 9 mod ekranını göster
     if query.data == "menu_tum_modlar":
-        klavye = [
-            [InlineKeyboardButton("◈ Mevsimler", callback_data="mod_mevsim"),
-             InlineKeyboardButton("◈ Hava Durumu", callback_data="mod_hava")],
-            [InlineKeyboardButton("◈ Jeopolitik", callback_data="mod_jeopolitik"),
-             InlineKeyboardButton("◈ Sektör Trendleri", callback_data="mod_sektor")],
-            [InlineKeyboardButton("◈ Dünya Trendleri", callback_data="mod_trendler"),
-             InlineKeyboardButton("◈ Magazin/Viral", callback_data="mod_magazin")],
-            [InlineKeyboardButton("◈ Özel Günler", callback_data="mod_ozel_gun"),
-             InlineKeyboardButton("◈ Doğal Afet", callback_data="mod_dogal_afet")],
-        ]
+        user_id = update.effective_user.id if update.effective_user else None
+        pro_mu = _kullanici_pro_mu(user_id) if user_id else False
+        
+        # Mod durumları (ücretsiz/ücretli)
+        if pro_mu:
+            # Premium kullanıcı - tüm modlar açık
+            klavye = [
+                [InlineKeyboardButton("🆓 Teknik Analiz", callback_data="mod_teknik_analiz")],
+                [InlineKeyboardButton("💎 Mevsimler", callback_data="mod_mevsim"),
+                 InlineKeyboardButton("💎 Hava Durumu", callback_data="mod_hava")],
+                [InlineKeyboardButton("💎 Jeopolitik", callback_data="mod_jeopolitik"),
+                 InlineKeyboardButton("💎 Sektör Trendleri", callback_data="mod_sektor")],
+                [InlineKeyboardButton("💎 Dünya Trendleri", callback_data="mod_trendler"),
+                 InlineKeyboardButton("💎 Magazin/Viral", callback_data="mod_magazin")],
+                [InlineKeyboardButton("💎 Özel Günler", callback_data="mod_ozel_gun"),
+                 InlineKeyboardButton("💎 Doğal Afet", callback_data="mod_dogal_afet")],
+            ]
+            mesaj = (
+                "<b>◈ Tüm Modlar</b>\n\n"
+                "Hangi modu kullanmak istersin?\n\n"
+                "🆓 <b>Ücretsiz</b> | 💎 <b>Premium</b>\n\n"
+                "<i>⚡ Teknik Analiz: RSI, SMA, trend analizi</i>"
+            )
+        else:
+            # Ücretsiz kullanıcı - sadece Teknik Analiz açık
+            klavye = [
+                [InlineKeyboardButton("🆓 Teknik Analiz", callback_data="mod_teknik_analiz")],
+                [InlineKeyboardButton("🔒 Mevsimler (Premium)", callback_data="mod_kilitli"),
+                 InlineKeyboardButton("🔒 Hava Durumu (Premium)", callback_data="mod_kilitli")],
+                [InlineKeyboardButton("🔒 Jeopolitik (Premium)", callback_data="mod_kilitli"),
+                 InlineKeyboardButton("🔒 Sektör Trendleri (Premium)", callback_data="mod_kilitli")],
+                [InlineKeyboardButton("🔒 Dünya Trendleri (Premium)", callback_data="mod_kilitli"),
+                 InlineKeyboardButton("🔒 Magazin/Viral (Premium)", callback_data="mod_kilitli")],
+                [InlineKeyboardButton("🔒 Özel Günler (Premium)", callback_data="mod_kilitli"),
+                 InlineKeyboardButton("🔒 Doğal Afet (Premium)", callback_data="mod_kilitli")],
+            ]
+            mesaj = (
+                "<b>◈ Tüm Modlar</b>\n\n"
+                "Hangi modu kullanmak istersin?\n\n"
+                "🆓 <b>Ücretsiz</b> | 🔒 <b>Premium</b>\n\n"
+                "<i>⚡ Teknik Analiz ücretsiz kullanıma açık!</i>\n"
+                "<i>Diğer modlar için Premium'a geç: /abonelik</i>"
+            )
+        
         await query.edit_message_text(
-            "Hangi modu kullanmak istersin?",
-            reply_markup=InlineKeyboardMarkup(klavye)
+            mesaj,
+            reply_markup=InlineKeyboardMarkup(klavye),
+            parse_mode=ParseMode.HTML,
         )
         return MOD_SECIMI
+    
+    # Kilitli mod tıklandı
+    if query.data == "mod_kilitli":
+        await query.answer(
+            "Bu mod Premium kullanıcılara özeldir.",
+            show_alert=True,
+        )
+        await query.edit_message_text(
+            "🔒 <b>Premium Mod</b>\n\n"
+            "Bu mod Premium ve Tam Güç planlarına özeldir.\n\n"
+            "<b>Premium'da neler var?</b>\n"
+            "  💎 8 analiz modu (Mevsim, Hava, Jeopolitik, vb.)\n"
+            "  💎 Okwis — Tanrının Gözü (8 mod birleşimi)\n"
+            "  💎 Hızlı Para Modu (trade önerileri)\n"
+            "  💎 Sınırsız analiz\n"
+            "  💎 Öncelikli destek\n\n"
+            "📋 Tüm planları görmek için: /abonelik\n\n"
+            "📩 Abone olmak için: @mehmethanece\n"
+            "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+            "Ücretsiz planda <b>⚡ Teknik Analiz</b> kullanabilirsin.",
+            parse_mode=ParseMode.HTML,
+            disable_web_page_preview=True,
+        )
+        return ConversationHandler.END
 
     # Ana menüye dön
     if query.data == "menu_ana":
@@ -4598,8 +5156,55 @@ async def mod_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
 
     # Modu kaydet
     context.user_data["mod"] = query.data
+    
+    # ─── PREMIUM KONTROL (Ücretli Modlar) ────────────────────────────────────
+    # Teknik Analiz hariç tüm modlar premium
+    UCRETLI_MODLAR = [
+        "mod_mevsim", "mod_hava", "mod_jeopolitik", "mod_sektor",
+        "mod_trendler", "mod_magazin", "mod_ozel_gun", "mod_dogal_afet"
+    ]
+    
+    if query.data in UCRETLI_MODLAR:
+        user_id = update.effective_user.id if update.effective_user else None
+        if not _kullanici_pro_mu(user_id):
+            await query.answer(
+                "Bu mod Premium kullanıcılara özeldir.",
+                show_alert=True,
+            )
+            await query.edit_message_text(
+                "🔒 <b>Premium Mod</b>\n\n"
+                "Bu mod Premium ve Tam Güç planlarına özeldir.\n\n"
+                "<b>Premium'da neler var?</b>\n"
+                "  💎 8 analiz modu (Mevsim, Hava, Jeopolitik, vb.)\n"
+                "  💎 Okwis — Tanrının Gözü (8 mod birleşimi)\n"
+                "  💎 Hızlı Para Modu (trade önerileri)\n"
+                "  💎 Sınırsız analiz\n"
+                "  💎 Öncelikli destek\n\n"
+                "📋 Tüm planları görmek için: /abonelik\n\n"
+                "📩 Abone olmak için: @mehmethanece\n"
+                "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+                "Ücretsiz planda <b>⚡ Teknik Analiz</b> kullanabilirsin.",
+                parse_mode=ParseMode.HTML,
+                disable_web_page_preview=True,
+            )
+            return ConversationHandler.END
 
-    # Ülke seçim butonları
+    # Teknik Analiz için özel akış - ülke sorma, direkt varlık sor
+    if query.data == "mod_teknik_analiz":
+        await query.edit_message_text(
+            "<b>⚡ Teknik Analiz Modu</b>\n\n"
+            "Hangi varlık için teknik analiz yapalım?\n\n"
+            "<b>Kripto:</b> Bitcoin, BTC, Ethereum, ETH, Solana, SOL\n"
+            "<b>Hisse:</b> Apple, AAPL, Microsoft, MSFT, Tesla, TSLA, Turkcell, THYAO\n"
+            "<b>Emtia:</b> Altın, Gold, XAUUSD, Petrol, Oil, WTI\n\n"
+            "<i>Varlık adını yaz (Türkçe veya İngilizce)</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        # Ülke varsayılan olarak "Global" yap
+        context.user_data["ulke"] = "Global"
+        return VARLIK_SORGUSU
+
+    # Ülke seçim butonları (diğer modlar için)
     klavye = []
     for i in range(0, len(ULKELER), 2):
         satir = [InlineKeyboardButton(ULKELER[i], callback_data=f"ulke_{ULKELER[i]}")]
@@ -4655,6 +5260,174 @@ async def ulke_secildi(update: Update, context: ContextTypes.DEFAULT_TYPE):
     return VARLIK_SORGUSU
 
 
+async def _teknik_analiz_calistir(message, context: ContextTypes.DEFAULT_TYPE, varlik: str):
+    """Teknik analiz çalıştır ve sonucu gönder (format seçimi olmadan)"""
+    user_id = message.from_user.id if message.from_user else None
+    
+    # Günlük limit kontrolü
+    if user_id is not None and not _kullanici_pro_mu(user_id):
+        asildi, kullanilan = _gunluk_limit_asildi_mi(user_id)
+        if asildi:
+            await message.reply_text(
+                (
+                    f"◆ Günlük ücretsiz limit doldu ({kullanilan}/{ANALIZ_GUNLUK_LIMIT}).\n\n"
+                    "Daha fazla analiz için bir plan seç:\n"
+                    "📊 /abonelik — tüm planları gör\n\n"
+                    "📩 Abone olmak için: @mehmethanece\n"
+                    "👥 Topluluk: <a href=\"https://t.me/+ztlxRCC7UspmZTY0\">t.me/okwis</a>\n\n"
+                    "Yarın tekrar ücretsiz deneyebilirsin."
+                ),
+                parse_mode="HTML",
+                disable_web_page_preview=True,
+            )
+            return ConversationHandler.END
+    
+    # Başlangıç mesajı
+    baslangic_msg = await message.reply_text(
+        f"⚡ <b>{_tg_html_escape(varlik)}</b> için teknik analiz başlıyor...",
+        parse_mode=ParseMode.HTML,
+    )
+    
+    try:
+        # Adım 1: Fiyat verisi al
+        await baslangic_msg.edit_text(
+            f"⚡ <b>{_tg_html_escape(varlik)}</b>\n\n"
+            "📡 Adım 1/2 — Fiyat verisi ve teknik göstergeler hesaplanıyor…\n"
+            "<i>yfinance API + RSI/SMA hesaplama</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        
+        from teknik_analiz_baglam import teknik_analiz_yap
+        analiz_data = await asyncio.to_thread(teknik_analiz_yap, varlik)
+        
+        if not analiz_data:
+            await baslangic_msg.edit_text(
+                f"<b>⚡ Teknik Analiz</b>\n\n"
+                f"<b>{_tg_html_escape(varlik)}</b> için fiyat verisi bulunamadı.\n\n"
+                "Lütfen geçerli bir varlık adı dene:\n"
+                "  • Kripto: Bitcoin, BTC, Ethereum, ETH\n"
+                "  • Hisse: Apple, AAPL, Microsoft, MSFT, Turkcell, THYAO\n"
+                "  • Emtia: Altın, Gold, XAUUSD, Petrol, WTI",
+                parse_mode=ParseMode.HTML,
+            )
+            return ConversationHandler.END
+        
+        # Adım 2: Formatla
+        await baslangic_msg.edit_text(
+            f"⚡ <b>{_tg_html_escape(varlik)}</b>\n\n"
+            "✨ Adım 2/2 — Teknik veriler formatlanıyor…\n"
+            "<i>HTML çıktı hazırlanıyor</i>",
+            parse_mode=ParseMode.HTML,
+        )
+        
+        # VERİ ÖN PLANDA - AI minimum
+        rsi = analiz_data.get("rsi")
+        rsi_sinyal = analiz_data.get("rsi_sinyal", "unknown")
+        sma_20 = analiz_data.get("sma_20")
+        sma_50 = analiz_data.get("sma_50")
+        trend = analiz_data.get("trend", "unknown")
+        destek = analiz_data.get("destek", [])
+        direnc = analiz_data.get("direnc", [])
+        sinyal = analiz_data.get("sinyal", "neutral")
+        guc = analiz_data.get("guc", 5.0)
+        son_fiyat = analiz_data.get("son_fiyat", 0)
+        
+        # Sinyal emoji
+        if sinyal == "bullish":
+            sinyal_emoji = "🟢"
+            sinyal_text = "BULLISH (Alım Sinyali)"
+        elif sinyal == "bearish":
+            sinyal_emoji = "🔴"
+            sinyal_text = "BEARISH (Satım Sinyali)"
+        else:
+            sinyal_emoji = "🟡"
+            sinyal_text = "NEUTRAL (Bekle)"
+        
+        # RSI açıklama
+        if rsi_sinyal == "oversold":
+            rsi_aciklama = "Aşırı satım bölgesinde (potansiyel sıçrama)"
+        elif rsi_sinyal == "overbought":
+            rsi_aciklama = "Aşırı alım bölgesinde (potansiyel düzeltme)"
+        else:
+            rsi_aciklama = "Normal bölgede"
+        
+        # Trend açıklama
+        if trend == "uptrend":
+            trend_aciklama = "Yükseliş trendi (SMA 20 > SMA 50)"
+        elif trend == "downtrend":
+            trend_aciklama = "Düşüş trendi (SMA 20 < SMA 50)"
+        else:
+            trend_aciklama = "Yatay hareket"
+        
+        # HTML çıktı - VERİ ODAKLI
+        # Tüm dinamik değerleri escape et
+        varlik_escaped = _tg_html_escape(varlik.upper())
+        rsi_aciklama_escaped = _tg_html_escape(rsi_aciklama)
+        trend_aciklama_escaped = _tg_html_escape(trend_aciklama)
+        sinyal_text_escaped = _tg_html_escape(sinyal_text)
+        
+        analiz_html = f"""<b>⚡ TEKNİK ANALİZ — {varlik_escaped}</b>
+
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+<b>📊 MEVCUT DURUM</b>
+Son Fiyat: <b>${son_fiyat:,.2f}</b>
+
+<b>📈 TEKNİK GÖSTERGELER</b>
+RSI (14): <b>{f'{rsi:.1f}' if rsi else 'N/A'}</b> — {rsi_aciklama_escaped}
+SMA 20: <b>{f'${sma_20:,.2f}' if sma_20 else 'N/A'}</b>
+SMA 50: <b>{f'${sma_50:,.2f}' if sma_50 else 'N/A'}</b>
+
+<b>📉 TREND ANALİZİ</b>
+Trend: <b>{trend_aciklama_escaped}</b>
+Destek: <b>{f'${destek[0]:,.2f}' if destek else 'N/A'}</b>
+Direnç: <b>{f'${direnc[0]:,.2f}' if direnc else 'N/A'}</b>
+
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+{sinyal_emoji} <b>TEKNİK SİNYAL: {sinyal_text_escaped}</b>
+Sinyal Gücü: <b>{guc:.1f}/10</b>
+
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+<i>⚠️ Bu analiz sadece teknik verilere dayanır. Yatırım tavsiyesi değildir.</i>
+
+{ANALIZ_FOOTER_HTML}"""
+        
+        # HTML'i temizle (bozuk tag'leri düzelt)
+        analiz_html = _analiz_html_temizle(analiz_html)
+        
+        # Sonucu gönder
+        await baslangic_msg.edit_text(analiz_html, parse_mode=ParseMode.HTML, disable_web_page_preview=True)
+        
+        # Metrik kaydı
+        _analiz_olayi_kaydet(
+            analiz_turu="teknik_analiz",
+            ulke="Global",
+            cikti_stili="data",
+            guven=guc,
+            baglam_metni=f"Teknik analiz: {varlik}",
+        )
+        
+        # Günlük kullanım arttır
+        if user_id is not None:
+            yeni = _gunluk_kullanim_arttir(user_id)
+            logger.info("Günlük kullanım arttı (teknik_analiz): user=%s %s/%s", user_id, yeni, ANALIZ_GUNLUK_LIMIT)
+        
+        return ConversationHandler.END
+        
+    except Exception as e:
+        logger.exception("Teknik analiz hatası (varlik=%s)", varlik)
+        await baslangic_msg.edit_text(
+            f"<b>Teknik analiz hatası</b>\n\n"
+            f"<b>{_tg_html_escape(varlik)}</b> için teknik analiz yapılamadı.\n\n"
+            f"Hata: {_tg_html_escape(str(e)[:200])}\n\n"
+            "Lütfen bir süre sonra <b>/analiz</b> ile tekrar dene.",
+            parse_mode=ParseMode.HTML,
+        )
+        return ConversationHandler.END
+
+
 async def varlik_sorgusu_cevap(update: Update, context: ContextTypes.DEFAULT_TYPE):
     """Kullanıcı varlık adı yazdı veya BOŞ/boş yaptı"""
     if update.message:
@@ -4667,6 +5440,19 @@ async def varlik_sorgusu_cevap(update: Update, context: ContextTypes.DEFAULT_TYP
         else:
             context.user_data["varlik"] = metin
             skip_msg = f"Adım. <b>{_tg_html_escape(metin)}</b> üzerinde odaklanıp analiz yapacağım."
+
+        # Teknik Analiz: format seçimi yok, direkt analiz başlat
+        if mod == "mod_teknik_analiz":
+            if not metin or metin.lower() in ("boş", "bos", ""):
+                await update.message.reply_text(
+                    "⚠️ Teknik analiz için varlık adı gerekli.\n\n"
+                    "Lütfen bir varlık adı yaz: BTC, Bitcoin, AAPL, Apple, vb.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return VARLIK_SORGUSU
+            
+            # Direkt analiz yap - format seçimi atla
+            return await _teknik_analiz_calistir(update.message, context, metin)
 
         # Okwis: format seçimi yok, direkt analiz başlat
         if mod == "mod_okwis":
@@ -4774,7 +5560,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
     if mod == "mod_okwis":
         mod_kisa = "okwis"
         varlik_goster = f" · {varlik}" if varlik else ""
-        await query.edit_message_text(f"◆ Okwis tarama başlıyor{varlik_goster}… Tüm modlar paralel çalışıyor.")
+        await query.edit_message_text(f"◆ Okwis tarama başlıyor{varlik_goster}… 9 mod paralel çalışıyor.")
     elif mod == "mod_hava":
         mod_kisa = "hava"
     elif mod == "mod_jeopolitik":
@@ -4829,20 +5615,20 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                 except Exception:
                     pass  # Telegram rate limit vb. — sessizce geç
 
-            baglamlar = await _topla_tum_baglamlari(ulke, ilerleme_cb=okwis_ilerleme)
+            baglamlar, mod_sinyalleri = await _topla_tum_baglamlari(ulke, varlik, ilerleme_cb=okwis_ilerleme)
 
             # Çıkarım aşaması bildirimleri
             await query.edit_message_text(
                 f"◆ <b>Okwis tarama tamamlandı.</b>\n\n"
                 + "\n".join(tamamlanan_modlar)
-                + "\n\n🧠 Sosyal ihtimal zincirleri değerlendiriliyor…",
+                + "\n\n🧠 Mod koordinasyonu değerlendiriliyor…",
                 parse_mode=ParseMode.HTML,
             )
 
             # Kullanıcı profilini al
             profil = _kullanici_profili_al(user_id) if user_id else None
 
-            analiz = await asyncio.to_thread(okwis_analizi_yap, ulke, baglamlar, varlik, profil, "kisa", user_id)
+            analiz = await asyncio.to_thread(okwis_analizi_yap, ulke, baglamlar, varlik, profil, "kisa", user_id, mod_sinyalleri)
 
             await query.edit_message_text(
                 f"◆ <b>Okwis tarama tamamlandı.</b>\n\n"
@@ -4890,6 +5676,7 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
             # Bağlamları ve profili kaydet — detay analizi için tekrar çekmeyeceğiz
             context.user_data["okwis_baglamlar"] = baglamlar
             context.user_data["okwis_profil"] = profil
+            context.user_data["okwis_mod_sinyalleri"] = mod_sinyalleri  # YENİ
 
             # Kısa analizi gönder + "Daha derin?" ve "Kalite Kartı" butonları
             detay_klavye = InlineKeyboardMarkup([
@@ -4946,6 +5733,122 @@ async def cikti_format_secildi(update: Update, context: ContextTypes.DEFAULT_TYP
                 yeni = _gunluk_kullanim_arttir(user_id)
                 logger.info("Günlük kullanım arttı (okwis): user=%s %s/%s", user_id, yeni, ANALIZ_GUNLUK_LIMIT)
             return OKWIS_DETAY_SECIMI
+
+        elif mod == "mod_teknik_analiz":
+            analiz_turu = "teknik_analiz"
+            
+            # Teknik Analiz için varlık ZORUNLU
+            if not varlik or not varlik.strip():
+                await query.edit_message_text(
+                    "<b>⚡ Teknik Analiz Modu</b>\n\n"
+                    "Teknik analiz için bir varlık belirtmelisin.\n\n"
+                    "Örnek: BTC, AAPL, EUR/USD, XAUUSD\n\n"
+                    "Lütfen /analiz ile baştan başla ve varlık adı gir.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            
+            await bildirim("📡 Adım 1/2 — Fiyat verisi ve teknik göstergeler hesaplanıyor…", "yfinance API + RSI/SMA hesaplama")
+            try:
+                from teknik_analiz_baglam import teknik_analiz_yap
+                analiz_data = await asyncio.to_thread(teknik_analiz_yap, varlik)
+                
+                if not analiz_data:
+                    await query.edit_message_text(
+                        f"<b>⚡ Teknik Analiz</b>\n\n"
+                        f"<b>{_tg_html_escape(varlik)}</b> için fiyat verisi bulunamadı.\n\n"
+                        "Lütfen geçerli bir varlık adı dene:\n"
+                        "  • Kripto: Bitcoin, BTC, Ethereum, ETH\n"
+                        "  • Hisse: Apple, AAPL, Microsoft, MSFT, Turkcell, THYAO\n"
+                        "  • Emtia: Altın, Gold, XAUUSD, Petrol, WTI",
+                        parse_mode=ParseMode.HTML,
+                    )
+                    return ConversationHandler.END
+                    
+            except Exception as e:
+                logger.exception("Teknik analiz hatası (varlik=%s)", varlik)
+                await query.edit_message_text(
+                    f"<b>Teknik analiz hatası</b>\n\n"
+                    f"<b>{_tg_html_escape(varlik)}</b> için teknik analiz yapılamadı.\n\n"
+                    f"Hata: {_tg_html_escape(str(e)[:200])}\n\n"
+                    "Lütfen bir süre sonra <b>/analiz</b> ile tekrar dene.",
+                    parse_mode=ParseMode.HTML,
+                )
+                return ConversationHandler.END
+            
+            await bildirim("✨ Adım 2/2 — Teknik veriler formatlanıyor…", "HTML çıktı hazırlanıyor")
+            
+            # VERİ ÖN PLANDA - AI minimum
+            # Teknik veriyi direkt HTML'e çevir
+            rsi = analiz_data.get("rsi")
+            rsi_sinyal = analiz_data.get("rsi_sinyal", "unknown")
+            sma_20 = analiz_data.get("sma_20")
+            sma_50 = analiz_data.get("sma_50")
+            trend = analiz_data.get("trend", "unknown")
+            destek = analiz_data.get("destek", [])
+            direnc = analiz_data.get("direnc", [])
+            sinyal = analiz_data.get("sinyal", "neutral")
+            guc = analiz_data.get("guc", 5.0)
+            son_fiyat = analiz_data.get("son_fiyat", 0)
+            
+            # Sinyal emoji
+            if sinyal == "bullish":
+                sinyal_emoji = "🟢"
+                sinyal_text = "BULLISH (Alım Sinyali)"
+            elif sinyal == "bearish":
+                sinyal_emoji = "🔴"
+                sinyal_text = "BEARISH (Satım Sinyali)"
+            else:
+                sinyal_emoji = "🟡"
+                sinyal_text = "NEUTRAL (Bekle)"
+            
+            # RSI açıklama
+            if rsi_sinyal == "oversold":
+                rsi_aciklama = "Aşırı satım bölgesinde (potansiyel sıçrama)"
+            elif rsi_sinyal == "overbought":
+                rsi_aciklama = "Aşırı alım bölgesinde (potansiyel düzeltme)"
+            else:
+                rsi_aciklama = "Normal bölgede"
+            
+            # Trend açıklama
+            if trend == "uptrend":
+                trend_aciklama = "Yükseliş trendi (SMA 20 > SMA 50)"
+            elif trend == "downtrend":
+                trend_aciklama = "Düşüş trendi (SMA 20 < SMA 50)"
+            else:
+                trend_aciklama = "Yatay hareket"
+            
+            # HTML çıktı - VERİ ODAKLI
+            analiz = f"""<b>⚡ TEKNİK ANALİZ — {varlik.upper()}</b>
+
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+<b>📊 MEVCUT DURUM</b>
+Son Fiyat: <b>${son_fiyat:,.2f}</b>
+
+<b>📈 TEKNİK GÖSTERGELER</b>
+RSI (14): <b>{f'{rsi:.1f}' if rsi else 'N/A'}</b> — {rsi_aciklama}
+SMA 20: <b>{f'${sma_20:,.2f}' if sma_20 else 'N/A'}</b>
+SMA 50: <b>{f'${sma_50:,.2f}' if sma_50 else 'N/A'}</b>
+
+<b>📉 TREND ANALİZİ</b>
+Trend: <b>{trend_aciklama}</b>
+Destek: <b>{f'${destek[0]:,.2f}' if destek else 'N/A'}</b>
+Direnç: <b>{f'${direnc[0]:,.2f}' if direnc else 'N/A'}</b>
+
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+<b>🎯 TEKNİK SİNYAL</b>
+{sinyal_emoji} <b>{sinyal_text}</b>
+Sinyal Gücü: <b>{guc:.1f}/10</b>
+
+<b>━━━━━━━━━━━━━━━━━━━━</b>
+
+<i>⚠️ Teknik analiz geçmiş fiyat hareketlerine dayanır.
+Yatırım tavsiyesi değildir. Kendi araştırmanı yap.</i>
+
+<b>Kaynak:</b> yfinance (Yahoo Finance)
+<b>Göstergeler:</b> RSI (14), SMA (20/50), Trend Analizi"""
 
         elif mod == "mod_mevsim":
             await bildirim("📡 Adım 1/3 — Mevsim verileri ve haber başlıkları çekiliyor…", "BBC Business RSS + ulke_mevsim.json")
@@ -5162,23 +6065,73 @@ async def diger_mesajlar(update: Update, context: ContextTypes.DEFAULT_TYPE):
             chat_id=update.effective_chat.id, action="typing"
         )
         
-        await update.message.reply_text(
+        # İlk mesaj
+        ilk_mesaj = await update.message.reply_text(
             f"⚡ <b>Hızlı Para Analizi Başladı</b>\n\n"
             f"Varlık: <b>{varlik}</b>\n"
             f"Ülke: <b>{ulke}</b>\n\n"
-            f"8 mod taranıyor...\n"
+            f"9 mod taranıyor...\n"
             f"<i>Bu 10-20 saniye sürebilir.</i>",
             parse_mode=ParseMode.HTML,
         )
         
+        # Tarama ilerlemesi göster
+        modlar = [
+            "✓ Teknik Analiz",
+            "✓ Jeopolitik",
+            "✓ Mevsim",
+            "✓ Hava",
+            "✓ Sektör",
+            "✓ Trendler",
+            "✓ Magazin",
+            "✓ Özel Günler",
+            "✓ Doğal Afet",
+        ]
+        
+        async def tarama_guncelle(tamamlanan: int):
+            """Tarama ilerlemesini güncelle"""
+            try:
+                ilerleme = "\n".join(modlar[:tamamlanan])
+                kalan = 9 - tamamlanan
+                await ilk_mesaj.edit_text(
+                    f"⚡ <b>Hızlı Para Analizi</b>\n\n"
+                    f"Varlık: <b>{varlik}</b> · Ülke: <b>{ulke}</b>\n\n"
+                    f"<b>Modlar taranıyor...</b>\n{ilerleme}\n"
+                    f"{'⏳ ' * kalan}\n\n"
+                    f"<i>{tamamlanan}/9 tamamlandı</i>",
+                    parse_mode=ParseMode.HTML,
+                )
+            except Exception:
+                pass  # Mesaj düzenleme hatası önemsiz
+        
+        # Simüle edilmiş ilerleme (gerçek tarama arka planda)
+        async def ilerleme_goster():
+            for i in range(1, 10):
+                await asyncio.sleep(1.5)
+                await tarama_guncelle(i)
+        
         try:
-            # Analiz yap
-            analiz = await asyncio.to_thread(
+            # Analiz ve ilerleme paralel çalıştır
+            analiz_task = asyncio.to_thread(
                 hizli_para_analizi,
                 varlik=varlik,
                 ulke=ulke,
                 user_id=user_id,
                 llm_fn=llm_metin_uret,
+            )
+            ilerleme_task = ilerleme_goster()
+            
+            # Her ikisini de bekle
+            analiz, _ = await asyncio.gather(analiz_task, ilerleme_task)
+            
+            # Tarama tamamlandı mesajı
+            await ilk_mesaj.edit_text(
+                f"⚡ <b>Hızlı Para Analizi</b>\n\n"
+                f"Varlık: <b>{varlik}</b> · Ülke: <b>{ulke}</b>\n\n"
+                f"<b>✓ Tarama tamamlandı</b>\n"
+                + "\n".join(modlar) +
+                f"\n\n✨ Sonuç hazırlanıyor...",
+                parse_mode=ParseMode.HTML,
             )
             
             # HTML formatla (detay=False, sadece trade setup)
@@ -5445,11 +6398,14 @@ def main():
     app.add_handler(CommandHandler("backtest", backtest))
     app.add_handler(CommandHandler("gecmis_sil", gecmis_sil))
     app.add_handler(CommandHandler("bildirim", bildirim_ayar))
+    app.add_handler(CommandHandler("gunluk_ozet", gunluk_ozet_ayar))
     app.add_handler(CommandHandler("pro_ver", pro_ver))
     app.add_handler(CommandHandler("pro_iptal", pro_iptal))
     app.add_handler(CommandHandler("claude_ver", claude_ver))
     app.add_handler(CommandHandler("claude_iptal", claude_iptal))
     app.add_handler(CommandHandler("odeme_kayit", odeme_kayit))
+    app.add_handler(CommandHandler("admin", admin_panel))
+    app.add_handler(CommandHandler("admin_detay", admin_detay))
 
     # Portföy komutları
     app.add_handler(CommandHandler("portfoy", portfoy_komut))
@@ -5457,6 +6413,9 @@ def main():
 
     # Bildirim ayarları callback
     app.add_handler(CallbackQueryHandler(bildirim_callback, pattern="^bildirim_"))
+    
+    # Günlük özet callback
+    app.add_handler(CallbackQueryHandler(gunluk_ozet_callback, pattern="^gunluk_ozet_"))
 
     # Kalite kartı butonu handler
     app.add_handler(CallbackQueryHandler(kalite_karti_goster, pattern="^show_quality_card$"))
@@ -5506,6 +6465,78 @@ def main():
         logger.info("Alarm sistemi başlatıldı (her %d saniye)", ALARM_ARALIK_SANIYE)
     else:
         logger.warning("JobQueue mevcut değil — alarm sistemi başlatılamadı")
+
+    # ── Günlük özet sistemi ───────────────────────────────────────────────────
+    async def _gunluk_ozet_job(context) -> None:
+        """Günlük haber özeti gönderimi"""
+        try:
+            # Aktif kullanıcıları al
+            aktif_kullanicilar = gunluk_ozet_aktif_kullanicilar()
+            
+            if not aktif_kullanicilar:
+                logger.info("Günlük özet: Aktif kullanıcı yok")
+                return
+            
+            # Haberleri topla
+            haberler = gunluk_haberler_topla()
+            
+            if not haberler:
+                logger.warning("Günlük özet: Haber toplanamadı")
+                return
+            
+            # AI prompt oluştur
+            prompt = gunluk_ozet_prompt_olustur(haberler)
+            
+            # Her kullanıcı için kontrol et ve gönder
+            gonderilen_sayisi = 0
+            for user_id in aktif_kullanicilar:
+                try:
+                    # Zamanı geldi mi?
+                    if not gunluk_ozet_zamani_geldi_mi(user_id):
+                        continue
+                    
+                    # AI ile özet oluştur
+                    ozet = await _llm_cagir(prompt, max_tokens=1000)
+                    
+                    if not ozet:
+                        logger.warning("Günlük özet: AI yanıt vermedi (user_id=%s)", user_id)
+                        continue
+                    
+                    # Kullanıcıya gönder
+                    try:
+                        await context.bot.send_message(
+                            chat_id=int(user_id),
+                            text=ozet,
+                            parse_mode=ParseMode.HTML,
+                        )
+                        
+                        # Kaydı tut
+                        gunluk_ozet_kaydet(user_id, ozet)
+                        gonderilen_sayisi += 1
+                        
+                        logger.info("Günlük özet gönderildi: user_id=%s", user_id)
+                    
+                    except Exception as e:
+                        logger.warning("Günlük özet gönderilemedi (user_id=%s): %s", user_id, e)
+                
+                except Exception as e:
+                    logger.warning("Günlük özet işleme hatası (user_id=%s): %s", user_id, e)
+            
+            if gonderilen_sayisi > 0:
+                logger.info("Günlük özet: %d kullanıcıya gönderildi", gonderilen_sayisi)
+        
+        except Exception as e:
+            logger.exception("Günlük özet job hatası: %s", e)
+
+    if job_queue is not None:
+        # Her 30 dakikada bir kontrol et (kullanıcıların farklı saatleri olabilir)
+        job_queue.run_repeating(
+            _gunluk_ozet_job,
+            interval=1800,  # 30 dakika
+            first=120,  # Bot başladıktan 2 dakika sonra ilk kontrol
+            name="okwis_gunluk_ozet",
+        )
+        logger.info("Günlük özet sistemi başlatıldı (her 30 dakikada kontrol)")
 
     app.run_polling()
 

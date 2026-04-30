@@ -12,6 +12,7 @@ from xml.etree import ElementTree as ET
 
 import httpx
 from web_arama import topla_mod_aramalari
+from rss_utils import fetch_rss_titles, get_fallback_urls
 
 logger = logging.getLogger(__name__)
 
@@ -48,33 +49,9 @@ def _zaman_satiri(now: datetime | None = None) -> str:
 
 
 def _rss_tum_basliklar(url: str, limit: int = 15) -> list[str]:
-    """Tek bir RSS url'inden tüm başlıkları çek."""
-    headers = {
-        "User-Agent": "MakroLensBot/1.0 (+https://t.me/)",
-        "Accept": "application/rss+xml, application/xml, text/xml, */*",
-    }
-    try:
-        with httpx.Client(timeout=_RSS_TIMEOUT, headers=headers) as client:
-            r = client.get(url, follow_redirects=True)
-            r.raise_for_status()
-            text = r.text
-    except Exception as e:
-        logger.warning("Trendler RSS alınamadı (%s): %s", url, e)
-        return []
-
-    titles: list[str] = []
-    try:
-        root = ET.fromstring(text)
-        for item in root.findall(".//item"):
-            if len(titles) >= limit:
-                break
-            el = item.find("title")
-            if el is not None and el.text and el.text.strip():
-                titles.append(el.text.strip()[:220])
-    except ET.ParseError:
-        logger.warning("Trendler RSS XML ayrıştırılamadı: %s", url)
-        return []
-
+    """Tek bir RSS url'inden tüm başlıkları çek (fallback ile)."""
+    fallback_urls = get_fallback_urls("world_news")
+    titles, used_url = fetch_rss_titles(url, limit, fallback_urls)
     return titles
 
 

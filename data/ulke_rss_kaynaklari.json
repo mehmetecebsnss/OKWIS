@@ -1,0 +1,222 @@
+{
+  "_aciklama": "Okwis AI - Ülkeye Özel RSS Kaynakları",
+  "_guncelleme": "2026-04-30",
+  
+  "Türkiye": {
+    "magazin": [
+      "https://www.hurriyet.com.tr/rss/magazin",
+      "https://www.sabah.com.tr/rss/magazin.xml",
+      "https://www.milliyet.com.tr/rss/rssnew/magazinrss.xml"
+    ],
+    "genel": [
+      "https://www.hurriyet.com.tr/rss/anasayfa",
+      "https://www.sabah.com.tr/rss/anasayfa.xml"
+    ],
+    "teknoloji": [
+      "https://www.webtekno.com/rss.xml",
+      "https://www.donanimhaber.com/rss.xml"
+    ]
+  },
+  
+  "ABD": {
+    "magazin": [
+      "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+      "https://rss.nytimes.com/services/xml/rss/nyt/Arts.xml",
+      "https://www.hollywoodreporter.com/feed/"
+    ],
+    "genel": [
+      "https://feeds.bbci.co.uk/news/rss.xml",
+      "https://rss.nytimes.com/services/xml/rss/nyt/HomePage.xml"
+    ],
+    "teknoloji": [
+      "https://feeds.bbci.co.uk/news/technology/rss.xml",
+      "https://rss.nytimes.com/services/xml/rss/nyt/Technology.xml"
+    ]
+  },
+  
+  "Japonya": {
+    "magazin": [
+      "https://www3.nhk.or.jp/rss/news/cat6.xml",
+      "https://www.asahi.com/rss/asahi/culture.rdf"
+    ],
+    "genel": [
+      "https://www3.nhk.or.jp/rss/news/cat0.xml",
+      "https://www.asahi.com/rss/asahi/newsheadlines.rdf"
+    ],
+    "teknoloji": [
+      "https://www3.nhk.or.jp/rss/news/cat5.xml"
+    ]
+  },
+  
+  "Çin": {
+    "magazin": [
+      "http://www.chinadaily.com.cn/rss/culture_rss.xml"
+    ],
+    "genel": [
+      "http://www.chinadaily.com.cn/rss/china_rss.xml"
+    ],
+    "teknoloji": [
+      "http://www.chinadaily.com.cn/rss/tech_rss.xml"
+    ]
+  },
+  
+  "Almanya": {
+    "magazin": [
+      "https://www.dw.com/rss/rss-en-culture/rss.xml"
+    ],
+    "genel": [
+      "https://www.dw.com/rss/rss-en-all/rss.xml"
+    ],
+    "teknoloji": [
+      "https://www.dw.com/rss/rss-en-science/rss.xml"
+    ]
+  },
+  
+  "Fransa": {
+    "magazin": [
+      "https://www.france24.com/en/culture/rss"
+    ],
+    "genel": [
+      "https://www.france24.com/en/rss"
+    ],
+    "teknoloji": [
+      "https://www.france24.com/en/technology/rss"
+    ]
+  },
+  
+  "İngiltere": {
+    "magazin": [
+      "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+      "https://www.theguardian.com/culture/rss"
+    ],
+    "genel": [
+      "https://feeds.bbci.co.uk/news/rss.xml",
+      "https://www.theguardian.com/uk/rss"
+    ],
+    "teknoloji": [
+      "https://feeds.bbci.co.uk/news/technology/rss.xml",
+      "https://www.theguardian.com/technology/rss"
+    ]
+  },
+  
+  "İtalya": {
+    "magazin": [
+      "https://www.ansa.it/sito/ansait_rss.xml"
+    ],
+    "genel": [
+      "https://www.ansa.it/sito/ansait_rss.xml"
+    ],
+    "teknoloji": [
+      "https://www.ansa.it/sito/notizie/tecnologia/tecnologia_rss.xml"
+    ]
+  },
+  
+  "İspanya": {
+    "magazin": [
+      "https://elpais.com/rss/elpais/cultura.xml"
+    ],
+    "genel": [
+      "https://elpais.com/rss/elpais/portada.xml"
+    ],
+    "teknoloji": [
+      "https://elpais.com/rss/elpais/tecnologia.xml"
+    ]
+  },
+  
+  "Rusya": {
+    "magazin": [
+      "https://www.rt.com/rss/entertainment/"
+    ],
+    "genel": [
+      "https://www.rt.com/rss/"
+    ],
+    "teknoloji": [
+      "https://www.rt.com/rss/tech/"
+    ]
+  },
+  
+  "Hindistan": {
+    "magazin": [
+      "https://timesofindia.indiatimes.com/rssfeeds/1081479906.cms"
+    ],
+    "genel": [
+      "https://timesofindia.indiatimes.com/rssfeedstopstories.cms"
+    ],
+    "teknoloji": [
+      "https://timesofindia.indiatimes.com/rssfeeds/66949542.cms"
+    ]
+  },
+  
+  "Brezilya": {
+    "magazin": [
+      "https://www.bbc.com/portuguese/topics/c340q430z4vt/rss.xml"
+    ],
+    "genel": [
+      "https://www.bbc.com/portuguese/topics/cyx5krnw38vt/rss.xml"
+    ],
+    "teknoloji": [
+      "https://www.bbc.com/portuguese/topics/c2dwqd1z7e1t/rss.xml"
+    ]
+  },
+  
+  "Meksika": {
+    "magazin": [
+      "https://www.bbc.com/mundo/topics/c340q430z4vt/rss.xml"
+    ],
+    "genel": [
+      "https://www.bbc.com/mundo/topics/cyx5krnw38vt/rss.xml"
+    ],
+    "teknoloji": [
+      "https://www.bbc.com/mundo/topics/c2dwqd1z7e1t/rss.xml"
+    ]
+  },
+  
+  "Kanada": {
+    "magazin": [
+      "https://www.cbc.ca/cmlink/rss-arts"
+    ],
+    "genel": [
+      "https://www.cbc.ca/cmlink/rss-topstories"
+    ],
+    "teknoloji": [
+      "https://www.cbc.ca/cmlink/rss-technology"
+    ]
+  },
+  
+  "Avustralya": {
+    "magazin": [
+      "https://www.abc.net.au/news/feed/51120/rss.xml"
+    ],
+    "genel": [
+      "https://www.abc.net.au/news/feed/45910/rss.xml"
+    ],
+    "teknoloji": [
+      "https://www.abc.net.au/news/feed/51892/rss.xml"
+    ]
+  },
+  
+  "Güney Kore": {
+    "magazin": [
+      "https://www.koreatimes.co.kr/www2/rss/culture.xml"
+    ],
+    "genel": [
+      "https://www.koreatimes.co.kr/www2/rss/all.xml"
+    ],
+    "teknoloji": [
+      "https://www.koreatimes.co.kr/www2/rss/tech.xml"
+    ]
+  },
+  
+  "DEFAULT": {
+    "magazin": [
+      "https://feeds.bbci.co.uk/news/entertainment_and_arts/rss.xml",
+      "https://feeds.bbci.co.uk/news/technology/rss.xml"
+    ],
+    "genel": [
+      "https://feeds.bbci.co.uk/news/rss.xml"
+    ],
+    "teknoloji": [
+      "https://feeds.bbci.co.uk/news/technology/rss.xml"
+    ]
+  }
+}

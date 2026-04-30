@@ -5,13 +5,16 @@ Magazin / Viral Haberler modu bağlamı: entertainment + viral haber RSS + Tavil
 
 from __future__ import annotations
 
+import json
 import logging
 import os
 from datetime import datetime
+from pathlib import Path
 from xml.etree import ElementTree as ET
 
 import httpx
 from web_arama import topla_mod_aramalari
+from rss_utils import fetch_rss_titles, get_fallback_urls
 
 logger = logging.getLogger(__name__)
 
@@ -21,6 +24,7 @@ _DEFAULT_RSS_LIST = [
     "https://feeds.bbci.co.uk/news/rss.xml",
 ]
 _RSS_TIMEOUT = 10.0
+_ULKE_RSS_PATH = Path(__file__).resolve().parent / "data" / "ulke_rss_kaynaklari.json"
 
 # Magazin/viral moduna özgü filtre anahtar kelimeleri
 _MAGAZIN_ANAHTAR = [
@@ -33,39 +37,56 @@ _MAGAZIN_ANAHTAR = [
 ]
 
 
+def _ulke_rss_yukle() -> dict:
+    """Ülkeye özel RSS kaynaklarını yükle."""
+    try:
+        with open(_ULKE_RSS_PATH, encoding="utf-8") as f:
+            return json.load(f)
+    except Exception as e:
+        logger.warning("Ülke RSS kaynakları yüklenemedi: %s", e)
+        return {}
+
+
+def _ulke_rss_al(ulke: str, kategori: str = "magazin") -> list[str]:
+    """
+    Ülkeye özel RSS feed'lerini al.
+    
+    Args:
+        ulke: Ülke adı (örn: "Türkiye", "ABD", "Japonya")
+        kategori: RSS kategorisi ("magazin", "genel", "teknoloji")
+    
+    Returns:
+        RSS URL listesi
+    """
+    rss_data = _ulke_rss_yukle()
+    
+    # Ülkeye özel RSS'ler
+    if ulke in rss_data:
+        feeds = rss_data[ulke].get(kategori, [])
+        if feeds:
+            logger.info("Ülkeye özel RSS kullanılıyor: %s (%s) - %d feed", ulke, kategori, len(feeds))
+            return feeds
+    
+    # Default RSS'ler
+    default_feeds = rss_data.get("DEFAULT", {}).get(kategori, [])
+    if default_feeds:
+        logger.info("Default RSS kullanılıyor: %s - %d feed", kategori, len(default_feeds))
+        return default_feeds
+    
+    # Hiçbiri yoksa hardcoded default
+    logger.warning("RSS bulunamadı, hardcoded default kullanılıyor")
+    return _DEFAULT_RSS_LIST
+
+
 def _zaman_satiri(now: datetime | None = None) -> str:
     now = now or datetime.now()
     return f"Bugünün tarihi (bot sunucusu yerel saati): {now:%d %B %Y}."
 
 
 def _rss_tum_basliklar(url: str, limit: int = 15) -> list[str]:
-    """Tek bir RSS url'inden tüm başlıkları çek."""
-    headers = {
-        "User-Agent": "MakroLensBot/1.0 (+https://t.me/)",
-        "Accept": "application/rss+xml, application/xml, text/xml, */*",
-    }
-    try:
-        with httpx.Client(timeout=_RSS_TIMEOUT, headers=headers) as client:
-            r = client.get(url, follow_redirects=True)
-            r.raise_for_status()
-            text = r.text
-    except Exception as e:
-        logger.warning("Magazin RSS alınamadı (%s): %s", url, e)
-        return []
-
-    titles: list[str] = []
-    try:
-        root = ET.fromstring(text)
-        for item in root.findall(".//item"):
-            if len(titles) >= limit:
-                break
-            el = item.find("title")
-            if el is not None and el.text and el.text.strip():
-                titles.append(el.text.strip()[:220])
-    except ET.ParseError:
-        logger.warning("Magazin RSS XML ayrıştırılamadı: %s", url)
-        return []
-
+    """Tek bir RSS url'inden tüm başlıkları çek (fallback ile)."""
+    fallback_urls = get_fallback_urls("entertainment")
+    titles, used_url = fetch_rss_titles(url, limit, fallback_urls)
     return titles
 
 
@@ -100,13 +121,24 @@ def _env_rss_listesini_oku() -> list[str]:
 def topla_magazin_baglami(ulke: str) -> str:
     """
     Magazin / Viral modu için prompt bağlamı.
-    Tüm kaynaklardan başlık topla, magazin-ilgilileri öne al.
+    Ülkeye özel RSS kaynaklarından başlık topla, magazin-ilgilileri öne al.
+    
+    Args:
+        ulke: Ülke adı (örn: "Türkiye", "ABD", "Japonya")
     """
-    rss_urls = _env_rss_listesini_oku()
-    rss_urls.extend(_DEFAULT_RSS_LIST)
-
+    # Ülkeye özel RSS feed'leri al
+    rss_urls = _ulke_rss_al(ulke, "magazin")
+    
+    # Env'den ek RSS'ler varsa ekle
+    env_rss = _env_rss_listesini_oku()
+    if env_rss:
+        rss_urls.extend(env_rss)
+    
+    # Tekrar eden URL'leri temizle
     seen: set[str] = set()
     rss_urls = [u for u in rss_urls if not (u in seen or seen.add(u))]
+    
+    logger.info("Magazin bağlamı: %s için %d RSS feed kullanılıyor", ulke, len(rss_urls))
 
     # Tüm kaynaklardan başlık topla
     tum_basliklar: list[str] = []
@@ -121,18 +153,18 @@ def topla_magazin_baglami(ulke: str) -> str:
 
     if ilgili:
         baslik_text = (
-            f"Magazin/viral haberler ({len(ilgili)} başlık bulundu):\n"
+            f"Magazin/viral haberler ({len(ilgili)} başlık bulundu - {ulke} kaynakları):\n"
             + "\n".join([f"- {t}" for t in ilgili[:7]])
         )
         if genel[:3]:
             baslik_text += "\n\nEk genel haberler:\n" + "\n".join([f"- {t}" for t in genel[:3]])
     elif tum_basliklar:
         baslik_text = (
-            "Magazine özgü başlık bulunamadı — mevcut haberler:\n"
+            f"Magazine özgü başlık bulunamadı — {ulke} mevcut haberleri:\n"
             + "\n".join([f"- {t}" for t in tum_basliklar[:8]])
         )
     else:
-        baslik_text = "Magazin haber akışından başlık çıkarılamadı (ağ/kaynak geçici olabilir)."
+        baslik_text = f"Magazin haber akışından başlık çıkarılamadı ({ulke} kaynakları geçici olabilir)."
 
     # Analiz rehberi
     analiz_rehberi = f"""### Analiz Rehberi
@@ -148,6 +180,7 @@ NOT: Eğer bağlamda somut magazin/viral haber yoksa bunu açıkça belirt. Uydu
         "### Verilen bağlam (bunu analizde dikkate al; uydurma veri ekleme)",
         _zaman_satiri(),
         f"Hedef ülke (kullanıcı seçimi): {ulke}.",
+        f"Haber kaynakları: {ulke}'ye özel magazin ve eğlence RSS feed'leri.",
         "Bu modda hedef: ünlü-marka ilişkileri, viral sosyal medya olayları ve eğlence haberlerinin şirket değerlemelerine, tüketici davranışına ve kısa vadeli spekülatif piyasa hareketlerine etkisini analiz etmek.",
         "### Güncel magazin ve viral haberler",
         baslik_text,
